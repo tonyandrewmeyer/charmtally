@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
-authors = [{ name = "Tony Meyer", email = "tony.meyer@gmail.com" }]
+authors = [{ name = "Tony Meyer", email = "charmtally@aotearoa.dev" }]
 keywords = ["juju", "charm", "ops", "pebble", "canonical"]
 classifiers = [
   "Development Status :: 3 - Alpha",
@@ -27,11 +27,16 @@ Repository = "https://github.com/tonyandrewmeyer/charmtally"
 Issues = "https://github.com/tonyandrewmeyer/charmtally/issues"
 Dashboard = "https://tonyandrewmeyer.github.io/charmtally/dashboard.html"
 
-[project.optional-dependencies]
-dev = ["pytest", "ruff"]
-
 [project.scripts]
 charmtally = "charmtally.cli:main"
+
+[dependency-groups]
+dev = [
+  "codespell>=2.3",
+  "pre-commit>=4",
+  "pytest>=8",
+  "ruff>=0.8",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -44,8 +49,13 @@ packages = ["charmtally"]
 testpaths = ["charmtally/tests"]
 
 [tool.ruff]
-line-length = 100
+line-length = 120
 target-version = "py310"
+preview = true
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.codespell]
+ignore-words-list = "ths,re-uses"
+skip = "dashboard.html,results.json,scored.json,uv.lock,snapshots"

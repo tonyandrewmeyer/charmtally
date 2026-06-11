@@ -1,4 +1,5 @@
 """Tests for charm-tree metadata extraction."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -95,52 +96,34 @@ def test_charm_name_extracted(tmp_path: Path) -> None:
 
 def test_charmcraft_plugins_extracted(tmp_path: Path) -> None:
     (tmp_path / "charmcraft.yaml").write_text(
-        "type: charm\n"
-        "name: c\n"
-        "parts:\n"
-        "  charm:\n"
-        "    plugin: uv\n"
-        "    source: .\n"
-        "  thing:\n"
-        "    plugin: python\n"
+        "type: charm\nname: c\nparts:\n  charm:\n    plugin: uv\n    source: .\n  thing:\n    plugin: python\n"
     )
     meta = read(tmp_path)
     assert set(meta.charmcraft_plugins) == {"uv", "python"}
 
 
 def test_bases_extracted_v2(tmp_path: Path) -> None:
-    (tmp_path / "charmcraft.yaml").write_text(
-        "type: charm\nname: c\nbase: ubuntu@22.04\nbuild-base: ubuntu@24.04\n"
-    )
+    (tmp_path / "charmcraft.yaml").write_text("type: charm\nname: c\nbase: ubuntu@22.04\nbuild-base: ubuntu@24.04\n")
     meta = read(tmp_path)
     assert meta.bases == ("ubuntu@22.04", "ubuntu@24.04")
 
 
 def test_bases_extracted_v1(tmp_path: Path) -> None:
     (tmp_path / "charmcraft.yaml").write_text(
-        "type: charm\nname: c\n"
-        "bases:\n"
-        "  - name: ubuntu\n"
-        "    channel: '22.04'\n"
-        "  - name: ubuntu\n"
-        "    channel: '24.04'\n"
+        "type: charm\nname: c\nbases:\n  - name: ubuntu\n    channel: '22.04'\n  - name: ubuntu\n    channel: '24.04'\n"
     )
     meta = read(tmp_path)
     assert meta.bases == ("ubuntu@22.04", "ubuntu@24.04")
 
 
 def test_min_juju_version_from_assumes_list(tmp_path: Path) -> None:
-    (tmp_path / "charmcraft.yaml").write_text(
-        "type: charm\nname: c\nassumes: ['juju >= 3.4', 'k8s-api']\n"
-    )
+    (tmp_path / "charmcraft.yaml").write_text("type: charm\nname: c\nassumes: ['juju >= 3.4', 'k8s-api']\n")
     assert read(tmp_path).min_juju_version == "3.4"
 
 
 def test_min_juju_version_from_assumes_nested(tmp_path: Path) -> None:
     (tmp_path / "charmcraft.yaml").write_text(
-        "type: charm\nname: c\n"
-        "assumes:\n"
-        "  - any-of: ['juju >= 3.6', 'juju >= 3.4']\n"
+        "type: charm\nname: c\nassumes:\n  - any-of: ['juju >= 3.6', 'juju >= 3.4']\n"
     )
     # min returns the lowest mentioned
     assert read(tmp_path).min_juju_version == "3.4"

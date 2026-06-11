@@ -7,6 +7,7 @@ The CSV columns (may-2026.csv, sourced from canonical/hyrum's charm-list):
 records URLs to skip and per-URL branch overrides. See CORPUS-TRIAGE.md for the
 rationale behind each entry.
 """
+
 from __future__ import annotations
 
 import csv
@@ -41,13 +42,14 @@ class CorpusOverrides:
     and is applied AFTER monorepo fan-out, to drop specific sub-charms (e.g.
     test fixtures shipped alongside a real example charm).
     """
+
     exclude: dict[str, str]
     branch_overrides: dict[str, str]
     sub_charm_excludes: dict[str, dict[str, str]] = field(default_factory=dict)
     feature_excludes: dict[tuple[str, str], dict[str, str]] = field(default_factory=dict)
 
     @classmethod
-    def empty(cls) -> "CorpusOverrides":
+    def empty(cls) -> CorpusOverrides:
         return cls(exclude={}, branch_overrides={}, sub_charm_excludes={}, feature_excludes={})
 
     def apply(self, ref: CharmRef) -> tuple[CharmRef | None, str | None]:
@@ -80,9 +82,7 @@ class CorpusOverrides:
         """
         return self.sub_charm_excludes.get(repo_url, {}).get(sub_path)
 
-    def feature_skip_reason(
-        self, repo_url: str, sub_path: str, feature_name: str
-    ) -> str | None:
+    def feature_skip_reason(self, repo_url: str, sub_path: str, feature_name: str) -> str | None:
         """Return the override reason for a specific (charm, feature) pair.
 
         Use ``sub_path=""`` for single-charm repos. Match is exact.

@@ -22,6 +22,7 @@ Usage:
     charmtally dashboard results.json [--out dashboard.html]
         Render results.json → dashboard.html (two sortable tables).
 """
+
 from __future__ import annotations
 
 import argparse
@@ -29,14 +30,16 @@ import json
 import sys
 from pathlib import Path
 
-from . import catalogue, corpus, dashboard, metadata as _metadata, scan, scoring as _scoring
+from . import catalogue, corpus, dashboard, scan
+from . import metadata as _metadata
+from . import scoring as _scoring
 
 DEFAULT_CATALOGUE = Path(__file__).resolve().parent.parent / "features.yaml"
 
 
 def _apply_feature_excludes(
     features_dict: dict,
-    overrides: "corpus.CorpusOverrides",
+    overrides: corpus.CorpusOverrides,
     repo_url: str,
     sub_path: str,
 ) -> None:
@@ -82,7 +85,7 @@ def cmd_spike(args: argparse.Namespace) -> int:
         print(f"… {ref.name} ({ref.repo_url})", file=sys.stderr)
         path = scan.ensure_clone(ref, args.workdir)
         if path is None:
-            print(f"  clone failed; skipping", file=sys.stderr)
+            print("  clone failed; skipping", file=sys.stderr)
             continue
         results[ref.slug] = {
             "name": ref.name,
@@ -138,18 +141,19 @@ def cmd_scan(args: argparse.Namespace) -> int:
             continue
         ref = adjusted
 
-        print(f"… {ref.name} ({ref.repo_url})"
-              + (f" [branch={ref.branch}]" if ref.branch else ""),
-              file=sys.stderr)
+        print(
+            f"… {ref.name} ({ref.repo_url})" + (f" [branch={ref.branch}]" if ref.branch else ""),
+            file=sys.stderr,
+        )
         path = scan.ensure_clone(ref, args.workdir)
         if path is None:
-            print(f"  clone failed; skipping", file=sys.stderr)
+            print("  clone failed; skipping", file=sys.stderr)
             skipped[ref.slug] = "clone failed"
             continue
 
         charm_roots = scan.find_charm_roots(path)
         if not charm_roots:
-            print(f"  no charm files found; skipping", file=sys.stderr)
+            print("  no charm files found; skipping", file=sys.stderr)
             skipped[ref.slug] = "no charmcraft.yaml or metadata.yaml found"
             continue
 
@@ -189,18 +193,14 @@ def cmd_scan(args: argparse.Namespace) -> int:
     text = json.dumps(results, indent=2) + "\n"
     args.out.write_text(text)
     scanned = sum(1 for k in results if not k.startswith("__"))
-    print(f"wrote {args.out} ({scanned} records, {len(skipped)} skipped)",
-          file=sys.stderr)
+    print(f"wrote {args.out} ({scanned} records, {len(skipped)} skipped)", file=sys.stderr)
     return 0
 
 
 def cmd_score(args: argparse.Namespace) -> int:
     """Re-apply rule-based scoring to an existing results.json → scored.json."""
     feats = catalogue.load(args.features)
-    overrides = (
-        corpus.load_overrides(args.overrides)
-        if args.overrides else corpus.CorpusOverrides.empty()
-    )
+    overrides = corpus.load_overrides(args.overrides) if args.overrides else corpus.CorpusOverrides.empty()
     results: dict = json.loads(args.results.read_text())
 
     for slug, charm_data in results.items():
@@ -211,8 +211,7 @@ def cmd_score(args: argparse.Namespace) -> int:
         meta = _metadata.CharmMeta(
             has_containers=meta_raw.get("has_containers", False),
             relations=tuple(
-                _metadata.Relation(r["name"], r["role"], r.get("interface", ""))
-                for r in meta_raw.get("relations", [])
+                _metadata.Relation(r["name"], r["role"], r.get("interface", "")) for r in meta_raw.get("relations", [])
             ),
             config_keys=tuple(meta_raw.get("config_keys", [])),
             secret_like_config=tuple(meta_raw.get("secret_like_config", [])),
@@ -268,8 +267,12 @@ def cmd_dashboard(args: argparse.Namespace) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="charmtally")
-    p.add_argument("--features", type=Path, default=DEFAULT_CATALOGUE,
-                   help="Path to features.yaml (default: alongside this package)")
+    p.add_argument(
+        "--features",
+        type=Path,
+        default=DEFAULT_CATALOGUE,
+        help="Path to features.yaml (default: alongside this package)",
+    )
     sub = p.add_subparsers(dest="cmd", required=True)
 
     p_local = sub.add_parser("local", help="Scan a checked-out charm dir.")
@@ -279,39 +282,52 @@ def main(argv: list[str] | None = None) -> int:
 
     p_spike = sub.add_parser("spike", help="Clone+scan a slice of the CSV corpus.")
     p_spike.add_argument("--corpus", type=Path, required=True)
-    p_spike.add_argument("--workdir", type=Path, required=True,
-                         help="Where to clone charms (reused if already present).")
+    p_spike.add_argument(
+        "--workdir",
+        type=Path,
+        required=True,
+        help="Where to clone charms (reused if already present).",
+    )
     p_spike.add_argument("--limit", type=int, default=5)
-    p_spike.add_argument("--key-only", action="store_true",
-                         help="Only scan rows marked 'Key Charm for this Team'.")
-    p_spike.add_argument("--only", nargs="+",
-                         help="Restrict to these feature names (default: all in features.yaml).")
+    p_spike.add_argument("--key-only", action="store_true", help="Only scan rows marked 'Key Charm for this Team'.")
+    p_spike.add_argument("--only", nargs="+", help="Restrict to these feature names (default: all in features.yaml).")
     p_spike.set_defaults(func=cmd_spike)
 
     p_scan = sub.add_parser("scan", help="Full corpus scan → results.json.")
     p_scan.add_argument("--corpus", type=Path, required=True)
-    p_scan.add_argument("--workdir", type=Path, required=True,
-                        help="Where to clone/cache charms.")
-    p_scan.add_argument("--team", nargs="+", metavar="TEAM",
-                        help="Include charms from these teams (case-insensitive). "
-                             "Combined with --key-only via OR.")
-    p_scan.add_argument("--key-only", action="store_true",
-                        help="Include all key_charm=TRUE rows.")
-    p_scan.add_argument("--only", nargs="+",
-                        help="Restrict to these feature names.")
-    p_scan.add_argument("--out", type=Path, default=Path("results.json"),
-                        help="Output path (default: results.json).")
-    p_scan.add_argument("--overrides", type=Path, default=None,
-                        help="Path to corpus-overrides.yaml (exclusions + branch swaps). "
-                             "Recommended: --overrides ./corpus-overrides.yaml.")
+    p_scan.add_argument("--workdir", type=Path, required=True, help="Where to clone/cache charms.")
+    p_scan.add_argument(
+        "--team",
+        nargs="+",
+        metavar="TEAM",
+        help="Include charms from these teams (case-insensitive). Combined with --key-only via OR.",
+    )
+    p_scan.add_argument("--key-only", action="store_true", help="Include all key_charm=TRUE rows.")
+    p_scan.add_argument("--only", nargs="+", help="Restrict to these feature names.")
+    p_scan.add_argument(
+        "--out",
+        type=Path,
+        default=Path("results.json"),
+        help="Output path (default: results.json).",
+    )
+    p_scan.add_argument(
+        "--overrides",
+        type=Path,
+        default=None,
+        help="Path to corpus-overrides.yaml (exclusions + branch swaps). "
+        "Recommended: --overrides ./corpus-overrides.yaml.",
+    )
     p_scan.set_defaults(func=cmd_scan)
 
     p_score = sub.add_parser("score", help="Re-apply scoring to results.json → scored.json.")
     p_score.add_argument("results", type=Path, help="Path to results.json.")
     p_score.add_argument("--out", type=Path, default=Path("scored.json"))
-    p_score.add_argument("--overrides", type=Path, default=None,
-                         help="Path to corpus-overrides.yaml; applies the same "
-                              "feature_excludes the scan command would apply.")
+    p_score.add_argument(
+        "--overrides",
+        type=Path,
+        default=None,
+        help="Path to corpus-overrides.yaml; applies the same feature_excludes the scan command would apply.",
+    )
     p_score.set_defaults(func=cmd_score)
 
     p_dash = sub.add_parser("dashboard", help="Render results.json/scored.json → dashboard.html.")

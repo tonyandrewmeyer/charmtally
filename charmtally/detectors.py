@@ -9,16 +9,17 @@ Implements four detector kinds for the v1 spike:
 
 The `yaml-key` kind is deferred — pebble.checks has a regex fallback that covers v1.
 """
+
 from __future__ import annotations
 
 import ast
 import re
 import warnings
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterator
 
-from .catalogue import Detector, Feature
+from .catalogue import Feature
 
 
 @dataclass(frozen=True)
@@ -38,10 +39,7 @@ _TEST_DIRS = ("tests", "test")
 
 def _is_vendored_lib(parts: tuple[str, ...]) -> bool:
     """`lib/charms/<libname>/...` is a vendored charm library, not charm code."""
-    for i in range(len(parts) - 1):
-        if parts[i] == "lib" and parts[i + 1] == "charms":
-            return True
-    return False
+    return any(parts[i] == "lib" and parts[i + 1] == "charms" for i in range(len(parts) - 1))
 
 
 def _charm_provides_lib(charm_root: Path, module: str) -> bool:
@@ -152,7 +150,7 @@ def _detect_call(tree: ast.Module, cfg: dict) -> Iterator[ast.AST]:
         if isinstance(func, ast.Attribute):
             chain = _attr_chain(func)
             if chain and len(chain) >= len(suffix):
-                tail = [seg.lstrip("_") for seg in chain[-len(suffix):]]
+                tail = [seg.lstrip("_") for seg in chain[-len(suffix) :]]
                 if tail == suffix:
                     yield node
         elif isinstance(func, ast.Name) and len(suffix) == 1 and func.id.lstrip("_") == suffix[0]:
@@ -214,8 +212,7 @@ def _detect_ast_init_call(tree: ast.Module, cfg: dict) -> Iterator[ast.AST]:
             continue
         for item in node.body:
             if isinstance(item, ast.FunctionDef) and item.name == "__init__":
-                for call in _self_attr_calls(item.body, attrs):
-                    yield call
+                yield from _self_attr_calls(item.body, attrs)
 
 
 def _detect_ast_shared_method(tree: ast.Module, cfg: dict) -> Iterator[ast.AST]:

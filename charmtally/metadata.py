@@ -25,14 +25,14 @@ Descriptive facts surfaced for the dashboard (no scoring rules attached):
     tooling               — subset of ["tox","make","just"] based on
                             tox.ini / Makefile / justfile presence
 """
+
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
-
 
 _SECRETY = re.compile(r"(password|token|secret|api[-_]?key)$", re.IGNORECASE)
 # Matches "juju >= 3.4", "juju>=3.4", "juju 3.4", etc. Captures the version.
@@ -151,12 +151,14 @@ def _extract_min_juju_version(data: dict) -> str | None:
     matches = _JUJU_VERSION.findall(text)
     if not matches:
         return None
+
     # Pick the lowest version mentioned (the asserted minimum).
     def _key(v: str) -> tuple[int, ...]:
         try:
             return tuple(int(p) for p in v.split("."))
         except ValueError:
             return (0,)
+
     return min(matches, key=_key)
 
 
@@ -224,10 +226,7 @@ def read(charm_root: Path) -> CharmMeta:
     secret_typed = list(dict.fromkeys(secret_typed))
 
     integration_dir = charm_root / "tests" / "integration"
-    has_integration_tests = (
-        integration_dir.exists()
-        and any(integration_dir.rglob("*.py"))
-    )
+    has_integration_tests = integration_dir.exists() and any(integration_dir.rglob("*.py"))
 
     # Reactive charms (charms.reactive framework) come in two layouts:
     #
@@ -240,17 +239,12 @@ def read(charm_root: Path) -> CharmMeta:
     #
     # Either layout: rule out ops.* / pebble.* / charmlibs.* features; the
     # scoring layer short-circuits to not-applicable.
-    has_reactive_indicator = (
-        (charm_root / "layer.yaml").is_file()
-        or (charm_root / "osci.yaml").is_file()
-    )
+    has_reactive_indicator = (charm_root / "layer.yaml").is_file() or (charm_root / "osci.yaml").is_file()
     reactive_dirs = (
         charm_root / "reactive",
         charm_root / "src" / "reactive",
     )
-    has_reactive_handlers = any(
-        d.is_dir() and any(d.rglob("*.py")) for d in reactive_dirs
-    )
+    has_reactive_handlers = any(d.is_dir() and any(d.rglob("*.py")) for d in reactive_dirs)
     is_reactive = has_reactive_indicator and has_reactive_handlers
 
     # Charmhub-hosted libraries vendored under lib/charms/<libname>/...
@@ -261,16 +255,11 @@ def read(charm_root: Path) -> CharmMeta:
             if entry.is_dir():
                 library_names.append(entry.name)
     library_count = len(library_names)
-    provides_own_library = bool(
-        charm_name and (lib_root / charm_name.replace("-", "_")).is_dir()
-    )
+    provides_own_library = bool(charm_name and (lib_root / charm_name.replace("-", "_")).is_dir())
 
     # Terraform module convention: a `terraform/` directory at root holding
     # the charm's published TF module. Some charms put .tf at root instead.
-    has_terraform_module = (
-        (charm_root / "terraform").is_dir()
-        or any(charm_root.glob("*.tf"))
-    )
+    has_terraform_module = (charm_root / "terraform").is_dir() or any(charm_root.glob("*.tf"))
 
     tooling: list[str] = []
     if (charm_root / "tox.ini").is_file():

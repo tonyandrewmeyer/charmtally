@@ -1,25 +1,34 @@
 """Scan one or more checked-out charm directories against the feature catalogue."""
+
 from __future__ import annotations
 
-import json
 import subprocess
 from dataclasses import asdict
 from pathlib import Path
 
 import yaml
 
-from .catalogue import Feature, Pattern, load as load_catalogue
-from .corpus import CharmRef
-from .detectors import Evidence, detect_feature
 from . import metadata, scoring
-
+from .catalogue import Feature, Pattern
+from .corpus import CharmRef
+from .detectors import detect_feature
 
 # Directory names a fan-out walk should never descend into when looking for
 # sub-charms. Vendored charm libs ship `charmcraft.yaml` files for the lib
 # itself; test fixtures sometimes do too. Both would inflate the fan-out.
 _FAN_OUT_SKIP_DIRS = {
-    "lib", "libs", "tests", "test", "node_modules", ".git", ".tox",
-    ".venv", "venv", "build", "dist", "vendor",
+    "lib",
+    "libs",
+    "tests",
+    "test",
+    "node_modules",
+    ".git",
+    ".tox",
+    ".venv",
+    "venv",
+    "build",
+    "dist",
+    "vendor",
 }
 
 
@@ -129,10 +138,7 @@ def find_charm_roots(repo_root: Path) -> list[Path]:
     root_charmcraft = repo_root / "charmcraft.yaml"
     root_metadata = repo_root / "metadata.yaml"
     root_is_bundle = root_charmcraft.is_file() and _is_bundle_charmcraft(root_charmcraft)
-    root_has_charm = (
-        (root_charmcraft.is_file() and not root_is_bundle)
-        or root_metadata.is_file()
-    )
+    root_has_charm = (root_charmcraft.is_file() and not root_is_bundle) or root_metadata.is_file()
     if root_has_charm:
         return [repo_root]
 

@@ -9,6 +9,7 @@ The catalogue has two top-level sections:
                     about the charm's overall structure that feed *into*
                     the scoring rules for features.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -37,6 +38,7 @@ class Feature:
 class Pattern:
     """An architectural pattern label. Same detector mechanics as Feature,
     but no library/scoring — patterns are descriptive, not prescriptive."""
+
     name: str
     summary: str
     scope: str
@@ -44,10 +46,7 @@ class Pattern:
 
 
 def _parse_detectors(raw: list[dict[str, Any]]) -> tuple[Detector, ...]:
-    return tuple(
-        Detector(kind=d["kind"], config={k: v for k, v in d.items() if k != "kind"})
-        for d in raw
-    )
+    return tuple(Detector(kind=d["kind"], config={k: v for k, v in d.items() if k != "kind"}) for d in raw)
 
 
 def load(path: Path) -> list[Feature]:

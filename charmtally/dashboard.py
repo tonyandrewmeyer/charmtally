@@ -9,16 +9,13 @@ charm-relative file path captured at scan time. We default to `main` as the
 ref since the spike doesn't capture commit SHAs yet (a v1+ improvement; see
 PLAN.md §9).
 """
+
 from __future__ import annotations
 
 import datetime as dt
-import json
 from pathlib import Path
 
 import jinja2
-
-from . import catalogue
-
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
 
@@ -40,13 +37,13 @@ def _exemplar(charm: dict, ref: str, evidence: list[dict]) -> dict:
 
 
 _ARCH_PRIORITY = (
-    "reactive",            # short-circuits all feature scoring; tracked separately
+    "reactive",  # short-circuits all feature scoring; tracked separately
     "component-graph",
     "reconcile-all",
     "reconcile",
     "unconditional-init",  # holistic-in-init
-    "part-reconcile",      # delta outside, holistic inside
-    "delta",               # implicit default
+    "part-reconcile",  # delta outside, holistic inside
+    "delta",  # implicit default
 )
 
 
@@ -76,10 +73,7 @@ def render(results: dict, features: list, ref: str = "main") -> str:
     feat_names = [f.name for f in features]
 
     # Pre-bucket each charm into its primary architecture (single pick).
-    arch_of_charm = {
-        c["name"]: _primary_arch(c["features"].get("__meta__", {}))
-        for c in charms
-    }
+    arch_of_charm = {c["name"]: _primary_arch(c["features"].get("__meta__", {})) for c in charms}
 
     # Feature view rows.
     feature_rows = []
@@ -93,9 +87,7 @@ def render(results: dict, features: list, ref: str = "main") -> str:
         # we can show "delta 60% (123/204)" alongside the corpus-wide totals.
         # Reactive charms are kept in their own bucket and reported as N/A
         # because every feature score short-circuits to not-applicable for them.
-        by_arch: dict[str, dict[str, int]] = {
-            a: {"present": 0, "total": 0} for a in _ARCH_PRIORITY
-        }
+        by_arch: dict[str, dict[str, int]] = {a: {"present": 0, "total": 0} for a in _ARCH_PRIORITY}
         for c in charms:
             rec = c["features"].get(fname, {})
             arch = arch_of_charm[c["name"]]
@@ -122,8 +114,11 @@ def render(results: dict, features: list, ref: str = "main") -> str:
                 continue
             if a == "reactive":
                 arch_adoption.append({
-                    "arch": a, "label": "n/a", "tooltip": f"{stats['total']} reactive charms — feature scoring N/A",
-                    "is_na": True, "pct": None,
+                    "arch": a,
+                    "label": "n/a",
+                    "tooltip": f"{stats['total']} reactive charms — feature scoring N/A",
+                    "is_na": True,
+                    "pct": None,
                 })
             else:
                 pct = 100 * stats["present"] // stats["total"]
@@ -169,7 +164,7 @@ def render(results: dict, features: list, ref: str = "main") -> str:
         elif architecture:
             arch_labels = architecture
         else:
-            arch_labels = ["delta"]   # implicit default
+            arch_labels = ["delta"]  # implicit default
         charm_rows.append({
             "name": c["name"],
             "team": c.get("team", ""),
@@ -197,15 +192,18 @@ def render(results: dict, features: list, ref: str = "main") -> str:
     team_acc: dict[str, dict] = {}
     for r in charm_rows:
         team = r["team"] or "(no team)"
-        bucket = team_acc.setdefault(team, {
-            "team": team,
-            "charms": 0,
-            "present": 0,
-            "clear_gap": 0,
-            "worth": 0,
-            "architecture": {},
-            "gap_features": {},
-        })
+        bucket = team_acc.setdefault(
+            team,
+            {
+                "team": team,
+                "charms": 0,
+                "present": 0,
+                "clear_gap": 0,
+                "worth": 0,
+                "architecture": {},
+                "gap_features": {},
+            },
+        )
         bucket["charms"] += 1
         bucket["present"] += r["present"]
         bucket["clear_gap"] += r["clear_gap"]
@@ -262,7 +260,6 @@ def render(results: dict, features: list, ref: str = "main") -> str:
             own_lib_count += 1
         if r["has_terraform_module"]:
             tf_count += 1
-    n = len(charm_rows) or 1
     summary = {
         "total": len(charm_rows),
         "k8s": k8s_count,

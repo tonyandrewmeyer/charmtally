@@ -1,9 +1,8 @@
 """Tests for monorepo fan-out and corpus overrides added for step 10."""
+
 from __future__ import annotations
 
 from pathlib import Path
-
-import pytest
 
 from ..corpus import CharmRef, CorpusOverrides, load_overrides
 from ..scan import find_charm_roots
@@ -38,10 +37,16 @@ class TestFindCharmRoots:
 
     def test_monorepo_nested_layers(self, tmp_path: Path) -> None:
         """Deeply nested charm layouts (e.g. bigtop's layer-* tree) fan out correctly."""
-        _make_charm(tmp_path / "pkg" / "src" / "charm" / "giraph" / "layer-giraph",
-                    charmcraft=False, metadata=True)
-        _make_charm(tmp_path / "pkg" / "src" / "charm" / "hadoop" / "layer-hadoop-plugin",
-                    charmcraft=False, metadata=True)
+        _make_charm(
+            tmp_path / "pkg" / "src" / "charm" / "giraph" / "layer-giraph",
+            charmcraft=False,
+            metadata=True,
+        )
+        _make_charm(
+            tmp_path / "pkg" / "src" / "charm" / "hadoop" / "layer-hadoop-plugin",
+            charmcraft=False,
+            metadata=True,
+        )
         roots = sorted(find_charm_roots(tmp_path))
         assert len(roots) == 2
 
@@ -55,8 +60,7 @@ class TestFindCharmRoots:
 
     def test_skips_tests_directory(self, tmp_path: Path) -> None:
         _make_charm(tmp_path / "charms" / "real")
-        _make_charm(tmp_path / "tests" / "fixtures" / "fake-charm",
-                    charmcraft=False, metadata=True)
+        _make_charm(tmp_path / "tests" / "fixtures" / "fake-charm", charmcraft=False, metadata=True)
         roots = find_charm_roots(tmp_path)
         assert roots == [tmp_path / "charms" / "real"]
 
@@ -97,8 +101,12 @@ class TestFindCharmRoots:
 
 def _ref(url: str, *, branch: str | None = None) -> CharmRef:
     return CharmRef(
-        team="x", name="charm", repo_url=url, key_charm=False,
-        branch=branch, notes="",
+        team="x",
+        name="charm",
+        repo_url=url,
+        key_charm=False,
+        branch=branch,
+        notes="",
     )
 
 
@@ -240,8 +248,10 @@ class TestFeatureExcludes:
                 },
             },
         )
-        assert ov.feature_skip_reason("https://example.com/shim-charm", "", "ops.pebble-ready") \
+        assert (
+            ov.feature_skip_reason("https://example.com/shim-charm", "", "ops.pebble-ready")
             == "shim — delegates upstream"
+        )
         assert ov.feature_skip_reason("https://example.com/shim-charm", "", "ops.secrets") is None
         assert ov.feature_skip_reason("https://example.com/other", "", "ops.pebble-ready") is None
 
@@ -255,8 +265,10 @@ class TestFeatureExcludes:
                 },
             },
         )
-        assert ov.feature_skip_reason("https://example.com/monorepo", "kubernetes", "ops.pebble-ready") \
+        assert (
+            ov.feature_skip_reason("https://example.com/monorepo", "kubernetes", "ops.pebble-ready")
             == "reconcile-all in sibling package"
+        )
         # different sub_path: no match
         assert ov.feature_skip_reason("https://example.com/monorepo", "machines", "ops.pebble-ready") is None
         # root-level lookup: no match
@@ -290,10 +302,7 @@ class TestFeatureExcludes:
         ov = load_overrides(root / "corpus-overrides.yaml")
         # mongodb-k8s and mysql-router-operators/kubernetes are the two known
         # shim FPs per CALIBRATION #9 follow-up.
+        assert ov.feature_skip_reason("https://github.com/canonical/mongodb-k8s-operator", "", "ops.pebble-ready")
         assert ov.feature_skip_reason(
-            "https://github.com/canonical/mongodb-k8s-operator", "", "ops.pebble-ready"
-        )
-        assert ov.feature_skip_reason(
-            "https://github.com/canonical/mysql-router-operators",
-            "kubernetes", "ops.pebble-ready"
+            "https://github.com/canonical/mysql-router-operators", "kubernetes", "ops.pebble-ready"
         )

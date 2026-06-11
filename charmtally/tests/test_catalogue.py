@@ -1,4 +1,5 @@
 """Tests for the architecture-pattern loader added with the architecture axis."""
+
 from __future__ import annotations
 
 from pathlib import Path

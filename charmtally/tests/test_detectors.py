@@ -1,5 +1,6 @@
 """Tests for the AST detector kinds added for the holistic-family
 architecture patterns (part-reconcile / unconditional-init)."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -30,7 +31,9 @@ def _write_charm(tmp_path: Path, code: str) -> Path:
 
 
 def test_ast_init_call_fires_on_reconcile_in_init(tmp_path: Path) -> None:
-    _write_charm(tmp_path, """
+    _write_charm(
+        tmp_path,
+        """
 class MyCharm:
     def __init__(self, framework):
         self.framework = framework
@@ -38,9 +41,9 @@ class MyCharm:
 
     def _reconcile(self):
         pass
-""")
-    ev = detect_feature(tmp_path, _feature("ast-init-call",
-                                          attrs=["_reconcile", "reconcile"]))
+""",
+    )
+    ev = detect_feature(tmp_path, _feature("ast-init-call", attrs=["_reconcile", "reconcile"]))
     assert len(ev) == 1
     assert ev[0].detector_kind == "ast-init-call"
     assert "_reconcile()" in ev[0].snippet
@@ -49,7 +52,9 @@ class MyCharm:
 def test_ast_init_call_no_match_when_reconcile_only_in_handler(tmp_path: Path) -> None:
     """A class that has _reconcile but only calls it from handlers (not init)
     is the part-reconcile pattern, not unconditional-init."""
-    _write_charm(tmp_path, """
+    _write_charm(
+        tmp_path,
+        """
 class MyCharm:
     def __init__(self, framework):
         self.framework = framework
@@ -59,23 +64,26 @@ class MyCharm:
 
     def _reconcile(self):
         pass
-""")
+""",
+    )
     ev = detect_feature(tmp_path, _feature("ast-init-call", attrs=["_reconcile"]))
     assert ev == []
 
 
 def test_ast_init_call_matches_any_attr_in_list(tmp_path: Path) -> None:
     """attrs config is a set; any one matching is enough."""
-    _write_charm(tmp_path, """
+    _write_charm(
+        tmp_path,
+        """
 class MyCharm:
     def __init__(self, framework):
         self._update_charm()
 
     def _update_charm(self):
         pass
-""")
-    ev = detect_feature(tmp_path, _feature("ast-init-call",
-                                          attrs=["_reconcile", "_update_charm"]))
+""",
+    )
+    ev = detect_feature(tmp_path, _feature("ast-init-call", attrs=["_reconcile", "_update_charm"]))
     assert len(ev) == 1
 
 
@@ -83,7 +91,9 @@ class MyCharm:
 
 
 def test_ast_shared_method_fires_at_min_callers(tmp_path: Path) -> None:
-    _write_charm(tmp_path, """
+    _write_charm(
+        tmp_path,
+        """
 class MyCharm:
     def __init__(self, framework):
         self.framework = framework
@@ -96,18 +106,19 @@ class MyCharm:
 
     def _reconcile(self):
         pass
-""")
-    ev = detect_feature(tmp_path, _feature("ast-shared-method",
-                                           attrs=["_reconcile"],
-                                           min_callers=2))
-    assert len(ev) == 2   # one evidence per qualifying caller
+""",
+    )
+    ev = detect_feature(tmp_path, _feature("ast-shared-method", attrs=["_reconcile"], min_callers=2))
+    assert len(ev) == 2  # one evidence per qualifying caller
     assert all(e.detector_kind == "ast-shared-method" for e in ev)
 
 
 def test_ast_shared_method_no_match_below_min_callers(tmp_path: Path) -> None:
     """Single handler delegating to reconcile isn't part-reconcile yet —
     that's just delta-with-helper."""
-    _write_charm(tmp_path, """
+    _write_charm(
+        tmp_path,
+        """
 class MyCharm:
     def __init__(self, framework): pass
     def _on_install(self, event):
@@ -115,17 +126,18 @@ class MyCharm:
     def _on_config_changed(self, event):
         pass
     def _reconcile(self): pass
-""")
-    ev = detect_feature(tmp_path, _feature("ast-shared-method",
-                                           attrs=["_reconcile"],
-                                           min_callers=2))
+""",
+    )
+    ev = detect_feature(tmp_path, _feature("ast-shared-method", attrs=["_reconcile"], min_callers=2))
     assert ev == []
 
 
 def test_ast_shared_method_ignores_non_handler_methods(tmp_path: Path) -> None:
     """helper methods named without the _on_ prefix don't count toward
     the caller threshold."""
-    _write_charm(tmp_path, """
+    _write_charm(
+        tmp_path,
+        """
 class MyCharm:
     def __init__(self, framework): pass
     def _helper_one(self):
@@ -135,17 +147,18 @@ class MyCharm:
     def _on_install(self, event):
         self._reconcile()
     def _reconcile(self): pass
-""")
-    ev = detect_feature(tmp_path, _feature("ast-shared-method",
-                                           attrs=["_reconcile"],
-                                           min_callers=2))
+""",
+    )
+    ev = detect_feature(tmp_path, _feature("ast-shared-method", attrs=["_reconcile"], min_callers=2))
     # Only 1 _on_* caller, below threshold even though two helpers also call.
     assert ev == []
 
 
 def test_ast_shared_method_custom_handler_re(tmp_path: Path) -> None:
     """The handler_re config lets the pattern match e.g. `_handle_*`."""
-    _write_charm(tmp_path, """
+    _write_charm(
+        tmp_path,
+        """
 class MyCharm:
     def __init__(self, framework): pass
     def _handle_install(self, event):
@@ -153,9 +166,10 @@ class MyCharm:
     def _handle_change(self, event):
         self._reconcile()
     def _reconcile(self): pass
-""")
-    ev = detect_feature(tmp_path, _feature("ast-shared-method",
-                                           attrs=["_reconcile"],
-                                           min_callers=2,
-                                           handler_re=r"^_handle_"))
+""",
+    )
+    ev = detect_feature(
+        tmp_path,
+        _feature("ast-shared-method", attrs=["_reconcile"], min_callers=2, handler_re=r"^_handle_"),
+    )
     assert len(ev) == 2

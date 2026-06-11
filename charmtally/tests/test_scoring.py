@@ -1,4 +1,5 @@
 """Unit tests for the rule-based scoring layer."""
+
 from __future__ import annotations
 
 import pytest
@@ -33,6 +34,7 @@ def _rel(name: str, role: str, interface: str = "") -> Relation:
 
 # ── pebble.checks ──────────────────────────────────────────────────────────────
 
+
 def test_pebble_checks_k8s_charm():
     s = score_absent("pebble.checks", {}, _meta(has_containers=True))
     assert s.label == SCORE_WORTH_CONSIDERING
@@ -45,6 +47,7 @@ def test_pebble_checks_machine_charm():
 
 # ── pebble.log-forwarding ──────────────────────────────────────────────────────
 
+
 def test_pebble_log_forwarding_no_rule_fires():
     # No rule defined — falls through to not-applicable.
     s = score_absent("pebble.log-forwarding", {}, _meta(has_containers=True))
@@ -52,6 +55,7 @@ def test_pebble_log_forwarding_no_rule_fires():
 
 
 # ── ops.pebble-ready ──────────────────────────────────────────────────────────
+
 
 def test_pebble_ready_absent_k8s_is_clear_gap():
     s = score_absent("ops.pebble-ready", {}, _meta(has_containers=True))
@@ -65,6 +69,7 @@ def test_pebble_ready_absent_machine_is_na():
 
 # ── ops.pebble-custom-notice ──────────────────────────────────────────────────
 
+
 def test_pebble_custom_notice_k8s():
     s = score_absent("ops.pebble-custom-notice", {}, _meta(has_containers=True))
     assert s.label == SCORE_WORTH_CONSIDERING
@@ -76,6 +81,7 @@ def test_pebble_custom_notice_machine():
 
 
 # ── ops.collect-status ────────────────────────────────────────────────────────
+
 
 def test_collect_status_direct_set_is_clear_gap():
     features = {"ops.status-set-directly": {"present": True}}
@@ -112,6 +118,7 @@ def test_collect_status_status_set_direct_beats_relation_check():
 
 # ── ops.secrets ───────────────────────────────────────────────────────────────
 
+
 def test_secrets_secret_like_config_is_clear_gap():
     meta = _meta(
         config_keys=("admin-password", "username"),
@@ -133,6 +140,7 @@ def test_secrets_empty_charm_is_na():
 
 
 # ── ops.relation-app-data ─────────────────────────────────────────────────────
+
 
 def test_relation_app_data_provides_is_worth_considering():
     meta = _meta(relations=(_rel("db", "provides", "pgsql"),))
@@ -159,15 +167,18 @@ def test_relation_app_data_no_relations_is_na():
 
 
 def test_relation_app_data_rationale_mentions_count():
-    meta = _meta(relations=(
-        _rel("db", "requires", "pgsql"),
-        _rel("ingress", "requires", "ingress"),
-    ))
+    meta = _meta(
+        relations=(
+            _rel("db", "requires", "pgsql"),
+            _rel("ingress", "requires", "ingress"),
+        )
+    )
     s = score_absent("ops.relation-app-data", {}, meta)
     assert "2" in s.rationale
 
 
 # ── jubilant.integration-tests ────────────────────────────────────────────────
+
 
 def test_jubilant_with_integration_tests_is_worth_considering():
     s = score_absent("jubilant.integration-tests", {}, _meta(has_integration_tests=True))
@@ -180,6 +191,7 @@ def test_jubilant_no_integration_tests_is_na():
 
 
 # ── ops.stored-state ──────────────────────────────────────────────────────────
+
 
 def test_stored_state_absent_is_na():
     # Absence is the desired state — no recommendation needed.
@@ -196,26 +208,36 @@ def test_stored_state_present_gets_migration_note():
 
 # ── annotate_present fallthrough ──────────────────────────────────────────────
 
+
 def test_annotate_present_returns_none_for_most_features():
     meta = _meta()
-    for feat in ("ops.secrets", "ops.collect-status", "pebble.checks",
-                 "jubilant.integration-tests", "charmlibs.data-platform"):
+    for feat in (
+        "ops.secrets",
+        "ops.collect-status",
+        "pebble.checks",
+        "jubilant.integration-tests",
+        "charmlibs.data-platform",
+    ):
         assert annotate_present(feat, meta) is None, f"unexpected note for {feat}"
 
 
 # ── unknown / uncovered features ─────────────────────────────────────────────
 
-@pytest.mark.parametrize("feature", [
-    "charmlibs.data-platform",
-    "charmlibs.observability",
-    "charmlibs.cos-agent",
-    "charmlibs.rolling-ops",
-    "ops.leader-events",
-    "ops.open-ports",
-    "ops.action-handlers",
-    "ops-scenario.unit-tests",
-    "pebble.restart-delay",
-])
+
+@pytest.mark.parametrize(
+    "feature",
+    [
+        "charmlibs.data-platform",
+        "charmlibs.observability",
+        "charmlibs.cos-agent",
+        "charmlibs.rolling-ops",
+        "ops.leader-events",
+        "ops.open-ports",
+        "ops.action-handlers",
+        "ops-scenario.unit-tests",
+        "pebble.restart-delay",
+    ],
+)
 def test_uncovered_feature_is_not_applicable(feature: str):
     s = score_absent(feature, {}, _meta())
     assert s.label == SCORE_NOT_APPLICABLE
@@ -224,15 +246,18 @@ def test_uncovered_feature_is_not_applicable(feature: str):
 # ── reactive charms ──────────────────────────────────────────────────────────
 
 
-@pytest.mark.parametrize("feature", [
-    "ops.pebble-ready",
-    "ops.collect-status",
-    "ops.secrets",
-    "ops.relation-app-data",
-    "pebble.checks",
-    "jubilant.integration-tests",
-    "charmlibs.observability",
-])
+@pytest.mark.parametrize(
+    "feature",
+    [
+        "ops.pebble-ready",
+        "ops.collect-status",
+        "ops.secrets",
+        "ops.relation-app-data",
+        "pebble.checks",
+        "jubilant.integration-tests",
+        "charmlibs.observability",
+    ],
+)
 def test_reactive_charm_short_circuits_to_not_applicable(feature: str):
     """A reactive charm gets NA for every feature, even those that would
     otherwise score clear-gap or worth-considering — the ops feature
@@ -255,16 +280,21 @@ def test_reactive_charm_short_circuits_to_not_applicable(feature: str):
 # ── architecture-axis short-circuits ─────────────────────────────────────────
 
 
-@pytest.mark.parametrize("architecture,expected_keyword", [
-    (["component-graph"], "component-graph"),
-    (["reconcile-all"], "reconcile-all"),
-    (["reconcile"], "reconcile-style"),
-    (["unconditional-init"], "unconditional-init"),
-    (["reconcile-all", "reconcile"], "reconcile-all"),  # reconcile-all wins (checked first)
-])
+@pytest.mark.parametrize(
+    "architecture,expected_keyword",
+    [
+        (["component-graph"], "component-graph"),
+        (["reconcile-all"], "reconcile-all"),
+        (["reconcile"], "reconcile-style"),
+        (["unconditional-init"], "unconditional-init"),
+        (["reconcile-all", "reconcile"], "reconcile-all"),  # reconcile-all wins (checked first)
+    ],
+)
 @pytest.mark.parametrize("feature", ["ops.pebble-ready", "ops.collect-status"])
 def test_architecture_short_circuits_feature_to_na(
-    architecture: list[str], expected_keyword: str, feature: str,
+    architecture: list[str],
+    expected_keyword: str,
+    feature: str,
 ):
     """A holistic / component-graph charm shouldn't get clear-gap on
     pebble-ready or collect-status — the framework or shared reconcile

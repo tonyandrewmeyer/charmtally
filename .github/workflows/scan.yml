@@ -42,7 +42,9 @@ jobs:
           python-version: "3.12"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@caf0cab7a618c569241d31dcd442f54681755d39  # v3
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39  # v8.2.0
+        with:
+          enable-cache: true
 
       # Persist the charm clone tree across runs. Cache key includes the
       # corpus CSV + overrides hash so that adding/removing a row gets a
