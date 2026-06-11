@@ -1,0 +1,83 @@
+# Per-row overrides for may-2026.csv applied by `charmtally scan`.
+#
+# Four kinds of override:
+#
+#   exclude:             skip the row with a recorded reason. The reason is
+#                        surfaced in results.json's __skipped__ block.
+#   branch_overrides:    clone the named branch instead of the repo's default
+#                        branch. Use for repos where the default branch is
+#                        docs-only or otherwise doesn't contain charm code.
+#   sub_charm_excludes:  for monorepos, skip specific sub-charms after fan-out.
+#                        Use when a repo's CSV row points at one example charm
+#                        but the repo also ships other sub-charms that aren't
+#                        meant to be evaluated (e.g. test fixtures).
+#   feature_excludes:    force a specific (charm, feature) pair to
+#                        not-applicable. Use for known shim-charm FPs where
+#                        the detector can't see through the abstraction
+#                        (CALIBRATION #9). Optional `sub_path:` for monorepos.
+#
+# Sourced from non-roadmap/charmtally/CORPUS-TRIAGE.md §"not-a-charm",
+# §"unreachable", §"scan-failure-other", and CALIBRATION.md §6 / §9.
+
+exclude:
+  # not-a-charm: upstream source mirror / bundle / non-charm repo
+  - url: https://github.com/kubernetes/kubernetes
+    reason: not-a-charm — upstream Kubernetes source mirror
+  - url: https://github.com/canonical/etcd-operator
+    reason: not-a-charm — no charmcraft.yaml/metadata.yaml at root or in charms/ subdirs
+  - url: https://github.com/charmed-kubernetes/bundle
+    reason: not-a-charm — bundle, not a charm
+  - url: https://git.launchpad.net/landscape-client
+    reason: not-a-charm — Landscape client source, not a charm
+  - url: https://opendev.org/openstack/charm-neutron-api-odl
+    reason: not-a-charm — abandoned ODL stub
+  - url: https://opendev.org/openstack/charm-odl-controller
+    reason: not-a-charm — abandoned ODL stub
+  - url: https://opendev.org/openstack/charm-openvswitch-odl
+    reason: not-a-charm — abandoned ODL stub
+
+  # unreachable: git ls-remote failed
+  - url: https://github.com/canonical/bundle-jupyter/issues/
+    reason: unreachable — repo not found (URL is an issues-page link)
+  - url: https://code.launchpad.net/landscape-bundles/+git
+    reason: unreachable — repo not found
+  - url: https://code.launchpad.net/~ubuntu-repository-cache-charmers/ubuntu-repository-cache/layer-ubuntu-repository-cache
+    reason: unreachable — auth-required / 404
+  - url: https://git.launchpad.net/charm-ovn-chassis
+    reason: unreachable — auth-required / 404
+  - url: https://git.launchpad.net/charm-ovn-dedicated-chassis
+    reason: unreachable — auth-required / 404
+
+branch_overrides:
+  # mysql-* family: default branch is "readme" (docs-only); charm code lives on "main".
+  - url: https://github.com/canonical/mysql-operator
+    branch: main
+  - url: https://github.com/canonical/mysql-k8s-operator
+    branch: main
+  - url: https://github.com/canonical/mysql-router-operator
+    branch: main
+  - url: https://github.com/canonical/mysql-router-k8s-operator
+    branch: main
+
+sub_charm_excludes:
+  # benhoyt/test-charms is in the corpus as "webapp (example charm)" — the
+  # webapp sub-charm is the documented example. The repo also ships three
+  # minimal test fixtures (statustest, noticestest, database) that exercise
+  # specific ops APIs and aren't meant to be migration targets.
+  # Surfaced by CALIBRATION.md §6 (noticestest flagged as missing pebble-ready).
+  - url: https://github.com/benhoyt/test-charms/
+    sub_paths: [statustest, noticestest, database]
+    reason: test fixture — not a production charm (only webapp is the example)
+
+feature_excludes:
+  # CALIBRATION #9: shim charms where the actual pebble-ready handler lives
+  # outside the scanner's reach. Audited in rounds R2/R3 — kept off the
+  # clear-gap list with a documented reason rather than continuing to flag
+  # them every scan.
+  - url: https://github.com/canonical/mongodb-k8s-operator
+    features: [ops.pebble-ready]
+    reason: shim — charm.py delegates to single_kernel_mongo.abstract_charm.AbstractMongoCharm; event wiring lives in the upstream library
+  - url: https://github.com/canonical/mysql-router-operators
+    sub_path: kubernetes
+    features: [ops.pebble-ready]
+    reason: reconcile-all pattern in sibling mysql-router-operators/common/abstract_charm.py — outside the sub-charm's src/, not visible to the per-charm scanner

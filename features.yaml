@@ -1,0 +1,547 @@
+# Feature catalogue v1 — detection recipes for the feature-adoption scan.
+#
+# Schema (per feature):
+#   name:         dotted identifier, used as the key everywhere downstream
+#   library:      ops | pebble | ops-scenario | jubilant | charmlibs
+#   summary:      one line, shown in the dashboard
+#   scope:        src | tests | any  — which file tree to scan
+#   detect:       list of detectors; ANY match counts as "present"
+#                 each detector has a `kind` and kind-specific fields:
+#                   import:        module (str) + optional names (list)
+#                   observe-event: event class name(s)
+#                   call:          dotted attribute call (e.g. unit.open_port)
+#                   yaml-key:      key path in a yaml literal under `files`
+#                   regex:         raw pattern (last resort; prefer AST)
+#   added-in:     ops/pebble/etc version the feature first shipped in
+#                 (best-effort; informational, not used by the extractor)
+#   notes:        free text — caveats, false-positive risks
+#
+# Sanity-check status per feature:
+#   verified: [<charm>, <charm>] — feature found cleanly in these charms
+#   negative: [<charm>]          — feature absent (no false positive)
+# Empty lists = not yet checked.
+
+version: 1
+
+features:
+
+  - name: ops.collect-status
+    library: ops
+    summary: Charm observes CollectStatusEvent for app/unit status aggregation.
+    scope: src
+    detect:
+      - kind: observe-event
+        events: [CollectAppStatusEvent, CollectUnitStatusEvent, CollectStatusEvent]
+      - kind: import
+        module: charmed_kubeflow_chisme.components
+      - kind: import
+        module: ops_sunbeam
+      - kind: import
+        module: coordinated_workers
+    added-in: ops 2.5
+    notes: |
+      Library-mediated status handling is detected as positive evidence
+      (CALIBRATION #10, extended #11):
+        - `charmed_kubeflow_chisme.components` charms manage status through
+          the `CharmReconciler`/component framework, not via direct
+          `unit.status = ...` assignment or an explicit collect-status
+          observer.
+        - `ops_sunbeam` (any sub-module) charms inherit a base operator
+          class that aggregates status across handlers.
+        - `coordinated_workers` (Observability CCA framework — tempo,
+          parca, mimir, loki) — `Coordinator`/`Worker` base classes
+          handle status as part of the reconcile cycle.
+      In both cases the charm is using status idiomatically for its
+      framework; flagging clear-gap on "has integrations" would be wrong.
+    verified: []
+    negative: []
+
+  - name: ops.status-set-directly
+    library: ops
+    summary: Charm sets unit/app status via direct assignment rather than CollectStatusEvent.
+    scope: src
+    detect:
+      - kind: regex
+        pattern: '\.(unit|app)\.status\s*='
+    notes: |
+      Charms with this present and `ops.collect-status` absent are strong
+      `clear-gap` candidates for adopting collect-status. Used by the scoring
+      layer to strengthen the collect-status signal.
+    verified: []
+    negative: []
+
+  - name: ops.secrets
+    library: ops
+    summary: Charm uses the Juju secrets API.
+    scope: src
+    detect:
+      - kind: call
+        attr: model.get_secret
+      - kind: call
+        attr: app.add_secret
+      - kind: call
+        attr: unit.add_secret
+      - kind: import
+        module: ops
+        names: [Secret]
+    added-in: ops 2.0 (Juju 3.0)
+    notes: |
+      A test-only construction of Secret should not count — keep scope: src.
+      `model.get_secret(` is the strongest signal; bare `Secret` import alone
+      is weaker but acceptable for v1.
+    verified: []
+    negative: []
+
+  - name: ops.stored-state
+    library: ops
+    summary: Charm declares StoredState.
+    scope: src
+    detect:
+      - kind: call
+        attr: StoredState
+      - kind: import
+        module: ops
+        names: [StoredState]
+    notes: |
+      Presence is a flag for *migration away from*, not adoption — handled
+      specially by the scoring layer (see PLAN.md §C).
+    verified: []
+    negative: []
+
+  - name: ops.relation-app-data
+    library: ops
+    summary: Charm reads/writes application-scope relation data.
+    scope: src
+    detect:
+      - kind: regex
+        pattern: 'relation\.data\[\s*(self\.app|event\.app|self\.model\.app|relation\.app|event\.relation\.app)\s*\]'
+    notes: |
+      Regex because the subscript form is hard to express as a call pattern.
+      Covers both writer-side reads (`self.app`/`event.app`) and remote-side
+      reads (`relation.app`, the canonical form when a requirer reads
+      provider app data). 2026-05-26 spike found `relation.app` is the
+      most-common form across the corpus slice — without it the detector
+      under-counted significantly.
+      Still misses aliased references (`app = self.app; relation.data[app]`);
+      acceptable for v1.
+    verified: []
+    negative: []
+
+  - name: ops.pebble-ready
+    library: ops
+    summary: Charm observes PebbleReadyEvent.
+    scope: src
+    detect:
+      - kind: observe-event
+        events: [PebbleReadyEvent]
+      - kind: regex
+        pattern: '\bon\.[a-zA-Z_][a-zA-Z0-9_]*_pebble_ready\b'
+      - kind: regex
+        pattern: '\bon\[\s*[^\]]+\s*\]\.pebble_ready\b'
+      - kind: regex
+        pattern: 'getattr\s*\(\s*[^,)]+\.on\s*,\s*[''"][a-zA-Z_][a-zA-Z0-9_]*_pebble_ready[''"]'
+      - kind: regex
+        pattern: 'self\.on\.events\(\)'
+      - kind: import
+        module: charmed_kubeflow_chisme.components
+      - kind: import
+        module: ops_sunbeam
+      - kind: import
+        module: coordinated_workers
+    notes: |
+      Four real-world forms:
+        - `observe(self.on.<container>_pebble_ready, ...)`  (attribute)
+        - `observe(self.on['<container>'].pebble_ready, ...)` (literal subscript)
+        - `observe(self.on[var].pebble_ready, ...)` (variable subscript — used
+          when the container name is computed at __init__ time, e.g. airbyte)
+        - `observe(getattr(self.on, "<container>_pebble_ready"), ...)`
+          (getattr form, used by some monorepo frameworks, e.g. kafka-k8s)
+      The event is always per-container — the class-name detector almost
+      never fires. Regex matches the `on.X` token alone (not the surrounding
+      `observe(...)`) because the call arguments can span multiple lines and
+      contain comments with stray parens, which a non-balancing regex can't
+      traverse safely.
+
+      Library-mediated handling is detected as positive evidence:
+        - `charmed_kubeflow_chisme.components` (Kubeflow chisme provides a
+          `PebbleServiceComponent` that subscribes to pebble-ready internally)
+        - `ops_sunbeam` (any sub-module — Sunbeam base classes
+          `WSGIPebbleHandler`/`ServicePebbleHandler` and their OVN variants
+          `ops_sunbeam.ovn.container_handlers.*` all wire up pebble-ready
+          internally; widened from a single sub-path per CALIBRATION #7)
+      The reconcile-all idiom
+      `for ev in self.on.events().values(): self.framework.observe(ev, ...)`
+      (mysql-router-{k8s,}-operator) also subscribes to pebble-ready without
+      ever naming the event, so we accept `self.on.events()` as evidence of
+      presence (CALIBRATION #8).
+
+      A charm using any of these patterns is handling pebble-ready properly,
+      even if no direct `observe(... pebble_ready ...)` call appears in src/.
+    verified: []
+    negative: []
+
+  - name: ops.pebble-custom-notice
+    library: ops
+    summary: Charm observes PebbleCustomNoticeEvent.
+    scope: src
+    detect:
+      - kind: observe-event
+        events: [PebbleCustomNoticeEvent]
+      - kind: regex
+        pattern: '\bon\.[a-zA-Z_][a-zA-Z0-9_]*_pebble_custom_notice\b'
+      - kind: regex
+        pattern: '\bon\[\s*[^\]]+\s*\]\.pebble_custom_notice\b'
+      - kind: regex
+        pattern: 'getattr\s*\(\s*[^,)]+\.on\s*,\s*[''"][a-zA-Z_][a-zA-Z0-9_]*_pebble_custom_notice[''"]'
+    added-in: ops 2.9
+    notes: |
+      Per-container, same shape as pebble_ready — attribute form, literal
+      and variable subscript forms, and the `getattr(self.on, "X_pebble_custom_notice")`
+      form are all covered.
+    verified: []
+    negative: []
+
+  - name: ops.leader-events
+    library: ops
+    summary: Charm observes leadership transition events.
+    scope: src
+    detect:
+      - kind: observe-event
+        events: [LeaderElectedEvent, LeaderSettingsChangedEvent]
+    verified: []
+    negative: []
+
+  - name: ops.open-ports
+    library: ops
+    summary: Charm opens ports via the unit API (not metadata.yaml).
+    scope: src
+    detect:
+      - kind: call
+        attr: unit.open_port
+      - kind: call
+        attr: unit.set_ports
+      - kind: call
+        attr: _unit.open_port
+      - kind: call
+        attr: _unit.set_ports
+    notes: |
+      Charms that wrap ops primitives in helper classes commonly store
+      the unit reference as `self._unit` (private convention), which the
+      `unit.open_port` suffix matcher misses. 2026-05-26 spike found this
+      in kratos-operator. Underscore-prefixed variants added.
+    verified: []
+    negative: []
+
+  - name: ops.action-handlers
+    library: ops
+    summary: Charm observes at least one ActionEvent.
+    scope: src
+    detect:
+      - kind: observe-event
+        events: [ActionEvent]
+      - kind: regex
+        pattern: '\bon\.[a-zA-Z_][a-zA-Z0-9_]*_action\b'
+      - kind: regex
+        pattern: '\bon\[\s*[^\]]+\s*\]\.action\b'
+      - kind: regex
+        pattern: 'getattr\s*\(\s*[^,)]+\.on\s*,\s*[''"][a-zA-Z_][a-zA-Z0-9_]*_action[''"]'
+    notes: |
+      Three real-world forms: `self.on.<name>_action` (attribute),
+      `self.on[<expr>].action` (subscript — literal or variable; the
+      latter used when action names are computed from config), and
+      `getattr(self.on, "<name>_action")`. The ActionEvent class itself
+      is rarely referenced directly.
+    verified: []
+    negative: []
+
+  - name: pebble.checks
+    library: pebble
+    summary: Charm defines pebble layer checks.
+    scope: src
+    detect:
+      - kind: import
+        module: ops.pebble
+        names: [CheckDict, Check]
+      - kind: yaml-key
+        files: ["**/*.yaml", "**/*.yml"]
+        key: checks
+      - kind: regex
+        pattern: '(?<![a-zA-Z_])["'']?checks["'']?\s*:\s*(?:[{\[]|$)'
+    notes: |
+      Pebble layers are built inline as Python dicts (`"checks": {...}`) at
+      least as often as in yaml files, so the regex matches both: quoted or
+      unquoted `checks:` followed by `{`, `[`, or end-of-line. The negative
+      lookbehind avoids matching `health_checks:` and similar suffixes.
+    verified: []
+    negative: []
+
+  - name: pebble.log-forwarding
+    library: pebble
+    summary: Charm configures pebble log targets.
+    scope: src
+    detect:
+      - kind: import
+        module: ops.pebble
+        names: [LogTarget]
+      - kind: regex
+        pattern: '\blog[-_]targets\s*:'
+    verified: []
+    negative: []
+
+  - name: pebble.restart-delay
+    library: pebble
+    summary: Charm tunes pebble service restart/backoff timing.
+    scope: src
+    detect:
+      - kind: regex
+        pattern: '\b(restart[-_]delay|backoff[-_]delay|backoff[-_]factor)\s*:'
+    verified: []
+    negative: []
+
+  - name: ops-scenario.unit-tests
+    library: ops-scenario
+    summary: Unit tests use ops.testing (Scenario or Harness — either form).
+    scope: tests
+    detect:
+      - kind: import
+        module: scenario
+      - kind: import
+        module: ops.testing
+        names: [Harness, Context, State]
+      - kind: import
+        module: ops
+        names: [testing]
+    notes: |
+      Aggregate "has ops.testing unit tests" signal — kept for backwards
+      compatibility with v1 dashboards. The two sub-features below
+      (`.harness` and `.scenario`) split this into the migration-relevant
+      forms; prefer those for actionable scoring.
+      The `from ops import testing` variant catches the common module-
+      import form (`testing.Context(...)` after a bare module import),
+      which the 2026-05-26 spike found is widely used and was previously
+      missed (discourse-k8s uses both APIs simultaneously).
+
+  - name: ops-scenario.unit-tests.harness
+    library: ops-scenario
+    summary: Unit tests use the legacy `ops.testing.Harness` API.
+    scope: tests
+    detect:
+      - kind: import
+        module: ops.testing
+        names: [Harness]
+    notes: |
+      The pre-Scenario API. A charm with `.harness` present and
+      `.scenario` absent is a candidate for the Harness→Scenario
+      migration; surface as a distinct dashboard gap.
+    verified: []
+    negative: []
+
+  - name: ops-scenario.unit-tests.scenario
+    library: ops-scenario
+    summary: Unit tests use the modern `ops.testing` Scenario API (Context/State).
+    scope: tests
+    detect:
+      - kind: import
+        module: scenario
+      - kind: import
+        module: ops.testing
+        names: [Context, State]
+      - kind: import
+        module: ops
+        names: [testing]
+    notes: |
+      Modern Scenario API — `Context`, `State`, or the bare `testing`
+      module import (used as `testing.Context(...)`). The bare-module
+      import alone doesn't strictly confirm Scenario use, but combined
+      with `testing.Context(` in the file it is the right signal —
+      acceptable imprecision for v1.
+    verified: []
+    negative: []
+
+  - name: jubilant.integration-tests
+    library: jubilant
+    summary: Integration tests use jubilant.
+    scope: tests
+    detect:
+      - kind: import
+        module: jubilant
+    verified: []
+    negative: []
+
+  - name: charmlibs.data-platform
+    library: charmlibs
+    summary: Charm imports the data-platform charm library.
+    scope: src
+    detect:
+      - kind: import
+        module: charms.data_platform_libs
+    verified: []
+    negative: []
+
+  - name: charmlibs.observability
+    library: charmlibs
+    summary: Charm imports observability_libs.
+    scope: src
+    detect:
+      - kind: import
+        module: charms.observability_libs
+    verified: []
+    negative: []
+
+  - name: charmlibs.cos-agent
+    library: charmlibs
+    summary: Charm integrates with the grafana-agent / COS agent (consumer side).
+    scope: src
+    detect:
+      - kind: import
+        module: charms.grafana_agent
+        names: [COSAgentProvider]
+    notes: |
+      The lib defines `COSAgentProvider` (consumer side — machine charms
+      that expose metrics to grafana-agent) and `COSAgentRequirer`
+      (provider side — grafana-agent itself receives via Requirer). The
+      2026-05-26 spike showed that matching any `charms.grafana_agent`
+      import produced a semantic false positive on `grafana-agent-operator`
+      itself, which imports `COSAgentRequirer` because it is the target
+      of integration. Pinning the import name to `COSAgentProvider`
+      restricts detection to the consumer side, which is the intended
+      "this charm integrates with COS" signal.
+      Post-processing should additionally exclude charms whose repo
+      provides the lib (i.e. has `lib/charms/grafana_agent/`) — belt and
+      braces.
+    verified: []
+    negative: []
+
+  - name: charmlibs.rolling-ops
+    library: charmlibs
+    summary: Charm uses the rolling-ops library for coordinated restarts.
+    scope: src
+    detect:
+      - kind: import
+        module: charms.rolling_ops
+    verified: []
+    negative: []
+
+  - name: python.lightkube
+    library: python
+    summary: Charm uses lightkube to talk to the Kubernetes API.
+    scope: src
+    detect:
+      - kind: import
+        module: lightkube
+    notes: |
+      Strong proxy for "needs --trust at deploy time" — lightkube is the
+      idiomatic ops-charm way to manage cluster-scope k8s resources, which
+      requires RBAC permissions that --trust grants.
+    verified: []
+    negative: []
+
+  - name: python.pydantic
+    library: python
+    summary: Charm uses pydantic for typed config / relation-data models.
+    scope: src
+    detect:
+      - kind: import
+        module: pydantic
+    notes: |
+      Modern-stack signal. Commonly paired with ops typed-relation API
+      (Relation.load / .save) where pydantic models the schema.
+    verified: []
+    negative: []
+
+  - name: ops.typed-relation
+    library: ops
+    summary: Charm uses ops Relation.load / Relation.save typed-relation API.
+    scope: src
+    detect:
+      - kind: regex
+        pattern: '\b\w+\.(load|save)\s*\(\s*[^,)]+,\s*[A-Z]\w+'
+    notes: |
+      Matches the `.load(relation, ModelClass)` / `.save(relation, ModelClass)`
+      shape used by ops typed-relation API. Could over-match on unrelated
+      methods (e.g. `json.load(fp, SomeClass)` isn't a thing in stdlib but
+      framework-style `.load(x, Cls)` calls in tests might trip). Strong
+      enough for v1; tighten if calibration shows FPs.
+    verified: []
+    negative: []
+
+# ── architecture patterns ──────────────────────────────────────────────────────
+#
+# Architectural-style labels, orthogonal to per-API features. Detected per charm
+# (any number of patterns can match — most charms will match one). Surfaced in
+# the per-charm __meta__ block as `architecture: [name, ...]` and consumed by
+# the scoring layer to make per-API gap rules architecture-aware.
+#
+# Terminology follows the ops docs:
+#   https://documentation.ubuntu.com/ops/latest/explanation/holistic-vs-delta-charms/
+#
+# Default style is `delta` (one handler per event). Charms that don't match any
+# pattern below are implicitly delta — there's no `delta` entry because absence
+# is the signal.
+
+architecture:
+  # The holistic family decomposes into four sub-styles (see PLAN.md
+  # "Patterns to recognise"). v1 implements the two that are
+  # regex-detectable; `part-reconcile` and `unconditional-init` need a
+  # new AST-based detector kind and are listed as TODO below.
+
+  - name: reconcile-all
+    summary: |
+      Holistic: listens to EVERY event and routes them all to one shared
+      handler — `for ev in self.on.events().values(): observe(ev, ...)`.
+      Purest form of the holistic discipline. Examples:
+      mysql-router-{k8s,}-operator.
+    scope: src
+    detect:
+      - kind: regex
+        pattern: 'self\.on\.events\(\)'
+
+  - name: reconcile
+    summary: |
+      Holistic: listens to a SPECIFIC SET of events with a single shared
+      handler (named `_reconcile` / `reconcile`). Multiple discrete
+      observe() calls bound to the same handler; no event-iteration loop.
+    scope: src
+    detect:
+      - kind: regex
+        pattern: 'framework\.observe\(\s*[^,]+,\s*self\._?reconcile\b'
+
+  - name: part-reconcile
+    summary: |
+      Mixed holistic/delta: per-event `_on_*` handlers each delegate
+      into a shared reconcile method (`self._reconcile()` /
+      `self._update_charm()` / similar). Delta on the outside, holistic
+      in the middle. Fires when ≥2 handler methods in one class body
+      call into the shared method.
+    scope: src
+    detect:
+      - kind: ast-shared-method
+        attrs: [_reconcile, reconcile, _update_charm, _reconcile_charm, _do_reconcile]
+        min_callers: 2
+
+  - name: unconditional-init
+    summary: |
+      Charm calls `self._reconcile()` (or equivalent) directly in
+      __init__. Since the charm is re-instantiated for every event,
+      this effectively runs reconcile on every invocation — a holistic
+      pattern hidden in the constructor rather than the observer wiring.
+    scope: src
+    detect:
+      - kind: ast-init-call
+        attrs: [_reconcile, reconcile, _update_charm, _reconcile_charm, _do_reconcile]
+
+  - name: component-graph
+    summary: |
+      Charm uses a framework that wires pebble/status/relations into a
+      declarative component graph rather than per-event handlers. Three
+      known frameworks: charmed_kubeflow_chisme.components (Kubeflow),
+      ops_sunbeam.* (OpenStack sunbeam), coordinated_workers.* (Observability
+      CCA — tempo, parca-coordinator, mimir, loki).
+    scope: src
+    detect:
+      - kind: import
+        module: charmed_kubeflow_chisme.components
+      - kind: import
+        module: ops_sunbeam
+      - kind: import
+        module: coordinated_workers

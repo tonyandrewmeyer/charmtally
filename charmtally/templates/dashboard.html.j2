@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>charmtally — charm feature adoption</title>
+<style>
+  body { font: 14px/1.4 system-ui, sans-serif; margin: 2em; max-width: 1600px; }
+  h1 { margin-bottom: 0; }
+  .meta { color: #666; font-size: 12px; margin-bottom: 1.5em; }
+  table { border-collapse: collapse; margin-bottom: 3em; }
+  th, td { border: 1px solid #ddd; padding: 4px 8px; text-align: left; vertical-align: top; }
+  th { background: #f4f4f4; cursor: pointer; user-select: none; }
+  th:hover { background: #e8e8e8; }
+  th.sorted-asc::after { content: " ▲"; color: #888; }
+  th.sorted-desc::after { content: " ▼"; color: #888; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .gap { color: #b00; font-weight: 600; }
+  .worth { color: #b67; }
+  .ok { color: #060; }
+  .lib-ops { color: #036; }
+  .lib-pebble { color: #063; }
+  .lib-jubilant { color: #630; }
+  .lib-ops-scenario { color: #306; }
+  .lib-charmlibs { color: #444; }
+  .lib-python { color: #408; }
+  details { margin-top: 1em; }
+  details summary { cursor: pointer; color: #06b; }
+  .ev { font-family: ui-monospace, monospace; font-size: 12px; color: #444; }
+  .ev a { color: #06b; text-decoration: none; }
+  .ev a:hover { text-decoration: underline; }
+  nav a { margin-right: 1em; }
+
+  /* Architecture / stack chips on charm rows */
+  .chip {
+    display: inline-block; font-size: 11px; line-height: 1; padding: 3px 7px;
+    border-radius: 9px; background: #eef; color: #224; margin-right: 4px;
+    margin-bottom: 2px; white-space: nowrap;
+  }
+  .chip-arch-delta              { background: #f0f0f0; color: #555; }
+  .chip-arch-part-reconcile     { background: #fdf0d8; color: #7a5600; }
+  .chip-arch-unconditional-init { background: #fde4c0; color: #7a4a00; }
+  .chip-arch-reconcile          { background: #fde8c0; color: #6a4000; }
+  .chip-arch-reconcile-all      { background: #fbd590; color: #6a4000; }
+  .chip-arch-component-graph    { background: #d8e8ff; color: #154; }
+  .chip-arch-reactive           { background: #fbe0e6; color: #802040; }
+  .chip-flag                  { background: #e8f4e8; color: #145; }
+  .stack {
+    font-family: ui-monospace, monospace; font-size: 11.5px; color: #444;
+    white-space: nowrap;
+  }
+  .stack .sep { color: #aaa; margin: 0 4px; }
+
+  /* Top-of-page summary widget */
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1em;
+    margin: 1em 0 2em 0;
+  }
+  .summary section {
+    border: 1px solid #ddd; border-radius: 4px; padding: .6em .9em;
+    background: #fafafa;
+  }
+  .summary h3 { margin: 0 0 .3em 0; font-size: 13px; color: #335;
+                text-transform: uppercase; letter-spacing: .5px; }
+  .summary dl { margin: 0; font-size: 13px; }
+  .summary dt { display: inline-block; min-width: 8em; color: #555; }
+  .summary dd { display: inline; margin-left: .4em; color: #112;
+                font-variant-numeric: tabular-nums; }
+  .summary dd::after { content: ""; display: block; }
+  .summary .pct { color: #678; font-size: 11px; margin-left: .4em; }
+
+  /* Filter bar above the charm view */
+  .filters {
+    display: flex; flex-wrap: wrap; gap: .4em .8em;
+    align-items: center; margin: 0 0 .8em 0;
+    font-size: 12px;
+  }
+  .filters .label { color: #555; text-transform: uppercase;
+                    letter-spacing: .5px; font-weight: 600; }
+  .filters button {
+    border: 1px solid #ccc; background: #fff; color: #333;
+    padding: 3px 9px; border-radius: 9px; cursor: pointer;
+    font: inherit;
+  }
+  .filters button:hover { background: #f4f4f4; }
+  .filters button.active { background: #224; color: #fff; border-color: #224; }
+  .filters .group { display: flex; gap: .3em; }
+  .filters .visible-count { margin-left: auto; color: #777; }
+  .filters input[type="search"] {
+    border: 1px solid #ccc; border-radius: 9px;
+    padding: 3px 10px; font: inherit; min-width: 14em;
+  }
+  .filters input[type="search"]:focus { outline: 2px solid #ace; outline-offset: -1px; }
+  tr.hidden { display: none; }
+
+  /* Per-architecture adoption pill in the feature view. */
+  .arch-pct {
+    display: inline-flex; align-items: baseline; gap: 4px;
+    font-size: 11px; padding: 2px 7px; border-radius: 9px;
+    background: #f0f0f0; color: #335; margin: 0 4px 2px 0;
+    white-space: nowrap;
+  }
+  .arch-pct .name { color: #678; }
+  .arch-pct .pct { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .arch-pct .pct-hi { color: #060; }
+  .arch-pct .pct-mid { color: #b67; }
+  .arch-pct .pct-lo { color: #b00; }
+  .arch-pct .pct-na { color: #888; font-weight: 400; }
+</style>
+</head>
+<body>
+
+<h1>charmtally</h1>
+<p class="tagline">A feature-adoption survey of the Canonical charm fleet.</p>
+<p class="meta">
+  Scanned {{ charms|length }} charm{{ "" if charms|length == 1 else "s" }}
+  against {{ features|length }} features.
+  {% if generated_at %}Generated {{ generated_at }}.{% endif %}
+</p>
+
+<nav>
+  <a href="#summary">Summary</a>
+  <a href="#feature-view">Feature view</a>
+  <a href="#charm-view">Charm view</a>
+  <a href="#team-view">Team view</a>
+</nav>
+
+{% if summary %}
+<section id="summary" class="summary">
+  <section>
+    <h3>Architecture</h3>
+    <dl>
+      {% for name, n in summary.architecture %}
+        <dt><span class="chip chip-arch-{{ name }}">{{ name }}</span></dt>
+        <dd>{{ n }}<span class="pct">{{ (100 * n / summary.total)|round(0, 'floor')|int }}%</span></dd>
+      {% endfor %}
+    </dl>
+  </section>
+  <section>
+    <h3>Shape</h3>
+    <dl>
+      <dt>k8s</dt><dd>{{ summary.k8s }}<span class="pct">{{ (100 * summary.k8s / summary.total)|round(0, 'floor')|int }}%</span></dd>
+      <dt>machine</dt><dd>{{ summary.machine }}<span class="pct">{{ (100 * summary.machine / summary.total)|round(0, 'floor')|int }}%</span></dd>
+      <dt>reactive</dt><dd>{{ summary.reactive }}<span class="pct">{{ (100 * summary.reactive / summary.total)|round(0, 'floor')|int }}%</span></dd>
+      <dt>lib provider</dt><dd>{{ summary.own_library }}<span class="pct">{{ (100 * summary.own_library / summary.total)|round(0, 'floor')|int }}%</span></dd>
+      <dt>terraform mod</dt><dd>{{ summary.terraform }}<span class="pct">{{ (100 * summary.terraform / summary.total)|round(0, 'floor')|int }}%</span></dd>
+    </dl>
+  </section>
+  <section>
+    <h3>Charmcraft plugin</h3>
+    <dl>
+      {% for name, n in summary.plugins[:6] %}
+        <dt>{{ name }}</dt><dd>{{ n }}</dd>
+      {% endfor %}
+    </dl>
+  </section>
+  <section>
+    <h3>Base</h3>
+    <dl>
+      {% for name, n in summary.bases %}
+        <dt>{{ name }}</dt><dd>{{ n }}</dd>
+      {% endfor %}
+    </dl>
+  </section>
+  <section>
+    <h3>Tooling</h3>
+    <dl>
+      {% for name, n in summary.tooling %}
+        <dt>{{ name }}</dt><dd>{{ n }}</dd>
+      {% endfor %}
+    </dl>
+  </section>
+</section>
+{% endif %}
+
+<h2 id="feature-view">By feature</h2>
+<table id="feature-table">
+  <thead>
+    <tr>
+      <th data-sort="text">Feature</th>
+      <th data-sort="text">Library</th>
+      <th data-sort="num">Present</th>
+      <th data-sort="num">Clear gap</th>
+      <th data-sort="num">Worth considering</th>
+      <th data-sort="num">N/A</th>
+      <th>By architecture</th>
+      <th>Exemplars</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for f in feature_rows %}
+    <tr>
+      <td>{{ f.name }}</td>
+      <td class="lib-{{ f.library }}">{{ f.library }}</td>
+      <td class="num ok">{{ f.present }}</td>
+      <td class="num{% if f.clear_gap %} gap{% endif %}">{{ f.clear_gap }}</td>
+      <td class="num{% if f.worth %} worth{% endif %}">{{ f.worth }}</td>
+      <td class="num">{{ f.na }}</td>
+      <td>
+        {% for a in f.arch_adoption -%}
+          <span class="arch-pct" title="{{ a.tooltip }}">
+            <span class="name">{{ a.arch }}</span>
+            <span class="pct
+              {%- if a.is_na %} pct-na
+              {%- elif a.pct >= 80 %} pct-hi
+              {%- elif a.pct >= 40 %} pct-mid
+              {%- else %} pct-lo{% endif %}">{{ a.label }}</span>
+          </span>
+        {%- endfor %}
+      </td>
+      <td>
+        {% for ex in f.exemplars[:3] -%}
+          <a href="{{ ex.url }}">{{ ex.charm }}</a>{% if not loop.last %}, {% endif %}
+        {%- endfor %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<h2 id="charm-view">By charm</h2>
+
+<div class="filters" id="charm-filters">
+  <span class="label">Arch:</span>
+  <div class="group" data-filter-group="arch">
+    <button class="active" data-arch="">all</button>
+    <button data-arch="delta">delta</button>
+    <button data-arch="part-reconcile">part-reconcile</button>
+    <button data-arch="unconditional-init">unconditional-init</button>
+    <button data-arch="reconcile">reconcile</button>
+    <button data-arch="reconcile-all">reconcile-all</button>
+    <button data-arch="component-graph">component-graph</button>
+    <button data-arch="reactive">reactive</button>
+  </div>
+  <span class="label">Shape:</span>
+  <div class="group" data-filter-group="shape">
+    <button class="active" data-shape="">any</button>
+    <button data-shape="k8s">k8s</button>
+    <button data-shape="machine">machine</button>
+  </div>
+  <span class="label">Status:</span>
+  <div class="group" data-filter-group="status">
+    <button class="active" data-status="">any</button>
+    <button data-status="has-gaps">has clear-gap</button>
+    <button data-status="clean">no clear-gap</button>
+  </div>
+  <input type="search" id="charm-search" placeholder="search charm / team / repo…" autocomplete="off">
+  <span class="visible-count" id="charm-visible-count"></span>
+</div>
+
+<table id="charm-table">
+  <thead>
+    <tr>
+      <th data-sort="text">Charm</th>
+      <th data-sort="text">Team</th>
+      <th data-sort="text">Architecture</th>
+      <th data-sort="text">Stack</th>
+      <th data-sort="num">Present</th>
+      <th data-sort="num">Clear gap</th>
+      <th data-sort="num">Worth considering</th>
+      <th>Gaps</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for c in charm_rows %}
+    <tr
+      data-arch="{{ c.architecture|join(' ') }}"
+      data-shape="{{ 'k8s' if c.k8s else 'machine' }}"
+      data-status="{{ 'has-gaps' if c.clear_gap else 'clean' }}"
+      data-search="{{ (c.name + ' ' + c.team + ' ' + c.repo_url)|lower }}"
+    >
+      <td><a href="{{ c.repo_url }}">{{ c.name }}</a></td>
+      <td>{{ c.team }}</td>
+      <td>
+        {% for a in c.architecture -%}
+          <span class="chip chip-arch-{{ a }}">{{ a }}</span>
+        {%- endfor %}
+        {% if c.provides_own_library %}<span class="chip chip-flag" title="Charm publishes its own lib/charms/&lt;name&gt;/ library">lib provider</span>{% endif %}
+      </td>
+      <td class="stack">
+        {{- "k8s" if c.k8s else "machine" -}}
+        {% if c.plugins %}<span class="sep">·</span>{{ c.plugins|join(",") }}{% endif %}
+        {% if c.bases %}<span class="sep">·</span>{{ c.bases|join(",") }}{% endif %}
+        {% if c.min_juju %}<span class="sep">·</span>juju&nbsp;{{ c.min_juju }}{% endif %}
+        {% if c.library_count %}<span class="sep">·</span>{{ c.library_count }}&nbsp;lib{{ "" if c.library_count == 1 else "s" }}{% endif %}
+        {% if c.tooling %}<span class="sep">·</span>{{ c.tooling|join("+") }}{% endif %}
+        {% if c.has_terraform_module %}<span class="sep">·</span>tf{% endif %}
+      </td>
+      <td class="num ok">{{ c.present }}</td>
+      <td class="num{% if c.clear_gap %} gap{% endif %}">{{ c.clear_gap }}</td>
+      <td class="num{% if c.worth %} worth{% endif %}">{{ c.worth }}</td>
+      <td>
+        {% for g in c.gaps -%}
+          <span class="gap" title="{{ g.rationale }}">{{ g.feature }}</span>{% if not loop.last %}, {% endif %}
+        {%- endfor %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<h2 id="team-view">By team</h2>
+<p class="meta" style="margin-top:-1em">
+  Aggregates per team. Rows sorted by total clear-gap count (most to least).
+  Avg gap = clear-gap labels per charm, a rough "how much migration work
+  is in this team's queue" signal that controls for team size.
+</p>
+<table id="team-table">
+  <thead>
+    <tr>
+      <th data-sort="text">Team</th>
+      <th data-sort="num">Charms</th>
+      <th data-sort="num">Present</th>
+      <th data-sort="num">Clear gap</th>
+      <th data-sort="num">Worth considering</th>
+      <th data-sort="num">Avg gap/charm</th>
+      <th>Architecture mix</th>
+      <th>Top clear-gap features</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for t in team_rows %}
+    <tr>
+      <td><strong>{{ t.team }}</strong></td>
+      <td class="num">{{ t.charms }}</td>
+      <td class="num ok">{{ t.present }}</td>
+      <td class="num{% if t.clear_gap %} gap{% endif %}">{{ t.clear_gap }}</td>
+      <td class="num{% if t.worth %} worth{% endif %}">{{ t.worth }}</td>
+      <td class="num">{{ t.avg_gap }}</td>
+      <td>
+        {% for arch, n in t.architecture -%}
+          <span class="chip chip-arch-{{ arch }}">{{ arch }}&nbsp;{{ n }}</span>
+        {%- endfor %}
+      </td>
+      <td>
+        {% for fname, n in t.top_gaps -%}
+          <span class="gap" title="{{ n }} charm{{ '' if n == 1 else 's' }} in {{ t.team }}">{{ fname }}&nbsp;({{ n }})</span>{% if not loop.last %}, {% endif %}
+        {%- endfor %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<details>
+  <summary>Evidence (all clear-gap findings)</summary>
+  <ul class="ev">
+    {% for item in evidence_log %}
+    <li>
+      <strong>{{ item.charm }}</strong> /
+      <span class="lib-{{ item.library }}">{{ item.feature }}</span>:
+      {{ item.rationale }}
+    </li>
+    {% endfor %}
+  </ul>
+</details>
+
+<script>
+// Charm-view filter bar. Three independent radio-style filter groups
+// (arch / shape / status). A row is visible iff it matches the active
+// pick in every group; the empty pick means "no filter for this group".
+(function () {
+  const bar = document.getElementById('charm-filters');
+  if (!bar) return;
+  const table = document.getElementById('charm-table');
+  const rows  = Array.from(table.tBodies[0].rows);
+  const countEl = document.getElementById('charm-visible-count');
+  const searchEl = document.getElementById('charm-search');
+  const state = { arch: '', shape: '', status: '', search: '' };
+
+  function apply() {
+    let visible = 0;
+    const q = state.search;
+    rows.forEach(r => {
+      const archMatch   = !state.arch   || (r.dataset.arch || '').split(' ').includes(state.arch);
+      const shapeMatch  = !state.shape  || r.dataset.shape === state.shape;
+      const statusMatch = !state.status || r.dataset.status === state.status;
+      const searchMatch = !q || (r.dataset.search || '').includes(q);
+      const show = archMatch && shapeMatch && statusMatch && searchMatch;
+      r.classList.toggle('hidden', !show);
+      if (show) visible++;
+    });
+    countEl.textContent = `${visible} / ${rows.length} shown`;
+  }
+
+  bar.querySelectorAll('.group').forEach(group => {
+    const key = group.dataset.filterGroup;
+    group.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state[key] = btn.dataset[key] || '';
+        group.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        apply();
+      });
+    });
+  });
+  if (searchEl) {
+    searchEl.addEventListener('input', () => {
+      state.search = searchEl.value.trim().toLowerCase();
+      apply();
+    });
+  }
+  apply();
+})();
+
+// Tiny column sorter. Click a th to sort by that column, click again to reverse.
+document.querySelectorAll('table').forEach(table => {
+  const ths = table.querySelectorAll('th[data-sort]');
+  ths.forEach((th, idx) => {
+    th.addEventListener('click', () => {
+      const tbody = table.tBodies[0];
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      const type = th.dataset.sort;
+      const asc = !th.classList.contains('sorted-asc');
+      ths.forEach(t => t.classList.remove('sorted-asc', 'sorted-desc'));
+      th.classList.add(asc ? 'sorted-asc' : 'sorted-desc');
+      rows.sort((a, b) => {
+        const av = a.cells[idx].textContent.trim();
+        const bv = b.cells[idx].textContent.trim();
+        if (type === 'num') return (parseFloat(av) || 0) - (parseFloat(bv) || 0);
+        return av.localeCompare(bv);
+      });
+      if (!asc) rows.reverse();
+      rows.forEach(r => tbody.appendChild(r));
+    });
+  });
+});
+</script>
+
+</body>
+</html>
