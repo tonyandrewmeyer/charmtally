@@ -33,6 +33,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -40,7 +42,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@caf0cab7a618c569241d31dcd442f54681755d39  # v3
 
       # Persist the charm clone tree across runs. Cache key includes the
       # corpus CSV + overrides hash so that adding/removing a row gets a
@@ -80,6 +82,9 @@ jobs:
           cp scored.json "snapshots/scored-$(date -u +%Y-%m-%d).json"
 
       - name: Commit refreshed artefacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
           git config user.name  "charmtally-bot"
           git config user.email "charmtally-bot@aotearoa.dev"
@@ -89,4 +94,4 @@ jobs:
             exit 0
           fi
           git commit -m "scan: weekly corpus refresh $(date -u +%Y-%m-%d)"
-          git push
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git" HEAD:main

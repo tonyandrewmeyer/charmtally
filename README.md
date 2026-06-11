@@ -5,3 +5,48 @@ landscape of which `ops` / `pebble` / `jubilant` / `charmlibs` features each
 charm uses — descriptive, not a leaderboard: not every feature applies to every
 charm.
 
+Browse the latest scan at
+**[tonyandrewmeyer.github.io/charmtally/dashboard.html](https://tonyandrewmeyer.github.io/charmtally/dashboard.html)**.
+
+## Install
+
+```sh
+uv tool install charmtally          # or: pipx install charmtally
+```
+
+Or run straight from a checkout with `uv run charmtally ...`.
+
+## Usage
+
+```sh
+# Scan a single already-checked-out charm directory.
+charmtally local path/to/my-operator
+
+# Calibration: clone and scan a few charms from the corpus.
+charmtally spike --corpus may-2026.csv --workdir /tmp/charms --limit 5
+
+# Full corpus scan -> results.json.
+charmtally scan \
+    --corpus may-2026.csv \
+    --workdir /tmp/charms \
+    --overrides corpus-overrides.yaml \
+    --out results.json
+
+# Re-score an existing results.json without re-cloning.
+charmtally score results.json --overrides corpus-overrides.yaml --out scored.json
+
+# Render the dashboard.
+charmtally dashboard scored.json --out dashboard.html
+```
+
+The weekly [`scan` workflow](.github/workflows/scan.yml) runs that pipeline
+every Monday and commits the refreshed `dashboard.html` (plus a dated snapshot
+under `snapshots/`) back to `main`.
+
+## Development
+
+```sh
+uv sync --extra dev
+uv run pytest
+uv run ruff check
+```
