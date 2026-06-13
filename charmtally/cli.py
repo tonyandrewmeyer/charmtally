@@ -236,6 +236,7 @@ def cmd_score(args: argparse.Namespace) -> int:
             secret_typed_config=tuple(meta_raw.get("secret_typed_config", [])),
             has_integration_tests=meta_raw.get("has_integration_tests", False),
             is_reactive=meta_raw.get("is_reactive", False),
+            is_legacy_classic=meta_raw.get("is_legacy_classic", False),
             charm_name=meta_raw.get("charm_name"),
             charmcraft_plugins=tuple(meta_raw.get("charmcraft_plugins", [])),
             bases=tuple(meta_raw.get("bases", [])),

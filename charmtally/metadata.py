@@ -12,6 +12,11 @@ Per-charm signals used by scoring rules:
                             handing the value to the charm)
     has_integration_tests — tests/integration/ contains at least one .py file
     is_reactive           — charm uses the charms.reactive framework
+    is_legacy_classic     — charm uses the pre-ops hooks-driven layout
+                            (hooks/ directory present, no src/charm.py).
+                            Pre-dates the ops framework; ops.* / pebble.* /
+                            charmlibs.* features don't apply, same as
+                            is_reactive.
 
 Descriptive facts surfaced for the dashboard (no scoring rules attached):
     charm_name            — declared name from charmcraft.yaml / metadata.yaml
@@ -55,6 +60,7 @@ class CharmMeta:
     secret_typed_config: tuple[str, ...]
     has_integration_tests: bool
     is_reactive: bool
+    is_legacy_classic: bool = False
     # Descriptive facts (no scoring rules) — surfaced for the dashboard
     # so users can cluster/filter by stack and tooling choices.
     charm_name: str | None = None
@@ -247,6 +253,16 @@ def read(charm_root: Path) -> CharmMeta:
     has_reactive_handlers = any(d.is_dir() and any(d.rglob("*.py")) for d in reactive_dirs)
     is_reactive = has_reactive_indicator and has_reactive_handlers
 
+    # Legacy classic-charm layout (pre-ops): `hooks/` directory at charm root
+    # with at least one executable hook script, and no `src/charm.py` modern
+    # entry point. Surfaced by CALIBRATION #15: openstack-charmers
+    # `charm-helpers` charms (charm-ceilometer, charm-cinder, etc.) and a
+    # handful of IS team charms (container-log-archive, ubuntu-mirror) share
+    # this shape. None of the ops.* / pebble.* / charmlibs.* features apply.
+    has_legacy_hooks_dir = (charm_root / "hooks").is_dir() and any((charm_root / "hooks").iterdir())
+    has_modern_entry = (charm_root / "src" / "charm.py").is_file()
+    is_legacy_classic = has_legacy_hooks_dir and not has_modern_entry and not is_reactive
+
     # Charmhub-hosted libraries vendored under lib/charms/<libname>/...
     lib_root = charm_root / "lib" / "charms"
     library_names: list[str] = []
@@ -277,6 +293,7 @@ def read(charm_root: Path) -> CharmMeta:
         secret_typed_config=tuple(secret_typed),
         has_integration_tests=has_integration_tests,
         is_reactive=is_reactive,
+        is_legacy_classic=is_legacy_classic,
         charm_name=charm_name,
         charmcraft_plugins=tuple(plugins),
         bases=tuple(bases),

@@ -277,6 +277,35 @@ def test_reactive_charm_short_circuits_to_not_applicable(feature: str):
     assert "reactive" in s.rationale.lower()
 
 
+# ── legacy classic charms ────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "feature",
+    [
+        "ops.pebble-ready",
+        "ops.collect-status",
+        "ops.secrets",
+        "ops.relation-app-data",
+        "pebble.checks",
+        "jubilant.integration-tests",
+        "charmlibs.observability",
+    ],
+)
+def test_legacy_classic_charm_short_circuits_to_not_applicable(feature: str):
+    """A pre-ops hooks-driven charm gets NA for every feature."""
+    meta = _meta(
+        is_legacy_classic=True,
+        relations=(_rel("db", "requires", "pgsql"),),
+        config_keys=("admin-password",),
+        secret_like_config=("admin-password",),
+        has_integration_tests=True,
+    )
+    s = score_absent(feature, {}, meta)
+    assert s.label == SCORE_NOT_APPLICABLE
+    assert "legacy classic" in s.rationale.lower()
+
+
 # ── architecture-axis short-circuits ─────────────────────────────────────────
 
 

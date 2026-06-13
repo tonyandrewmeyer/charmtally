@@ -172,3 +172,56 @@ def test_tooling_combinations(tmp_path: Path) -> None:
     (tmp_path / "Makefile").write_text("all:\n")
     meta = read(tmp_path)
     assert set(meta.tooling) == {"tox", "make"}
+
+
+def test_modern_ops_charm_is_not_legacy_classic(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "charm.py").write_text("# modern ops charm\n")
+    assert read(tmp_path).is_legacy_classic is False
+
+
+def test_legacy_hooks_layout_detected(tmp_path: Path) -> None:
+    """Pre-ops openstack-charmers / IS-team legacy charms: hooks/ + no src/charm.py."""
+    _ops_charm(tmp_path)
+    hooks = tmp_path / "hooks"
+    hooks.mkdir()
+    (hooks / "install").write_text("#!/bin/sh\necho install\n")
+    (hooks / "config-changed").write_text("#!/bin/sh\necho changed\n")
+    assert read(tmp_path).is_legacy_classic is True
+
+
+def test_empty_hooks_dir_is_not_legacy(tmp_path: Path) -> None:
+    """Bare empty hooks/ shouldn't flip — could be scaffolding."""
+    _ops_charm(tmp_path)
+    (tmp_path / "hooks").mkdir()
+    assert read(tmp_path).is_legacy_classic is False
+
+
+def test_hooks_with_modern_entry_is_not_legacy(tmp_path: Path) -> None:
+    """Some ops charms keep a small hooks/ shim for migration. With src/charm.py
+    present, the modern entry wins."""
+    _ops_charm(tmp_path)
+    hooks = tmp_path / "hooks"
+    hooks.mkdir()
+    (hooks / "install").write_text("#!/bin/sh\necho install\n")
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "charm.py").write_text("# modern ops charm\n")
+    assert read(tmp_path).is_legacy_classic is False
+
+
+def test_reactive_charm_does_not_double_classify_as_legacy(tmp_path: Path) -> None:
+    """is_reactive wins over is_legacy_classic for the small overlap case."""
+    _ops_charm(tmp_path)
+    (tmp_path / "osci.yaml").write_text("# OSCI tooling\n")
+    src_reactive = tmp_path / "src" / "reactive"
+    src_reactive.mkdir(parents=True)
+    (src_reactive / "h.py").write_text("# handler\n")
+    hooks = tmp_path / "hooks"
+    hooks.mkdir()
+    (hooks / "install").write_text("#!/bin/sh\n")
+    m = read(tmp_path)
+    assert m.is_reactive is True
+    assert m.is_legacy_classic is False

@@ -73,6 +73,7 @@ def scan_charm(
         "secret_typed_config": list(meta.secret_typed_config),
         "has_integration_tests": meta.has_integration_tests,
         "is_reactive": meta.is_reactive,
+        "is_legacy_classic": meta.is_legacy_classic,
         "architecture": architecture,
         "charm_name": meta.charm_name,
         "charmcraft_plugins": list(meta.charmcraft_plugins),

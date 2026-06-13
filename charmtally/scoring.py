@@ -55,6 +55,15 @@ def score_absent(
             "reactive charm (charms.reactive framework) — ops feature catalogue does not apply",
         )
 
+    # Legacy classic charms (pre-ops, hooks/ + charmhelpers/ layout) similarly
+    # pre-date the ops framework. CALIBRATION #15: openstack-charmers
+    # `charm-helpers` charms + a few IS-team legacy charms share this shape.
+    if meta.is_legacy_classic:
+        return Score(
+            SCORE_NOT_APPLICABLE,
+            "legacy classic charm (pre-ops hooks/ layout) — ops feature catalogue does not apply",
+        )
+
     # Architecture-axis short-circuits (PLAN.md "Architecture axis").
     # A charm in the holistic family or using a component-graph framework
     # delegates event wiring (including pebble-ready) and status aggregation
