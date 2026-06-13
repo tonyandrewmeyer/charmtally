@@ -4,8 +4,10 @@
 #   - Cron: 02:00 UTC every Monday (cheap; data moves slowly).
 #   - workflow_dispatch: run on demand from the GH UI.
 #   - Caches /tmp/charm-workdir between runs so we don't re-clone ~340
-#     charms each scan; cache key invalidates on may-2026.csv changes
-#     (new charms added or excluded → fresh clones for the diff).
+#     charms each scan. The corpus CSV itself is fetched fresh from
+#     canonical/hyrum on every run (the upstream source); cache key
+#     hashes corpus-overrides.yaml only (per-row pins are the only
+#     locally-controlled axis).
 #   - Runs the full pipeline: scan -> score -> dashboard.
 #   - Writes a dated snapshot to snapshots/scored-YYYY-MM-DD.json for
 #     the trend code.
@@ -46,22 +48,22 @@ jobs:
         with:
           enable-cache: true
 
-      # Persist the charm clone tree across runs. Cache key includes the
-      # corpus CSV + overrides hash so that adding/removing a row gets a
-      # fresh slice without invalidating the whole tree.
+      # Persist the charm clone tree across runs. Cache key is the
+      # overrides hash — the corpus CSV is fetched fresh from
+      # canonical/hyrum on every run and lives at workdir/corpus.csv
+      # (re-clones are bounded by the per-row diff anyway).
       - name: Cache charm workdir
         uses: actions/cache@v4
         with:
           path: /tmp/charm-workdir
-          key: charm-workdir-${{ hashFiles('may-2026.csv', 'corpus-overrides.yaml') }}-${{ github.run_number }}
+          key: charm-workdir-${{ hashFiles('corpus-overrides.yaml') }}-${{ github.run_number }}
           restore-keys: |
-            charm-workdir-${{ hashFiles('may-2026.csv', 'corpus-overrides.yaml') }}-
+            charm-workdir-${{ hashFiles('corpus-overrides.yaml') }}-
             charm-workdir-
 
       - name: Scan corpus
         run: |
           uv run --with pyyaml charmtally scan \
-            --corpus may-2026.csv \
             --workdir /tmp/charm-workdir \
             --overrides corpus-overrides.yaml \
             --out results.json
