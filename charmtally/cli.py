@@ -299,10 +299,12 @@ def main(argv: list[str] | None = None) -> int:
     p_local.set_defaults(func=cmd_local)
 
     p_spike = sub.add_parser("spike", help="Clone+scan a slice of the corpus.")
-    p_spike.add_argument("--corpus", type=Path, default=None,
-                         help="Path to a local CSV. Default: fetch --corpus-url.")
-    p_spike.add_argument("--corpus-url", default=corpus.HYRUM_CHARMS_CSV_URL,
-                         help="URL of the corpus CSV (default: canonical/hyrum charm-list).")
+    p_spike.add_argument("--corpus", type=Path, default=None, help="Path to a local CSV. Default: fetch --corpus-url.")
+    p_spike.add_argument(
+        "--corpus-url",
+        default=corpus.HYRUM_CHARMS_CSV_URL,
+        help="URL of the corpus CSV (default: canonical/hyrum charm-list).",
+    )
     p_spike.add_argument(
         "--workdir",
         type=Path,
@@ -315,10 +317,12 @@ def main(argv: list[str] | None = None) -> int:
     p_spike.set_defaults(func=cmd_spike)
 
     p_scan = sub.add_parser("scan", help="Full corpus scan → results.json.")
-    p_scan.add_argument("--corpus", type=Path, default=None,
-                        help="Path to a local CSV. Default: fetch --corpus-url.")
-    p_scan.add_argument("--corpus-url", default=corpus.HYRUM_CHARMS_CSV_URL,
-                        help="URL of the corpus CSV (default: canonical/hyrum charm-list).")
+    p_scan.add_argument("--corpus", type=Path, default=None, help="Path to a local CSV. Default: fetch --corpus-url.")
+    p_scan.add_argument(
+        "--corpus-url",
+        default=corpus.HYRUM_CHARMS_CSV_URL,
+        help="URL of the corpus CSV (default: canonical/hyrum charm-list).",
+    )
     p_scan.add_argument("--workdir", type=Path, required=True, help="Where to clone/cache charms.")
     p_scan.add_argument(
         "--team",

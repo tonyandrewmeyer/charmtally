@@ -24,9 +24,7 @@ from pathlib import Path
 
 import yaml
 
-HYRUM_CHARMS_CSV_URL = (
-    "https://raw.githubusercontent.com/canonical/hyrum/main/charm-list/charms.csv"
-)
+HYRUM_CHARMS_CSV_URL = "https://raw.githubusercontent.com/canonical/hyrum/main/charm-list/charms.csv"
 
 
 @dataclass(frozen=True)
