@@ -1,20 +1,32 @@
 """Parse the charm corpus CSV.
 
-The CSV columns (may-2026.csv, sourced from canonical/hyrum's charm-list):
-    Team, Charm Name, Repository, Key Charm for this Team, Branch (if not the default), Notes
+The canonical source is **canonical/hyrum's `charm-list/charms.csv`**, kept up
+to date by the hyrum team. ``HYRUM_CHARMS_CSV_URL`` is the raw URL; the
+``scan`` and ``spike`` subcommands fetch it on demand and cache under the
+workdir. Pass ``--corpus <local.csv>`` to override (offline / pinned scans).
+
+The columns hyrum ships:
+    Team, Charm Name, Repository, Branch (if not the default), Source
+
+Older snapshots also carried ``Key Charm for this Team`` / ``Notes`` columns;
+both are optional and default to ``False`` / ``""`` when absent.
 
 `load_overrides` loads the companion YAML file (`corpus-overrides.yaml`) that
-records URLs to skip and per-URL branch overrides. See CORPUS-TRIAGE.md for the
-rationale behind each entry.
+records URLs to skip and per-URL branch overrides.
 """
 
 from __future__ import annotations
 
 import csv
+import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import yaml
+
+HYRUM_CHARMS_CSV_URL = (
+    "https://raw.githubusercontent.com/canonical/hyrum/main/charm-list/charms.csv"
+)
 
 
 @dataclass(frozen=True)
@@ -108,6 +120,19 @@ def load(path: Path) -> list[CharmRef]:
                 )
             )
     return out
+
+
+def fetch_to(url: str, dest: Path) -> Path:
+    """Download ``url`` to ``dest`` (creating parents). Returns ``dest``.
+
+    Stdlib-only so the scanner has no extra network dep. Use this to materialise
+    the hyrum CSV under a workdir before calling :func:`load`.
+    """
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    with urllib.request.urlopen(url, timeout=30) as resp:  # noqa: S310
+        body = resp.read()
+    dest.write_bytes(body)
+    return dest
 
 
 def load_overrides(path: Path) -> CorpusOverrides:

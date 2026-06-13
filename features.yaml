@@ -38,10 +38,12 @@ features:
         module: ops_sunbeam
       - kind: import
         module: coordinated_workers
+      - kind: import
+        module: single_kernel_mongo
     added-in: ops 2.5
     notes: |
       Library-mediated status handling is detected as positive evidence
-      (CALIBRATION #10, extended #11):
+      (CALIBRATION #10, extended #11, extended #15):
         - `charmed_kubeflow_chisme.components` charms manage status through
           the `CharmReconciler`/component framework, not via direct
           `unit.status = ...` assignment or an explicit collect-status
@@ -51,7 +53,11 @@ features:
         - `coordinated_workers` (Observability CCA framework — tempo,
           parca, mimir, loki) — `Coordinator`/`Worker` base classes
           handle status as part of the reconcile cycle.
-      In both cases the charm is using status idiomatically for its
+        - `single_kernel_mongo` (mongodb-operator + mongodb-k8s-operator
+          shim) — charm.py delegates to `AbstractMongoCharm`; status
+          handling lives in the upstream library. Surfaced by the
+          2026-06-13 30-charm collect-status audit.
+      In all cases the charm is using status idiomatically for its
       framework; flagging clear-gap on "has integrations" would be wrong.
     verified: []
     negative: []

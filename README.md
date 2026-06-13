@@ -23,11 +23,12 @@ Or run straight from a checkout with `uv run charmtally ...`.
 charmtally local path/to/my-operator
 
 # Calibration: clone and scan a few charms from the corpus.
-charmtally spike --corpus may-2026.csv --workdir /tmp/charms --limit 5
+# The corpus CSV is fetched from canonical/hyrum on every run by default;
+# pass `--corpus <local.csv>` to pin (offline / reproducible scans).
+charmtally spike --workdir /tmp/charms --limit 5
 
 # Full corpus scan -> results.json.
 charmtally scan \
-    --corpus may-2026.csv \
     --workdir /tmp/charms \
     --overrides corpus-overrides.yaml \
     --out results.json

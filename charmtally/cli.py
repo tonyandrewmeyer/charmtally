@@ -1,15 +1,19 @@
 """Command-line entry point.
 
+The corpus CSV is pulled from canonical/hyrum on each run by default
+(``--corpus-url``, see ``corpus.HYRUM_CHARMS_CSV_URL``). Override with
+``--corpus <local.csv>`` for offline / pinned runs.
+
 Usage:
     charmtally local <charm-dir> [--features features.yaml]
         Scan a single already-checked-out charm directory.
 
-    charmtally spike --corpus may-2026.csv --workdir /tmp/charms \\
+    charmtally spike --workdir /tmp/charms \\
                              [--limit 5] [--only ops.collect-status,...]
-        Clone (or reuse) a handful of charms from the CSV and scan them.
+        Clone (or reuse) a handful of charms from the corpus and scan them.
         Calibration tool: limited set, output to stdout.
 
-    charmtally scan --corpus may-2026.csv --workdir /tmp/charms \\
+    charmtally scan --workdir /tmp/charms \\
                             [--team charm-tech] [--key-only] --out results.json
         Full corpus scan: clones charms, detects + scores features, writes
         results.json. Skipped slugs (clone failure / archived) recorded in
@@ -64,6 +68,20 @@ def _filter(features, names):
     return [f for f in features if f.name in wanted]
 
 
+def _resolve_corpus_path(args: argparse.Namespace) -> Path:
+    """Return the CSV path to load — local if --corpus, else fetch --corpus-url.
+
+    Pulls into ``<workdir>/corpus.csv``; the fetch is idempotent (just
+    re-downloads). Caller pins ``--corpus`` to override (offline runs).
+    """
+    if args.corpus is not None:
+        return args.corpus
+    dest = args.workdir / "corpus.csv"
+    print(f"… fetching corpus from {args.corpus_url}", file=sys.stderr)
+    corpus.fetch_to(args.corpus_url, dest)
+    return dest
+
+
 def cmd_local(args: argparse.Namespace) -> int:
     feats = _filter(catalogue.load(args.features), args.only)
     result = scan.scan_charm(args.charm_dir, feats)
@@ -74,7 +92,7 @@ def cmd_local(args: argparse.Namespace) -> int:
 
 def cmd_spike(args: argparse.Namespace) -> int:
     feats = _filter(catalogue.load(args.features), args.only)
-    refs = corpus.load(args.corpus)
+    refs = corpus.load(_resolve_corpus_path(args))
     if args.key_only:
         refs = [r for r in refs if r.key_charm]
     if args.limit:
@@ -109,7 +127,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
     """
     feats = _filter(catalogue.load(args.features), args.only)
     pats = catalogue.load_patterns(args.features)
-    refs = corpus.load(args.corpus)
+    refs = corpus.load(_resolve_corpus_path(args))
     overrides = corpus.load_overrides(args.overrides) if args.overrides else corpus.CorpusOverrides.empty()
 
     # Filter: union of team match and key_charm flag.
@@ -280,8 +298,11 @@ def main(argv: list[str] | None = None) -> int:
     p_local.add_argument("--only", nargs="+", help="Limit to these feature names.")
     p_local.set_defaults(func=cmd_local)
 
-    p_spike = sub.add_parser("spike", help="Clone+scan a slice of the CSV corpus.")
-    p_spike.add_argument("--corpus", type=Path, required=True)
+    p_spike = sub.add_parser("spike", help="Clone+scan a slice of the corpus.")
+    p_spike.add_argument("--corpus", type=Path, default=None,
+                         help="Path to a local CSV. Default: fetch --corpus-url.")
+    p_spike.add_argument("--corpus-url", default=corpus.HYRUM_CHARMS_CSV_URL,
+                         help="URL of the corpus CSV (default: canonical/hyrum charm-list).")
     p_spike.add_argument(
         "--workdir",
         type=Path,
@@ -294,7 +315,10 @@ def main(argv: list[str] | None = None) -> int:
     p_spike.set_defaults(func=cmd_spike)
 
     p_scan = sub.add_parser("scan", help="Full corpus scan → results.json.")
-    p_scan.add_argument("--corpus", type=Path, required=True)
+    p_scan.add_argument("--corpus", type=Path, default=None,
+                        help="Path to a local CSV. Default: fetch --corpus-url.")
+    p_scan.add_argument("--corpus-url", default=corpus.HYRUM_CHARMS_CSV_URL,
+                        help="URL of the corpus CSV (default: canonical/hyrum charm-list).")
     p_scan.add_argument("--workdir", type=Path, required=True, help="Where to clone/cache charms.")
     p_scan.add_argument(
         "--team",
