@@ -43,6 +43,7 @@
   .chip-arch-reconcile-all      { background: #fbd590; color: #6a4000; }
   .chip-arch-component-graph    { background: #d8e8ff; color: #154; }
   .chip-arch-reactive           { background: #fbe0e6; color: #802040; }
+  .chip-arch-legacy-classic     { background: #ece0fb; color: #4a2080; }
   .chip-flag                  { background: #e8f4e8; color: #145; }
   .low-count {
     display: inline-block; font-size: 11px; padding: 1px 6px; margin-left: 6px;
@@ -158,6 +159,7 @@
       <dt>k8s</dt><dd>{{ summary.k8s }}<span class="pct">{{ (100 * summary.k8s / summary.total)|round(0, 'floor')|int }}%</span></dd>
       <dt>machine</dt><dd>{{ summary.machine }}<span class="pct">{{ (100 * summary.machine / summary.total)|round(0, 'floor')|int }}%</span></dd>
       <dt>reactive</dt><dd>{{ summary.reactive }}<span class="pct">{{ (100 * summary.reactive / summary.total)|round(0, 'floor')|int }}%</span></dd>
+      <dt>legacy-classic</dt><dd>{{ summary.legacy_classic }}<span class="pct">{{ (100 * summary.legacy_classic / summary.total)|round(0, 'floor')|int }}%</span></dd>
       <dt>lib provider</dt><dd>{{ summary.own_library }}<span class="pct">{{ (100 * summary.own_library / summary.total)|round(0, 'floor')|int }}%</span></dd>
       <dt>terraform mod</dt><dd>{{ summary.terraform }}<span class="pct">{{ (100 * summary.terraform / summary.total)|round(0, 'floor')|int }}%</span></dd>
     </dl>
@@ -253,6 +255,7 @@
     <button data-arch="reconcile-all">reconcile-all</button>
     <button data-arch="component-graph">component-graph</button>
     <button data-arch="reactive">reactive</button>
+    <button data-arch="legacy-classic">legacy-classic</button>
   </div>
   <span class="label">Shape:</span>
   <div class="group" data-filter-group="shape">

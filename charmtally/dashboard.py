@@ -44,6 +44,7 @@ _PRECISION_FLOOR = 5
 
 _ARCH_PRIORITY = (
     "reactive",  # short-circuits all feature scoring; tracked separately
+    "legacy-classic",  # pre-ops hooks/ layout; also N/A for the ops catalogue
     "component-graph",
     "reconcile-all",
     "reconcile",
@@ -64,6 +65,8 @@ def _primary_arch(meta: dict) -> str:
     """
     if meta.get("is_reactive"):
         return "reactive"
+    if meta.get("is_legacy_classic"):
+        return "legacy-classic"
     archs = meta.get("architecture") or []
     for a in _ARCH_PRIORITY:
         if a == "delta":
@@ -129,6 +132,14 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
                     "is_na": True,
                     "pct": None,
                 })
+            elif a == "legacy-classic":
+                arch_adoption.append({
+                    "arch": a,
+                    "label": "n/a",
+                    "tooltip": f"{stats['total']} legacy-classic charms — feature scoring N/A",
+                    "is_na": True,
+                    "pct": None,
+                })
             else:
                 pct = 100 * stats["present"] // stats["total"]
                 arch_adoption.append({
@@ -183,6 +194,8 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
         architecture = list(m.get("architecture") or [])
         if m.get("is_reactive"):
             arch_labels = ["reactive"]
+        elif m.get("is_legacy_classic"):
+            arch_labels = ["legacy-classic"]
         elif architecture:
             arch_labels = architecture
         else:
@@ -201,6 +214,7 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
             "is_reactive": m.get("is_reactive", False),
             "is_subordinate": m.get("is_subordinate", False),
             "is_workload_less": m.get("is_workload_less", False),
+            "is_legacy_classic": m.get("is_legacy_classic", False),
             "provides_own_library": m.get("provides_own_library", False),
             "has_terraform_module": m.get("has_terraform_module", False),
             "library_count": m.get("library_count", 0),
@@ -236,6 +250,8 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
         # primary arch (single pick, same priority as the chip)
         if r["is_reactive"]:
             primary = "reactive"
+        elif r["is_legacy_classic"]:
+            primary = "legacy-classic"
         elif r["architecture"] and r["architecture"][0] != "delta":
             primary = r["architecture"][0]
         else:
@@ -266,6 +282,7 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
     base_dist: dict[str, int] = {}
     k8s_count = 0
     reactive_count = 0
+    legacy_classic_count = 0
     own_lib_count = 0
     tf_count = 0
     for r in charm_rows:
@@ -281,6 +298,8 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
             k8s_count += 1
         if r["is_reactive"]:
             reactive_count += 1
+        if r["is_legacy_classic"]:
+            legacy_classic_count += 1
         if r["provides_own_library"]:
             own_lib_count += 1
         if r["has_terraform_module"]:
@@ -290,6 +309,7 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
         "k8s": k8s_count,
         "machine": len(charm_rows) - k8s_count,
         "reactive": reactive_count,
+        "legacy_classic": legacy_classic_count,
         "own_library": own_lib_count,
         "terraform": tf_count,
         "architecture": sorted(arch_dist.items(), key=lambda kv: -kv[1]),
