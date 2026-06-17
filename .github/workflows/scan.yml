@@ -34,12 +34,12 @@ jobs:
     timeout-minutes: 45    # cold-cache run takes ~30min; warm cache ~10min
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -53,7 +53,7 @@ jobs:
       # canonical/hyrum on every run and lives at workdir/corpus.csv
       # (re-clones are bounded by the per-row diff anyway).
       - name: Cache charm workdir
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: /tmp/charm-workdir
           key: charm-workdir-${{ hashFiles('corpus-overrides.yaml') }}-${{ github.run_number }}
