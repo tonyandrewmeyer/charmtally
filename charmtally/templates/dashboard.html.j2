@@ -278,6 +278,7 @@
         {%- endfor %}
         {% if c.provides_own_library %}<span class="chip chip-flag" title="Charm publishes its own lib/charms/&lt;name&gt;/ library">lib provider</span>{% endif %}
         {% if c.is_subordinate %}<span class="chip chip-flag" title="subordinate: true in charm metadata — runs alongside a principal charm">subordinate</span>{% endif %}
+        {% if c.is_workload_less %}<span class="chip chip-flag" title="Principal charm with no containers, no pebble layer, and no juju-info requires — manages no processes">workload-less</span>{% endif %}
       </td>
       <td class="stack">
         {{- "k8s" if c.k8s else "machine" -}}

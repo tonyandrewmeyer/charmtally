@@ -251,3 +251,58 @@ def test_subordinate_string_true_tolerated(tmp_path: Path) -> None:
 def test_subordinate_false_explicit(tmp_path: Path) -> None:
     (tmp_path / "charmcraft.yaml").write_text("type: charm\nname: x\nsubordinate: false\n")
     assert read(tmp_path).is_subordinate is False
+
+
+# workload-less
+
+
+def test_workload_less_bare_charm(tmp_path: Path) -> None:
+    """Charm with no containers, no pebble, no juju-info — workload-less."""
+    _ops_charm(tmp_path)
+    assert read(tmp_path).is_workload_less is True
+
+
+def test_workload_less_false_when_containers_present(tmp_path: Path) -> None:
+    (tmp_path / "charmcraft.yaml").write_text(
+        "type: charm\nname: x\ncontainers:\n  workload:\n    resource: workload-image\n"
+    )
+    assert read(tmp_path).is_workload_less is False
+
+
+def test_workload_less_false_with_pebble_layer_call_in_src(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "charm.py").write_text("from ops import pebble\nlayer = pebble.Layer({'services': {}})\n")
+    assert read(tmp_path).is_workload_less is False
+
+
+def test_workload_less_false_with_layer_yaml(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    (tmp_path / "layer.yaml").write_text("services: {}\n")
+    assert read(tmp_path).is_workload_less is False
+
+
+def test_workload_less_false_with_juju_info_requires(tmp_path: Path) -> None:
+    """A subordinate (juju-info requires) is not workload-less in James's sense."""
+    (tmp_path / "charmcraft.yaml").write_text(
+        "type: charm\nname: x\nrequires:\n  general-info:\n    interface: juju-info\n    scope: container\n"
+    )
+    assert read(tmp_path).is_workload_less is False
+
+
+def test_workload_less_ignores_layer_yaml_under_tests(tmp_path: Path) -> None:
+    """A `layer.yaml` fixture under tests/ shouldn't flip the chip."""
+    _ops_charm(tmp_path)
+    tests = tmp_path / "tests" / "fixtures"
+    tests.mkdir(parents=True)
+    (tests / "layer.yaml").write_text("services: {}\n")
+    assert read(tmp_path).is_workload_less is True
+
+
+def test_workload_less_other_requires_interfaces_dont_disqualify(tmp_path: Path) -> None:
+    """`requires:` bindings to non-juju-info interfaces are fine."""
+    (tmp_path / "charmcraft.yaml").write_text(
+        "type: charm\nname: x\nrequires:\n  db:\n    interface: postgresql_client\n"
+    )
+    assert read(tmp_path).is_workload_less is True

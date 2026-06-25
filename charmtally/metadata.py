@@ -20,6 +20,13 @@ Per-charm signals used by scoring rules:
     is_subordinate        — `subordinate: true` at root of charmcraft.yaml
                             or metadata.yaml. Surfaces as a dashboard chip;
                             not a scoring suppressor in v1.
+    is_workload_less      — principal charm that manages no processes:
+                            no `containers:`, no pebble layer usage (call
+                            or *layer*.yaml), and no juju-info requires
+                            binding (which would mark a subordinate).
+                            Descriptive chip; not a scoring suppressor.
+                            Misses machine charms that drive processes
+                            via systemd/apt/subprocess.
 
 Descriptive facts surfaced for the dashboard (no scoring rules attached):
     charm_name            — declared name from charmcraft.yaml / metadata.yaml
@@ -45,6 +52,9 @@ import yaml
 _SECRETY = re.compile(r"(password|token|secret|api[-_]?key)$", re.IGNORECASE)
 # Matches "juju >= 3.4", "juju>=3.4", "juju 3.4", etc. Captures the version.
 _JUJU_VERSION = re.compile(r"juju\s*[>=]*\s*(\d+(?:\.\d+)*)", re.IGNORECASE)
+# `pebble.Layer(...)` or `pebble.LayerDict(...)` construction in src/ —
+# strong signal that the charm drives a workload via pebble.
+_PEBBLE_LAYER_CALL = re.compile(r"\bpebble\.Layer(Dict)?\s*\(")
 
 
 @dataclass(frozen=True)
@@ -65,6 +75,7 @@ class CharmMeta:
     is_reactive: bool
     is_legacy_classic: bool = False
     is_subordinate: bool = False
+    is_workload_less: bool = False
     # Descriptive facts (no scoring rules) — surfaced for the dashboard
     # so users can cluster/filter by stack and tooling choices.
     charm_name: str | None = None
@@ -170,6 +181,33 @@ def _extract_min_juju_version(data: dict) -> str | None:
             return (0,)
 
     return min(matches, key=_key)
+
+
+def _has_pebble_layer_evidence(charm_root: Path) -> bool:
+    """True if the charm constructs a pebble layer in src/ or ships a layer YAML.
+
+    Two signals (either is sufficient):
+      * `pebble.Layer(` / `pebble.LayerDict(` call in any `src/**/*.py` file.
+      * A `*layer*.yaml` file under the charm root or `src/` (case-insensitive,
+        excluding `tests/`, `lib/`, `.git/`).
+    """
+    src = charm_root / "src"
+    if src.is_dir():
+        for py in src.rglob("*.py"):
+            try:
+                text = py.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            if _PEBBLE_LAYER_CALL.search(text):
+                return True
+    skip_dirs = {"tests", "test", "lib", ".git"}
+    for yml in charm_root.rglob("*.yaml"):
+        rel_parts = yml.relative_to(charm_root).parts
+        if any(p in skip_dirs for p in rel_parts):
+            continue
+        if "layer" in yml.name.lower():
+            return True
+    return False
 
 
 def _extract_relations(data: dict) -> list[Relation]:
@@ -283,6 +321,16 @@ def read(charm_root: Path) -> CharmMeta:
     library_count = len(library_names)
     provides_own_library = bool(charm_name and (lib_root / charm_name.replace("-", "_")).is_dir())
 
+    # Workload-less classification: a principal charm that drives
+    # no processes. All three negatives must hold:
+    #   1. No `containers:` block (would imply k8s workload).
+    #   2. No pebble layer evidence (call in src/ or *layer*.yaml).
+    #   3. No juju-info requires binding
+    # Known miss: machine charms managing processes via systemd / apt /
+    # subprocess — left as a future refinement, not chased in v1.
+    has_juju_info_requires = any(r.role == "requires" and r.interface == "juju-info" for r in deduped_rel)
+    is_workload_less = not has_containers and not _has_pebble_layer_evidence(charm_root) and not has_juju_info_requires
+
     # Terraform module convention: a `terraform/` directory at root holding
     # the charm's published TF module. Some charms put .tf at root instead.
     has_terraform_module = (charm_root / "terraform").is_dir() or any(charm_root.glob("*.tf"))
@@ -305,6 +353,7 @@ def read(charm_root: Path) -> CharmMeta:
         is_reactive=is_reactive,
         is_legacy_classic=is_legacy_classic,
         is_subordinate=is_subordinate,
+        is_workload_less=is_workload_less,
         charm_name=charm_name,
         charmcraft_plugins=tuple(plugins),
         bases=tuple(bases),
