@@ -175,7 +175,7 @@ class MyCharm:
     assert len(ev) == 2
 
 
-# ── testing.caplog regex (step-12 Nhan-1) ────────────────────────────────────
+# testing.caplog regex
 
 
 def _caplog_feature() -> Feature:

@@ -384,8 +384,7 @@ features:
     notes: |
       Matches `def test_foo(..., caplog, ...):` shapes in tests/. Descriptive
       signal only; absent → not-applicable. `caplog` is a pytest-reserved
-      fixture name, so name collisions are negligible. Added per step-12
-      team-feedback triage (Nhan-1).
+      fixture name, so name collisions are negligible.
     verified: []
     negative: []
 
