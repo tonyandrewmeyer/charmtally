@@ -35,6 +35,8 @@ Descriptive facts surfaced for the dashboard (no scoring rules attached):
     bases                 — base/bases entries (e.g. ubuntu@22.04)
     min_juju_version      — Juju version asserted in `assumes:` (or None)
     library_count         — distinct lib/charms/<libname>/ subdirs imported
+    library_names         — the same set, by name (used by pair detection
+                            to spot k8s/machine pairs sharing a charmlib)
     provides_own_library  — true if lib/charms/<charm_name>/ exists
     has_terraform_module  — true if terraform/ dir or .tf files at root
     tooling               — subset of ["tox","make","just"] based on
@@ -83,6 +85,7 @@ class CharmMeta:
     bases: tuple[str, ...] = ()
     min_juju_version: str | None = None
     library_count: int = 0
+    library_names: tuple[str, ...] = ()
     provides_own_library: bool = False
     has_terraform_module: bool = False
     tooling: tuple[str, ...] = ()
@@ -359,6 +362,7 @@ def read(charm_root: Path) -> CharmMeta:
         bases=tuple(bases),
         min_juju_version=min_juju,
         library_count=library_count,
+        library_names=tuple(library_names),
         provides_own_library=provides_own_library,
         has_terraform_module=has_terraform_module,
         tooling=tuple(tooling),

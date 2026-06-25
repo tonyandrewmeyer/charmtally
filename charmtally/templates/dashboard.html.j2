@@ -129,6 +129,7 @@
   <a href="#feature-view">Feature view</a>
   <a href="#charm-view">Charm view</a>
   <a href="#team-view">Team view</a>
+  {% if pairs %}<a href="#pairs-view">Pairs</a>{% endif %}
 </nav>
 
 {% if summary %}
@@ -352,6 +353,55 @@
   {% endfor %}
   </tbody>
 </table>
+
+{% if pairs %}
+<h2 id="pairs-view">k8s/machine pairs</h2>
+<p class="meta">
+  {{ pairs|length }} pair{{ "" if pairs|length == 1 else "s" }} identified by
+  name normalisation. <em>High</em> = identical root after stripping
+  <code>-k8s</code> / <code>-operator</code>; <em>medium</em> = within
+  edit-distance 2. <code>shared lib</code> means either side vendors a
+  <code>lib/charms/&lt;n&gt;/</code> whose name normalises to the other's root.
+  Sub-metrics <em>shared-src</em> / <em>copy-paste</em> / <em>% unique code</em>
+  are v2.
+</p>
+<table id="pairs-table">
+  <thead>
+    <tr>
+      <th>Root</th>
+      <th>k8s charm</th>
+      <th>Machine charm</th>
+      <th>Confidence</th>
+      <th>Repo</th>
+      <th>Code sharing</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for p in pairs %}
+    <tr>
+      <td>{{ p.root }}</td>
+      <td><a href="{{ p.k8s_repo_url }}">{{ p.k8s_name }}</a></td>
+      <td><a href="{{ p.machine_repo_url }}">{{ p.machine_name }}</a></td>
+      <td>
+        {% if p.confidence == "high" %}
+          <span class="chip chip-flag" title="Identical name root after stripping -k8s / -operator">high</span>
+        {% else %}
+          <span class="chip" title="Edit-distance ≤ 2 between roots">medium</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if p.same_repo %}<span class="chip chip-flag" title="Both members share the same repo URL">same repo</span>
+        {% else %}<span class="chip" title="Different repos">separate</span>{% endif %}
+      </td>
+      <td>
+        {% if p.shares_charmlib %}<span class="chip chip-flag" title="Either side vendors a charmlib whose name normalises to the other's root">shared lib</span>
+        {% else %}<span class="chip" title="No shared charmlib detected (shared-src / copy-paste is v2)">—</span>{% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
 
 <details>
   <summary>Evidence (all clear-gap findings)</summary>
