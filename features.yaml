@@ -374,6 +374,20 @@ features:
     verified: []
     negative: []
 
+  - name: testing.caplog
+    library: python
+    summary: Test functions take pytest's caplog fixture.
+    scope: tests
+    detect:
+      - kind: regex
+        pattern: 'def\s+test_\w*\s*\([^)]*\bcaplog\b'
+    notes: |
+      Matches `def test_foo(..., caplog, ...):` shapes in tests/. Descriptive
+      signal only; absent → not-applicable. `caplog` is a pytest-reserved
+      fixture name, so name collisions are negligible.
+    verified: []
+    negative: []
+
   - name: charmlibs.data-platform
     library: charmlibs
     summary: Charm imports the data-platform charm library.

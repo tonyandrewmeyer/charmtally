@@ -17,6 +17,9 @@ Per-charm signals used by scoring rules:
                             Pre-dates the ops framework; ops.* / pebble.* /
                             charmlibs.* features don't apply, same as
                             is_reactive.
+    is_subordinate        — `subordinate: true` at root of charmcraft.yaml
+                            or metadata.yaml. Surfaces as a dashboard chip;
+                            not a scoring suppressor in v1.
 
 Descriptive facts surfaced for the dashboard (no scoring rules attached):
     charm_name            — declared name from charmcraft.yaml / metadata.yaml
@@ -61,6 +64,7 @@ class CharmMeta:
     has_integration_tests: bool
     is_reactive: bool
     is_legacy_classic: bool = False
+    is_subordinate: bool = False
     # Descriptive facts (no scoring rules) — surfaced for the dashboard
     # so users can cluster/filter by stack and tooling choices.
     charm_name: str | None = None
@@ -182,6 +186,7 @@ def _extract_relations(data: dict) -> list[Relation]:
 
 def read(charm_root: Path) -> CharmMeta:
     has_containers = False
+    is_subordinate = False
     relations: list[Relation] = []
     config_keys: list[str] = []
     secret_typed: list[str] = []
@@ -196,6 +201,11 @@ def read(charm_root: Path) -> CharmMeta:
             continue
         if isinstance(data.get("containers"), dict) and data["containers"]:
             has_containers = True
+        # YAML loads `subordinate: true` as bool True; tolerate the string
+        # form for hand-edited metadata.yaml files.
+        sub = data.get("subordinate")
+        if sub is True or (isinstance(sub, str) and sub.strip().lower() == "true"):
+            is_subordinate = True
         relations.extend(_extract_relations(data))
         cfg = data.get("config") or {}
         opts = cfg.get("options") if isinstance(cfg, dict) else None
@@ -294,6 +304,7 @@ def read(charm_root: Path) -> CharmMeta:
         has_integration_tests=has_integration_tests,
         is_reactive=is_reactive,
         is_legacy_classic=is_legacy_classic,
+        is_subordinate=is_subordinate,
         charm_name=charm_name,
         charmcraft_plugins=tuple(plugins),
         bases=tuple(bases),

@@ -173,3 +173,61 @@ class MyCharm:
         _feature("ast-shared-method", attrs=["_reconcile"], min_callers=2, handler_re=r"^_handle_"),
     )
     assert len(ev) == 2
+
+
+# testing.caplog regex
+
+
+def _caplog_feature() -> Feature:
+    return Feature(
+        name="testing.caplog",
+        library="python",
+        summary="test",
+        scope="tests",
+        detectors=(Detector(kind="regex", config={"pattern": r"def\s+test_\w*\s*\([^)]*\bcaplog\b"}),),
+    )
+
+
+def _write_test_file(tmp_path: Path, body: str) -> Path:
+    tests = tmp_path / "tests"
+    tests.mkdir()
+    (tests / "test_thing.py").write_text(body)
+    (tmp_path / "charmcraft.yaml").write_text("type: charm\nname: t\n")
+    return tmp_path
+
+
+def test_caplog_fires_on_test_function_with_caplog(tmp_path: Path) -> None:
+    _write_test_file(
+        tmp_path,
+        "def test_logs_warning(caplog):\n    assert caplog.records == []\n",
+    )
+    ev = detect_feature(tmp_path, _caplog_feature())
+    assert len(ev) == 1
+    assert "caplog" in ev[0].snippet
+
+
+def test_caplog_fires_with_extra_args_around(tmp_path: Path) -> None:
+    _write_test_file(
+        tmp_path,
+        "def test_logs(monkeypatch, caplog, tmp_path):\n    pass\n",
+    )
+    ev = detect_feature(tmp_path, _caplog_feature())
+    assert len(ev) == 1
+
+
+def test_caplog_does_not_fire_on_non_test_function(tmp_path: Path) -> None:
+    _write_test_file(
+        tmp_path,
+        "def helper_logs(caplog):\n    pass\n",
+    )
+    ev = detect_feature(tmp_path, _caplog_feature())
+    assert ev == []
+
+
+def test_caplog_does_not_fire_on_usage_without_fixture_param(tmp_path: Path) -> None:
+    _write_test_file(
+        tmp_path,
+        "def test_thing():\n    caplog = make_caplog()\n    assert caplog\n",
+    )
+    ev = detect_feature(tmp_path, _caplog_feature())
+    assert ev == []
