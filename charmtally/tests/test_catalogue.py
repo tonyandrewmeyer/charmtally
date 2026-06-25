@@ -62,3 +62,38 @@ def test_load_patterns_parses_detectors(tmp_path: Path) -> None:
     assert pats[0].detectors[0].config["pattern"] == "xyzzy"
     assert pats[0].detectors[1].kind == "import"
     assert pats[0].detectors[1].config["module"] == "foo.bar"
+
+
+def test_expected_rare_defaults_to_false(tmp_path: Path) -> None:
+    p = tmp_path / "f.yaml"
+    p.write_text(
+        "version: 1\n"
+        "features:\n"
+        "  - name: f1\n"
+        "    library: ops\n"
+        "    summary: s\n"
+        "    scope: src\n"
+        "    detect:\n"
+        "      - kind: regex\n"
+        "        pattern: 'x'\n"
+    )
+    feats = load(p)
+    assert feats[0].expected_rare is False
+
+
+def test_expected_rare_parsed_when_true(tmp_path: Path) -> None:
+    p = tmp_path / "f.yaml"
+    p.write_text(
+        "version: 1\n"
+        "features:\n"
+        "  - name: f1\n"
+        "    library: ops\n"
+        "    summary: s\n"
+        "    scope: src\n"
+        "    expected_rare: true\n"
+        "    detect:\n"
+        "      - kind: regex\n"
+        "        pattern: 'x'\n"
+    )
+    feats = load(p)
+    assert feats[0].expected_rare is True

@@ -32,6 +32,11 @@ class Feature:
     summary: str
     scope: str  # "src" | "tests" | "any"
     detectors: tuple[Detector, ...]
+    # If True, suppress the dashboard's "low present-count → re-check detector"
+    # annotation for this feature. Set in features.yaml as
+    # `expected_rare: true` for features genuinely held by only a handful
+    # of charms.
+    expected_rare: bool = False
 
 
 @dataclass(frozen=True)
@@ -60,6 +65,7 @@ def load(path: Path) -> list[Feature]:
                 summary=raw["summary"],
                 scope=raw["scope"],
                 detectors=_parse_detectors(raw["detect"]),
+                expected_rare=bool(raw.get("expected_rare", False)),
             )
         )
     return out

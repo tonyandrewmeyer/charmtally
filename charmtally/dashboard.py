@@ -36,6 +36,12 @@ def _exemplar(charm: dict, ref: str, evidence: list[dict]) -> dict:
     return {"charm": charm["name"], "url": charm["repo_url"]}
 
 
+# Below this many present-counts across the full corpus a feature is flagged
+# as low-confidence in the feature view — the detector probably needs a
+# re-check. Suppress per-feature with `expected_rare: true` in features.yaml.
+# 5 hits on a ~340-charm corpus is ~1.5%.
+_PRECISION_FLOOR = 5
+
 _ARCH_PRIORITY = (
     "reactive",  # short-circuits all feature scoring; tracked separately
     "component-graph",
@@ -129,6 +135,11 @@ def render(results: dict, features: list, ref: str = "main") -> str:
                     "is_na": False,
                     "pct": pct,
                 })
+        # Low-count flag: a feature with fewer than PRECISION_FLOOR positive
+        # hits across the whole corpus is suspicious — usually it means the
+        # detector is too strict. Suppress for features explicitly marked
+        # `expected_rare: true` in features.yaml.
+        low_count = present < _PRECISION_FLOOR and not feat_meta[fname].expected_rare
         feature_rows.append({
             "name": fname,
             "library": feat_meta[fname].library,
@@ -138,6 +149,7 @@ def render(results: dict, features: list, ref: str = "main") -> str:
             "na": na,
             "exemplars": exemplars,
             "arch_adoption": arch_adoption,
+            "low_count": low_count,
         })
 
     # Charm view rows. Pulls the descriptive __meta__ facts forward so each
