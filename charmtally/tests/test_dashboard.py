@@ -78,3 +78,36 @@ def test_expected_rare_suppresses_low_count_marker() -> None:
     charms = [_charm(f"c{i}", present_features=set(), all_features=["genuinely-rare"]) for i in range(10)]
     html = render({c["name"]: c for c in charms}, feats)
     assert 'class="low-count"' not in html
+
+
+# ── Pairs view (k8s/machine pair detection) ──────────────────────────────────
+
+
+def test_pairs_view_absent_when_no_pairs_passed() -> None:
+    """Without pairs= the Pairs section and nav link are not in the page."""
+    feats = [_feature("f1")]
+    charms = [_charm("c1", present_features={"f1"}, all_features=["f1"])]
+    html = render({c["name"]: c for c in charms}, feats)
+    assert 'id="pairs-view"' not in html
+    assert "Pairs</a>" not in html
+
+
+def test_pairs_view_renders_when_pairs_passed() -> None:
+    feats = [_feature("f1")]
+    charms = [_charm("c1", present_features={"f1"}, all_features=["f1"])]
+    pairs = [
+        {
+            "root": "postgresql",
+            "k8s_name": "postgresql-k8s",
+            "machine_name": "postgresql",
+            "k8s_repo_url": "https://x/p-k8s",
+            "machine_repo_url": "https://x/p",
+            "confidence": "high",
+            "same_repo": False,
+            "shares_charmlib": True,
+        },
+    ]
+    html = render({c["name"]: c for c in charms}, feats, pairs=pairs)
+    assert 'id="pairs-view"' in html
+    assert "postgresql-k8s" in html
+    assert "shared lib" in html

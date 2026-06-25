@@ -32,10 +32,12 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from dataclasses import asdict
 from pathlib import Path
 
 from . import catalogue, corpus, dashboard, scan
 from . import metadata as _metadata
+from . import pairs as _pairs
 from . import scoring as _scoring
 
 DEFAULT_CATALOGUE = Path(__file__).resolve().parent.parent / "features.yaml"
@@ -244,6 +246,7 @@ def cmd_score(args: argparse.Namespace) -> int:
             bases=tuple(meta_raw.get("bases", [])),
             min_juju_version=meta_raw.get("min_juju_version"),
             library_count=int(meta_raw.get("library_count", 0)),
+            library_names=tuple(meta_raw.get("library_names", [])),
             provides_own_library=bool(meta_raw.get("provides_own_library", False)),
             has_terraform_module=bool(meta_raw.get("has_terraform_module", False)),
             tooling=tuple(meta_raw.get("tooling", [])),
@@ -280,9 +283,21 @@ def cmd_score(args: argparse.Namespace) -> int:
 def cmd_dashboard(args: argparse.Namespace) -> int:
     feats = catalogue.load(args.features)
     results = json.loads(args.results.read_text())
-    html = dashboard.render(results, feats)
+    pairs_payload = None
+    if args.pairs is not None and args.pairs.is_file():
+        pairs_payload = json.loads(args.pairs.read_text()).get("pairs")
+    html = dashboard.render(results, feats, pairs=pairs_payload)
     args.out.write_text(html)
     print(f"wrote {args.out}", file=sys.stderr)
+    return 0
+
+
+def cmd_pairs(args: argparse.Namespace) -> int:
+    results = json.loads(args.results.read_text())
+    pairs = _pairs.find_pairs(results)
+    payload = {"pairs": [asdict(p) for p in pairs]}
+    args.out.write_text(json.dumps(payload, indent=2) + "\n")
+    print(f"wrote {len(pairs)} pairs to {args.out}", file=sys.stderr)
     return 0
 
 
@@ -364,7 +379,18 @@ def main(argv: list[str] | None = None) -> int:
     p_dash = sub.add_parser("dashboard", help="Render results.json/scored.json → dashboard.html.")
     p_dash.add_argument("results", type=Path, help="Path to results/scored JSON.")
     p_dash.add_argument("--out", type=Path, default=Path("dashboard.html"))
+    p_dash.add_argument(
+        "--pairs",
+        type=Path,
+        default=None,
+        help="Optional pairs.json (from `charmtally pairs`) to render the Pairs view.",
+    )
     p_dash.set_defaults(func=cmd_dashboard)
+
+    p_pairs = sub.add_parser("pairs", help="Detect k8s/machine charm pairs → pairs.json.")
+    p_pairs.add_argument("results", type=Path, help="Path to results.json (or scored.json).")
+    p_pairs.add_argument("--out", type=Path, default=Path("pairs.json"))
+    p_pairs.set_defaults(func=cmd_pairs)
 
     args = p.parse_args(argv)
     return args.func(args)

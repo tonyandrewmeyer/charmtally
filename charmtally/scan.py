@@ -82,6 +82,7 @@ def scan_charm(
         "bases": list(meta.bases),
         "min_juju_version": meta.min_juju_version,
         "library_count": meta.library_count,
+        "library_names": list(meta.library_names),
         "provides_own_library": meta.provides_own_library,
         "has_terraform_module": meta.has_terraform_module,
         "tooling": list(meta.tooling),

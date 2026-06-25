@@ -73,7 +73,7 @@ def _primary_arch(meta: dict) -> str:
     return "delta"
 
 
-def render(results: dict, features: list, ref: str = "main") -> str:
+def render(results: dict, features: list, ref: str = "main", *, pairs: list | None = None) -> str:
     charms = [v for k, v in results.items() if not k.startswith("__")]
     feat_meta = {f.name: f for f in features}
     feat_names = [f.name for f in features]
@@ -313,5 +313,6 @@ def render(results: dict, features: list, ref: str = "main") -> str:
         team_rows=team_rows,
         evidence_log=evidence_log,
         summary=summary,
+        pairs=pairs or [],
         generated_at=dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
     )
