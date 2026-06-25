@@ -176,6 +176,7 @@ def render(results: dict, features: list, ref: str = "main") -> str:
             "architecture": arch_labels,
             "k8s": m.get("has_containers", False),
             "is_reactive": m.get("is_reactive", False),
+            "is_subordinate": m.get("is_subordinate", False),
             "provides_own_library": m.get("provides_own_library", False),
             "has_terraform_module": m.get("has_terraform_module", False),
             "library_count": m.get("library_count", 0),

@@ -225,3 +225,29 @@ def test_reactive_charm_does_not_double_classify_as_legacy(tmp_path: Path) -> No
     m = read(tmp_path)
     assert m.is_reactive is True
     assert m.is_legacy_classic is False
+
+
+def test_charm_without_subordinate_key_is_not_subordinate(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    assert read(tmp_path).is_subordinate is False
+
+
+def test_subordinate_true_in_charmcraft_yaml(tmp_path: Path) -> None:
+    (tmp_path / "charmcraft.yaml").write_text("type: charm\nname: x\nsubordinate: true\n")
+    assert read(tmp_path).is_subordinate is True
+
+
+def test_subordinate_true_in_metadata_yaml(tmp_path: Path) -> None:
+    (tmp_path / "metadata.yaml").write_text("name: x\nsubordinate: true\n")
+    assert read(tmp_path).is_subordinate is True
+
+
+def test_subordinate_string_true_tolerated(tmp_path: Path) -> None:
+    """Hand-edited metadata.yaml with the string \"true\" still counts."""
+    (tmp_path / "metadata.yaml").write_text('name: x\nsubordinate: "true"\n')
+    assert read(tmp_path).is_subordinate is True
+
+
+def test_subordinate_false_explicit(tmp_path: Path) -> None:
+    (tmp_path / "charmcraft.yaml").write_text("type: charm\nname: x\nsubordinate: false\n")
+    assert read(tmp_path).is_subordinate is False

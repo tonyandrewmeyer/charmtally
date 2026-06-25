@@ -277,6 +277,7 @@
           <span class="chip chip-arch-{{ a }}">{{ a }}</span>
         {%- endfor %}
         {% if c.provides_own_library %}<span class="chip chip-flag" title="Charm publishes its own lib/charms/&lt;name&gt;/ library">lib provider</span>{% endif %}
+        {% if c.is_subordinate %}<span class="chip chip-flag" title="subordinate: true in charm metadata — runs alongside a principal charm">subordinate</span>{% endif %}
       </td>
       <td class="stack">
         {{- "k8s" if c.k8s else "machine" -}}
