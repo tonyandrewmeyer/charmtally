@@ -321,13 +321,11 @@ def read(charm_root: Path) -> CharmMeta:
     library_count = len(library_names)
     provides_own_library = bool(charm_name and (lib_root / charm_name.replace("-", "_")).is_dir())
 
-    # Workload-less classification (James-2): a principal charm that drives
+    # Workload-less classification: a principal charm that drives
     # no processes. All three negatives must hold:
     #   1. No `containers:` block (would imply k8s workload).
     #   2. No pebble layer evidence (call in src/ or *layer*.yaml).
-    #   3. No juju-info requires binding (would mark a classic subordinate;
-    #      subordinates have no workload of their own but are not what James
-    #      is asking for — he wants principal charms that manage nothing).
+    #   3. No juju-info requires binding
     # Known miss: machine charms managing processes via systemd / apt /
     # subprocess — left as a future refinement, not chased in v1.
     has_juju_info_requires = any(r.role == "requires" and r.interface == "juju-info" for r in deduped_rel)

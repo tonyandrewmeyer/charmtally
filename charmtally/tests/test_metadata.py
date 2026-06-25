@@ -253,7 +253,7 @@ def test_subordinate_false_explicit(tmp_path: Path) -> None:
     assert read(tmp_path).is_subordinate is False
 
 
-# ── workload-less (James-2) ──────────────────────────────────────────────────
+# workload-less
 
 
 def test_workload_less_bare_charm(tmp_path: Path) -> None:
