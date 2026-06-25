@@ -13,11 +13,17 @@ The `yaml-key` kind is deferred — pebble.checks has a regex fallback that cove
 from __future__ import annotations
 
 import ast
+import configparser
 import re
 import warnings
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
+
+try:
+    import tomllib  # Python 3.11+ stdlib
+except ModuleNotFoundError:  # pragma: no cover — exercised only on 3.10
+    import tomli as tomllib
 
 from .catalogue import Feature
 
@@ -266,8 +272,6 @@ def _detect_pytest_config_key(charm_root: Path, config: dict) -> list[Evidence]:
     pp = charm_root / "pyproject.toml"
     if pp.is_file():
         try:
-            import tomllib
-
             data = tomllib.loads(pp.read_text(encoding="utf-8", errors="replace"))
         except (tomllib.TOMLDecodeError, OSError):
             data = {}
@@ -284,8 +288,6 @@ def _detect_pytest_config_key(charm_root: Path, config: dict) -> list[Evidence]:
                         )
                     )
 
-    import configparser as _cp
-
     for filename, section_name in (
         ("pytest.ini", "pytest"),
         ("setup.cfg", "tool:pytest"),
@@ -294,10 +296,10 @@ def _detect_pytest_config_key(charm_root: Path, config: dict) -> list[Evidence]:
         path = charm_root / filename
         if not path.is_file():
             continue
-        cp = _cp.ConfigParser()
+        cp = configparser.ConfigParser()
         try:
             cp.read_string(path.read_text(encoding="utf-8", errors="replace"))
-        except (_cp.Error, ValueError, OSError):
+        except (configparser.Error, ValueError, OSError):
             continue
         if section_name not in cp:
             continue
