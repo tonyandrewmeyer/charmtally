@@ -75,6 +75,7 @@ def scan_charm(
         "is_reactive": meta.is_reactive,
         "is_legacy_classic": meta.is_legacy_classic,
         "is_subordinate": meta.is_subordinate,
+        "is_workload_less": meta.is_workload_less,
         "architecture": architecture,
         "charm_name": meta.charm_name,
         "charmcraft_plugins": list(meta.charmcraft_plugins),

@@ -238,6 +238,7 @@ def cmd_score(args: argparse.Namespace) -> int:
             is_reactive=meta_raw.get("is_reactive", False),
             is_legacy_classic=meta_raw.get("is_legacy_classic", False),
             is_subordinate=meta_raw.get("is_subordinate", False),
+            is_workload_less=meta_raw.get("is_workload_less", False),
             charm_name=meta_raw.get("charm_name"),
             charmcraft_plugins=tuple(meta_raw.get("charmcraft_plugins", [])),
             bases=tuple(meta_raw.get("bases", [])),
