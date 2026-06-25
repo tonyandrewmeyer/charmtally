@@ -247,9 +247,82 @@ def _detect_ast_shared_method(tree: ast.Module, cfg: dict) -> Iterator[ast.AST]:
 # ── public entry point ─────────────────────────────────────────────────────────
 
 
+def _detect_pytest_config_key(charm_root: Path, config: dict) -> list[Evidence]:
+    """Look for pytest config keys (e.g. `log_level`) in the four standard
+    config-file locations a charm might use.
+
+    File / section conventions:
+      * pyproject.toml -> [tool.pytest.ini_options]   (TOML)
+      * pytest.ini     -> [pytest]                    (INI)
+      * setup.cfg      -> [tool:pytest]               (INI)
+      * tox.ini        -> [pytest]                    (INI)
+
+    Stops on the first parse error per file; treats malformed config the
+    same as absent.
+    """
+    keys = set(config["keys"])
+    results: list[Evidence] = []
+
+    pp = charm_root / "pyproject.toml"
+    if pp.is_file():
+        try:
+            import tomllib
+
+            data = tomllib.loads(pp.read_text(encoding="utf-8", errors="replace"))
+        except (tomllib.TOMLDecodeError, OSError):
+            data = {}
+        ini_opts = ((data.get("tool") or {}).get("pytest") or {}).get("ini_options") or {}
+        if isinstance(ini_opts, dict):
+            for key in keys:
+                if key in ini_opts:
+                    results.append(
+                        Evidence(
+                            "pyproject.toml",
+                            0,
+                            "pytest-config-key",
+                            f"[tool.pytest.ini_options] {key}={ini_opts[key]!r}"[:120],
+                        )
+                    )
+
+    import configparser as _cp
+
+    for filename, section_name in (
+        ("pytest.ini", "pytest"),
+        ("setup.cfg", "tool:pytest"),
+        ("tox.ini", "pytest"),
+    ):
+        path = charm_root / filename
+        if not path.is_file():
+            continue
+        cp = _cp.ConfigParser()
+        try:
+            cp.read_string(path.read_text(encoding="utf-8", errors="replace"))
+        except (_cp.Error, ValueError, OSError):
+            continue
+        if section_name not in cp:
+            continue
+        for key in keys:
+            if key in cp[section_name]:
+                results.append(
+                    Evidence(
+                        filename,
+                        0,
+                        "pytest-config-key",
+                        f"[{section_name}] {key}={cp[section_name][key]}"[:120],
+                    )
+                )
+    return results
+
+
 def detect_feature(charm_root: Path, feature: Feature) -> list[Evidence]:
     files = _select_files(charm_root, feature.scope)
     evidence: list[Evidence] = []
+
+    # File-independent detectors run once over the charm root, not per
+    # Python file in scope. Today: pytest-config-key.
+    for det in feature.detectors:
+        if det.kind == "pytest-config-key":
+            evidence.extend(_detect_pytest_config_key(charm_root, det.config))
 
     # Pre-compile observe-event regexes per detector.
     observe_pats: dict[int, list[re.Pattern[str]]] = {}

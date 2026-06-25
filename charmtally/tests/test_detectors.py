@@ -231,3 +231,101 @@ def test_caplog_does_not_fire_on_usage_without_fixture_param(tmp_path: Path) -> 
     )
     ev = detect_feature(tmp_path, _caplog_feature())
     assert ev == []
+
+
+# ── pytest-config-key (testing.pytest-log-config) ────────────────────────────
+
+
+def _pytest_log_feature() -> Feature:
+    return Feature(
+        name="testing.pytest-log-config",
+        library="python",
+        summary="t",
+        scope="tests",
+        detectors=(
+            Detector(
+                kind="pytest-config-key",
+                config={"keys": ["log_level", "log_cli_level", "log_file_level"]},
+            ),
+        ),
+    )
+
+
+def _seed_charm_root(tmp_path: Path) -> Path:
+    (tmp_path / "charmcraft.yaml").write_text("type: charm\nname: t\n")
+    return tmp_path
+
+
+def test_pytest_log_config_pyproject_toml(tmp_path: Path) -> None:
+    _seed_charm_root(tmp_path)
+    (tmp_path / "pyproject.toml").write_text("[tool.pytest.ini_options]\nlog_level = 'INFO'\n")
+    ev = detect_feature(tmp_path, _pytest_log_feature())
+    assert len(ev) == 1
+    assert ev[0].file == "pyproject.toml"
+    assert "log_level" in ev[0].snippet
+
+
+def test_pytest_log_config_pytest_ini(tmp_path: Path) -> None:
+    _seed_charm_root(tmp_path)
+    (tmp_path / "pytest.ini").write_text("[pytest]\nlog_cli_level = DEBUG\n")
+    ev = detect_feature(tmp_path, _pytest_log_feature())
+    assert len(ev) == 1
+    assert ev[0].file == "pytest.ini"
+
+
+def test_pytest_log_config_setup_cfg(tmp_path: Path) -> None:
+    _seed_charm_root(tmp_path)
+    (tmp_path / "setup.cfg").write_text("[tool:pytest]\nlog_file_level = WARNING\n")
+    ev = detect_feature(tmp_path, _pytest_log_feature())
+    assert len(ev) == 1
+    assert ev[0].file == "setup.cfg"
+
+
+def test_pytest_log_config_tox_ini(tmp_path: Path) -> None:
+    _seed_charm_root(tmp_path)
+    (tmp_path / "tox.ini").write_text("[pytest]\nlog_level = INFO\n")
+    ev = detect_feature(tmp_path, _pytest_log_feature())
+    assert len(ev) == 1
+    assert ev[0].file == "tox.ini"
+
+
+def test_pytest_log_config_none_present(tmp_path: Path) -> None:
+    _seed_charm_root(tmp_path)
+    (tmp_path / "pyproject.toml").write_text("[tool.pytest.ini_options]\nminversion = '7.0'\n")
+    (tmp_path / "pytest.ini").write_text("[pytest]\naddopts = -v\n")
+    ev = detect_feature(tmp_path, _pytest_log_feature())
+    assert ev == []
+
+
+def test_pytest_log_config_wrong_section_in_pyproject(tmp_path: Path) -> None:
+    """A `log_level` key outside [tool.pytest.ini_options] must not match."""
+    _seed_charm_root(tmp_path)
+    (tmp_path / "pyproject.toml").write_text("[tool.something_else]\nlog_level = 'INFO'\n")
+    ev = detect_feature(tmp_path, _pytest_log_feature())
+    assert ev == []
+
+
+def test_pytest_log_config_multiple_files_fanout(tmp_path: Path) -> None:
+    """Both pyproject.toml and pytest.ini set keys — both surface as evidence."""
+    _seed_charm_root(tmp_path)
+    (tmp_path / "pyproject.toml").write_text("[tool.pytest.ini_options]\nlog_level = 'INFO'\n")
+    (tmp_path / "pytest.ini").write_text("[pytest]\nlog_cli_level = DEBUG\n")
+    ev = detect_feature(tmp_path, _pytest_log_feature())
+    assert {e.file for e in ev} == {"pyproject.toml", "pytest.ini"}
+
+
+def test_pytest_log_config_malformed_toml_treated_as_absent(tmp_path: Path) -> None:
+    _seed_charm_root(tmp_path)
+    (tmp_path / "pyproject.toml").write_text("this is not toml [[[\n")
+    ev = detect_feature(tmp_path, _pytest_log_feature())
+    assert ev == []
+
+
+def test_pytest_log_config_with_comments_tolerated(tmp_path: Path) -> None:
+    """A real charm's tox.ini often has comments mixed with keys."""
+    _seed_charm_root(tmp_path)
+    (tmp_path / "tox.ini").write_text(
+        "# pytest settings\n[pytest]\n# verbose logging during CI\nlog_level = DEBUG\naddopts = -v\n"
+    )
+    ev = detect_feature(tmp_path, _pytest_log_feature())
+    assert len(ev) == 1
