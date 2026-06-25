@@ -329,3 +329,139 @@ def test_pytest_log_config_with_comments_tolerated(tmp_path: Path) -> None:
     )
     ev = detect_feature(tmp_path, _pytest_log_feature())
     assert len(ev) == 1
+
+
+# ── ast-observe-shared-handler (reconcile pattern) ───────────────────────────
+
+
+def _reconcile_feature(**overrides) -> Feature:
+    cfg = {"min_events": 3, "exclude_suffixes": ["_error"]}
+    cfg.update(overrides)
+    return Feature(
+        name="reconcile",
+        library="ops",
+        summary="t",
+        scope="src",
+        detectors=(Detector(kind="ast-observe-shared-handler", config=cfg),),
+    )
+
+
+def test_reconcile_fires_when_handler_bound_to_3_events(tmp_path: Path) -> None:
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework):
+        self.framework.observe(self.on.install, self._reconcile)
+        self.framework.observe(self.on.config_changed, self._reconcile)
+        self.framework.observe(self.on.start, self._reconcile)
+    def _reconcile(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert len(ev) == 3
+    assert all(e.detector_kind == "ast-observe-shared-handler" for e in ev)
+
+
+def test_reconcile_misses_when_only_2_events(tmp_path: Path) -> None:
+    """Two shared bindings is a single-responsibility pattern, not reconcile."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework):
+        self.framework.observe(self.on.leader_elected, self._on_leader)
+        self.framework.observe(self.on.leader_settings_changed, self._on_leader)
+    def _on_leader(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert ev == []
+
+
+def test_reconcile_handler_name_independent(tmp_path: Path) -> None:
+    """The bind-count, not the handler name, is the signal."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework):
+        self.framework.observe(self.on.install, self._handle)
+        self.framework.observe(self.on.config_changed, self._handle)
+        self.framework.observe(self.on.upgrade_charm, self._handle)
+    def _handle(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert len(ev) == 3
+
+
+def test_reconcile_excludes_error_events(tmp_path: Path) -> None:
+    """3 error events into one handler is not reconcile — they're routed errors."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework):
+        self.framework.observe(self.on.collect_error, self._on_error)
+        self.framework.observe(self.on.config_error, self._on_error)
+        self.framework.observe(self.on.relation_error, self._on_error)
+    def _on_error(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert ev == []
+
+
+def test_reconcile_subscripted_events_use_trailing_attr(tmp_path: Path) -> None:
+    """`self.on['c'].pebble_ready` resolves to event name 'pebble_ready'."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework):
+        self.framework.observe(self.on['db'].pebble_ready, self._reconcile)
+        self.framework.observe(self.on.install, self._reconcile)
+        self.framework.observe(self.on.config_changed, self._reconcile)
+    def _reconcile(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert len(ev) == 3
+
+
+def test_reconcile_ignores_loop_variable_events(tmp_path: Path) -> None:
+    """`for ev in self.on.events().values(): observe(ev, ...)` — `ev` is a
+    Name, not an Attribute, so this is NOT counted as reconcile (it's
+    `reconcile-all`, a different pattern)."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework):
+        for ev in self.on.events().values():
+            self.framework.observe(ev, self._reconcile)
+    def _reconcile(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert ev == []
+
+
+def test_reconcile_distinct_handlers_dont_aggregate(tmp_path: Path) -> None:
+    """Two different handlers, each bound to 2 events: no reconcile signal."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework):
+        self.framework.observe(self.on.install, self._on_setup)
+        self.framework.observe(self.on.upgrade_charm, self._on_setup)
+        self.framework.observe(self.on.start, self._on_run)
+        self.framework.observe(self.on.config_changed, self._on_run)
+    def _on_setup(self, event): pass
+    def _on_run(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert ev == []

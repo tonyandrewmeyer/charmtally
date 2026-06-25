@@ -539,12 +539,17 @@ architecture:
   - name: reconcile
     summary: |
       Holistic: listens to a SPECIFIC SET of events with a single shared
-      handler (named `_reconcile` / `reconcile`). Multiple discrete
-      observe() calls bound to the same handler; no event-iteration loop.
+      handler. Multiple discrete observe() calls bound to the same
+      handler method (≥3 distinct events); no event-iteration loop.
+      Detector counts the (event, handler) bindings rather than matching
+      handler names, so non-`_reconcile`-named handlers (`_handle`,
+      `_update`, `_reconcile_state`, ...) are picked up when their
+      binding count crosses the threshold.
     scope: src
     detect:
-      - kind: regex
-        pattern: 'framework\.observe\(\s*[^,]+,\s*self\._?reconcile\b'
+      - kind: ast-observe-shared-handler
+        min_events: 3
+        exclude_suffixes: [_error]
 
   - name: part-reconcile
     summary: |

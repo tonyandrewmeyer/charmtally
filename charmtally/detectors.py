@@ -221,6 +221,48 @@ def _detect_ast_init_call(tree: ast.Module, cfg: dict) -> Iterator[ast.AST]:
                 yield from _self_attr_calls(item.body, attrs)
 
 
+def _detect_ast_observe_shared_handler(tree: ast.Module, cfg: dict) -> Iterator[ast.AST]:
+    """Match the holistic `reconcile` pattern: a single handler method is
+    bound to >= `min_events` distinct events via `framework.observe(...)`.
+
+    Bind-count is the discriminating signal, not the handler's name — a
+    `_reconcile_state` / `_handle` / `_update` method that receives three
+    or more event types is reconcile-shaped. Two shared bindings (e.g.
+    `leader_elected + leader_settings_changed -> _on_leader`) is a
+    single-responsibility pattern, not reconcile.
+
+    Event identifier: the trailing attribute name of `args[0]` (works for
+    `self.on.<x>`, `self.on['c'].<x>`, etc.; skips bare names like the
+    `reconcile-all` loop variable). Handler identifier: trailing attribute
+    name of `args[1]`. Events matching any suffix in `exclude_suffixes`
+    (default: `_error`) are filtered out before counting.
+    """
+    min_events = int(cfg.get("min_events", 3))
+    exclude_suffixes = tuple(cfg.get("exclude_suffixes", ["_error"]))
+
+    per_handler_events: dict[str, set[str]] = {}
+    per_handler_calls: dict[str, list[ast.Call]] = {}
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if not (isinstance(func, ast.Attribute) and func.attr == "observe"):
+            continue
+        if len(node.args) < 2:
+            continue
+        event = node.args[0].attr if isinstance(node.args[0], ast.Attribute) else None
+        handler = node.args[1].attr if isinstance(node.args[1], ast.Attribute) else None
+        if event is None or handler is None:
+            continue
+        if event.endswith(exclude_suffixes):
+            continue
+        per_handler_events.setdefault(handler, set()).add(event)
+        per_handler_calls.setdefault(handler, []).append(node)
+    for handler, events in per_handler_events.items():
+        if len(events) >= min_events:
+            yield from per_handler_calls[handler]
+
+
 def _detect_ast_shared_method(tree: ast.Module, cfg: dict) -> Iterator[ast.AST]:
     """Match charms with the `part-reconcile` pattern: per-event `_on_*`
     handler methods that each delegate into a shared reconcile method.
@@ -365,6 +407,10 @@ def detect_feature(charm_root: Path, feature: Feature) -> list[Evidence]:
                         evidence.append(Evidence(rel, lineno, det.kind, m.group(0)[:120]))
             elif det.kind == "ast-init-call" and tree is not None:
                 for node in _detect_ast_init_call(tree, det.config):
+                    line = text.splitlines()[node.lineno - 1] if node.lineno <= len(text.splitlines()) else ""
+                    evidence.append(Evidence(rel, node.lineno, det.kind, line.strip()[:120]))
+            elif det.kind == "ast-observe-shared-handler" and tree is not None:
+                for node in _detect_ast_observe_shared_handler(tree, det.config):
                     line = text.splitlines()[node.lineno - 1] if node.lineno <= len(text.splitlines()) else ""
                     evidence.append(Evidence(rel, node.lineno, det.kind, line.strip()[:120]))
             elif det.kind == "ast-shared-method" and tree is not None:
