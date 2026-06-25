@@ -12,6 +12,9 @@
 #                   call:          dotted attribute call (e.g. unit.open_port)
 #                   yaml-key:      key path in a yaml literal under `files`
 #                   regex:         raw pattern (last resort; prefer AST)
+#                   pytest-config-key: scan root pyproject.toml / pytest.ini /
+#                                  setup.cfg / tox.ini for given keys (TOML +
+#                                  INI parse, not regex)
 #   added-in:     ops/pebble/etc version the feature first shipped in
 #                 (best-effort; informational, not used by the extractor)
 #   notes:        free text — caveats, false-positive risks
@@ -371,6 +374,23 @@ features:
     detect:
       - kind: import
         module: jubilant
+    verified: []
+    negative: []
+
+  - name: testing.pytest-log-config
+    library: python
+    summary: Test config sets pytest log_level / log_cli_level / log_file_level.
+    scope: tests
+    detect:
+      - kind: pytest-config-key
+        keys: [log_level, log_cli_level, log_file_level]
+    notes: |
+      Multi-file fan-out detector: scans pyproject.toml
+      ([tool.pytest.ini_options]), pytest.ini ([pytest]), setup.cfg
+      ([tool:pytest]), and tox.ini ([pytest]) at the charm root. Parse-based
+      (tomllib + configparser) — comment-tolerant. Any one matching key in
+      any one file counts as present. Descriptive-only signal; absent →
+      not-applicable.
     verified: []
     negative: []
 

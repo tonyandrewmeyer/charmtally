@@ -18,6 +18,7 @@ source = { editable = "." }
 dependencies = [
     { name = "jinja2" },
     { name = "pyyaml" },
+    { name = "tomli", marker = "python_full_version < '3.11'" },
 ]
 
 [package.dev-dependencies]
@@ -32,6 +33,7 @@ dev = [
 requires-dist = [
     { name = "jinja2" },
     { name = "pyyaml" },
+    { name = "tomli", marker = "python_full_version < '3.11'" },
 ]
 
 [package.metadata.requires-dev]
