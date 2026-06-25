@@ -44,6 +44,11 @@
   .chip-arch-component-graph    { background: #d8e8ff; color: #154; }
   .chip-arch-reactive           { background: #fbe0e6; color: #802040; }
   .chip-flag                  { background: #e8f4e8; color: #145; }
+  .low-count {
+    display: inline-block; font-size: 11px; padding: 1px 6px; margin-left: 6px;
+    border-radius: 9px; background: #fff3cd; color: #7a5600; cursor: help;
+    white-space: nowrap;
+  }
   .stack {
     font-family: ui-monospace, monospace; font-size: 11.5px; color: #444;
     white-space: nowrap;
@@ -191,7 +196,10 @@
   <tbody>
   {% for f in feature_rows %}
     <tr>
-      <td>{{ f.name }}</td>
+      <td>
+        {{ f.name }}
+        {% if f.low_count %}<span class="low-count" title="Fewer than 5 charms detected with this feature across the whole corpus — the detector may be too strict. Add `expected_rare: true` in features.yaml to suppress.">⚠ low-count</span>{% endif %}
+      </td>
       <td class="lib-{{ f.library }}">{{ f.library }}</td>
       <td class="num ok">{{ f.present }}</td>
       <td class="num{% if f.clear_gap %} gap{% endif %}">{{ f.clear_gap }}</td>
