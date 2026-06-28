@@ -6,7 +6,7 @@ on:
   pull_request:
     paths:
       - ".github/workflows/**"
-      - ".github/zizmor.yml"
+      - ".github/zizmor.yaml"
 
 permissions:
   contents: read

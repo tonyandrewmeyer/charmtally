@@ -46,7 +46,7 @@ overrides ──┴─► score  ─► scored.json  ─► dashboard ─► das
 
 `results.json`, `scored.json`, `dashboard.html`, and `snapshots/scored-*.json`
 are rewritten by the weekly `scan` workflow
-(`.github/workflows/scan.yml`). Treat them as build output that happens to
+(`.github/workflows/scan.yaml`). Treat them as build output that happens to
 live in git (the dashboard is served via GitHub Pages from `main`). Don't
 revert their contents when rebasing; rebase your work *onto* the latest
 scan commit instead.
@@ -66,10 +66,10 @@ negative test in `tests/test_detectors.py`.
 
 ## Workflows
 
-- `ci.yml` — pytest matrix (3.10 / 3.12) + ruff lint + ruff format check.
-- `zizmor.yml` + `actionlint.yml` — audit workflow files.
-- `dependency-review.yml` — PR-only gate on new dependency CVEs / licences.
-- `scan.yml` — weekly cron + `workflow_dispatch`. Pushes refreshed
+- `ci.yaml` — pytest matrix (3.10 / 3.12) + ruff lint + ruff format check.
+- `zizmor.yaml` + `actionlint.yaml` — audit workflow files.
+- `dependency-review.yaml` — PR-only gate on new dependency CVEs / licences.
+- `scan.yaml` — weekly cron + `workflow_dispatch`. Pushes refreshed
   artefacts back to `main` via an explicit token-in-URL remote.
 
 Pin third-party actions to a commit SHA with the version in a trailing

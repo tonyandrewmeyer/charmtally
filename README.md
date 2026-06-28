@@ -40,7 +40,7 @@ charmtally score results.json --overrides corpus-overrides.yaml --out scored.jso
 charmtally dashboard scored.json --out dashboard.html
 ```
 
-The weekly [`scan` workflow](.github/workflows/scan.yml) runs that pipeline
+The weekly [`scan` workflow](.github/workflows/scan.yaml) runs that pipeline
 every Monday and commits the refreshed `dashboard.html` (plus a dated snapshot
 under `snapshots/`) back to `main`.
 
