@@ -110454,7 +110454,7 @@
     "kubernetes": "not-a-charm \u2014 upstream Kubernetes source mirror",
     "issues": "clone failed",
     "bundle": "not-a-charm \u2014 bundle, not a charm",
-    "landscape-client-charm": "clone failed",
+    "landscape-client-charm": "no charmcraft.yaml or metadata.yaml found",
     "+git": "unreachable \u2014 repo not found",
     "bundle-kubeflow": "no charmcraft.yaml or metadata.yaml found",
     "charm-neutron-api-odl": "not-a-charm \u2014 abandoned ODL stub",
@@ -110463,12 +110463,12 @@
     "charm-ovn-chassis": "unreachable \u2014 auth-required / 404",
     "charm-ovn-dedicated-chassis": "unreachable \u2014 auth-required / 404",
     "layer-ubuntu-repository-cache": "unreachable \u2014 auth-required / 404",
-    "anbox-cloud": "clone failed",
+    "anbox-cloud": "no charmcraft.yaml or metadata.yaml found",
     "argo-controller": "clone failed",
-    "livepatch-onprem": "clone failed",
+    "livepatch-onprem": "no charmcraft.yaml or metadata.yaml found",
     "+filebug": "no charmcraft.yaml or metadata.yaml found",
-    "nexentaedge-data": "clone failed",
-    "nexentaedge-iscsi-gw": "clone failed",
-    "nexentaedge-swift-gw": "clone failed"
+    "nexentaedge-data": "no charmcraft.yaml or metadata.yaml found",
+    "nexentaedge-iscsi-gw": "no charmcraft.yaml or metadata.yaml found",
+    "nexentaedge-swift-gw": "no charmcraft.yaml or metadata.yaml found"
   }
 }
