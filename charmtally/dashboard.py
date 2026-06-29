@@ -86,6 +86,7 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
     for fname in feat_names:
         present = 0
         clear_gap = 0
+        clear_gap_ai = 0
         worth = 0
         na = 0
         exemplars: list[dict] = []
@@ -107,6 +108,8 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
                 score = rec.get("score", "not-applicable")
                 if score == "clear-gap":
                     clear_gap += 1
+                    if rec.get("ai_escalated"):
+                        clear_gap_ai += 1
                 elif score == "worth-considering":
                     worth += 1
                 else:
@@ -145,6 +148,7 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
             "library": feat_meta[fname].library,
             "present": present,
             "clear_gap": clear_gap,
+            "clear_gap_ai": clear_gap_ai,
             "worth": worth,
             "na": na,
             "exemplars": exemplars,
@@ -158,7 +162,7 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
     # a compact stack cell in the rendered HTML.
     charm_rows = []
     for c in charms:
-        present = clear_gap = worth = 0
+        present = clear_gap = clear_gap_ai = worth = 0
         gaps = []
         for fname in feat_names:
             rec = c["features"].get(fname, {})
@@ -166,7 +170,13 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
                 present += 1
             elif rec.get("score") == "clear-gap":
                 clear_gap += 1
-                gaps.append({"feature": fname, "rationale": rec.get("rationale", "")})
+                if rec.get("ai_escalated"):
+                    clear_gap_ai += 1
+                gaps.append({
+                    "feature": fname,
+                    "rationale": rec.get("rationale", ""),
+                    "ai_escalated": bool(rec.get("ai_escalated")),
+                })
             elif rec.get("score") == "worth-considering":
                 worth += 1
         m = c["features"].get("__meta__", {})
@@ -183,6 +193,7 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
             "repo_url": c["repo_url"],
             "present": present,
             "clear_gap": clear_gap,
+            "clear_gap_ai": clear_gap_ai,
             "worth": worth,
             "gaps": gaps,
             "architecture": arch_labels,

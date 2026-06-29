@@ -36,6 +36,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 from . import catalogue, corpus, dashboard, scan
+from . import llm_score as _llm_score
 from . import metadata as _metadata
 from . import pairs as _pairs
 from . import scoring as _scoring
@@ -292,6 +293,84 @@ def cmd_dashboard(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_llm_score(args: argparse.Namespace) -> int:
+    """Run the LLM scoring pass over worth-considering records → llm-scored.json."""
+    scored = json.loads(args.results.read_text())
+
+    cache_dir = args.cache_dir
+    if cache_dir is None:
+        cache_dir = args.results.parent / ".llm-verdicts"
+
+    out_path = args.out
+    if out_path is None:
+        out_path = args.results.parent / "llm-scored.json"
+
+    if args.prune_cache:
+        removed = _llm_score.prune_cache(cache_dir)
+        print(f"pruned {removed} expired cache entries from {cache_dir}", file=sys.stderr)
+        return 0
+
+    if args.dry_run:
+        counts = _llm_score.count_worth_considering(scored)
+        total = sum(counts.values())
+        print(f"dry-run: {total} worth-considering records eligible for LLM scoring")
+        for feat, n in sorted(counts.items()):
+            print(f"  {feat}: {n}")
+        return 0
+
+    import os
+
+    api_key = os.environ.get("OPENROUTER_API_KEY", "")
+    if not api_key:
+        print(
+            "warning: OPENROUTER_API_KEY not set; LLM calls will fail. Use --dry-run to skip or set the env var.",
+            file=sys.stderr,
+        )
+
+    client = _llm_score.OpenRouterClient(api_key=api_key)
+    workdir = args.workdir
+
+    result = _llm_score.score_worth_considering(
+        scored,
+        client,
+        cache_dir,
+        max_calls=args.max_llm_calls,
+        workdir=workdir,
+    )
+    out_path.write_text(json.dumps(result, indent=2) + "\n")
+    print(f"wrote {out_path}", file=sys.stderr)
+    return 0
+
+
+def cmd_llm_calibrate(args: argparse.Namespace) -> int:
+    """Run pre-flight calibration comparing LLM verdicts against human ground truth."""
+    scored = json.loads(args.results.read_text())
+    ground_truth = json.loads(args.ground_truth.read_text())
+
+    cache_dir = args.cache_dir
+    if cache_dir is None:
+        cache_dir = args.results.parent / ".llm-verdicts"
+
+    import os
+
+    api_key = os.environ.get("OPENROUTER_API_KEY", "")
+    client = _llm_score.OpenRouterClient(api_key=api_key)
+
+    cal = _llm_score.run_preflight_calibration(
+        scored,
+        client,
+        cache_dir,
+        ground_truth,
+        max_calls=args.max_llm_calls,
+        workdir=args.workdir,
+    )
+    print(
+        f"calibration: {cal['agreed']}/{cal['total']} agreed "
+        f"({cal['agreement']:.0%}) — {'PASSED' if cal['passed'] else 'FAILED'}"
+    )
+    return 0 if cal["passed"] else 1
+
+
 def cmd_pairs(args: argparse.Namespace) -> int:
     results = json.loads(args.results.read_text())
     pairs = _pairs.find_pairs(results)
@@ -386,6 +465,77 @@ def main(argv: list[str] | None = None) -> int:
         help="Optional pairs.json (from `charmtally pairs`) to render the Pairs view.",
     )
     p_dash.set_defaults(func=cmd_dashboard)
+
+    p_llm_score = sub.add_parser("llm-score", help="LLM scoring pass over worth-considering records → llm-scored.json.")
+    p_llm_score.add_argument("results", type=Path, help="Path to scored.json.")
+    p_llm_score.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help="Output path (default: llm-scored.json next to RESULTS).",
+    )
+    p_llm_score.add_argument(
+        "--cache-dir",
+        type=Path,
+        default=None,
+        dest="cache_dir",
+        help="Cache directory for LLM verdicts (default: .llm-verdicts/ next to RESULTS).",
+    )
+    p_llm_score.add_argument(
+        "--workdir",
+        type=Path,
+        default=None,
+        help="Charm clone workdir (enables source-excerpt reading; default: none).",
+    )
+    p_llm_score.add_argument(
+        "--max-llm-calls",
+        type=int,
+        default=200,
+        dest="max_llm_calls",
+        help="Hard cap on LLM calls per run (default: 200).",
+    )
+    p_llm_score.add_argument(
+        "--dry-run",
+        action="store_true",
+        dest="dry_run",
+        help="Print eligible worth-considering counts; exit without calling LLM.",
+    )
+    p_llm_score.add_argument(
+        "--prune-cache",
+        action="store_true",
+        dest="prune_cache",
+        help="Prune expired cache entries and exit.",
+    )
+    p_llm_score.set_defaults(func=cmd_llm_score)
+
+    p_llm_cal = sub.add_parser("llm-calibrate", help="Pre-flight calibration: compare LLM to human ground truth.")
+    p_llm_cal.add_argument("results", type=Path, help="Path to scored.json.")
+    p_llm_cal.add_argument(
+        "ground_truth",
+        type=Path,
+        help="JSON file with [{charm_slug, feature_id, human_verdict}, …].",
+    )
+    p_llm_cal.add_argument(
+        "--cache-dir",
+        type=Path,
+        default=None,
+        dest="cache_dir",
+        help="Cache directory for LLM verdicts.",
+    )
+    p_llm_cal.add_argument(
+        "--workdir",
+        type=Path,
+        default=None,
+        help="Charm clone workdir (enables source-excerpt reading).",
+    )
+    p_llm_cal.add_argument(
+        "--max-llm-calls",
+        type=int,
+        default=200,
+        dest="max_llm_calls",
+        help="Hard cap on LLM calls (default: 200).",
+    )
+    p_llm_cal.set_defaults(func=cmd_llm_calibrate)
 
     p_pairs = sub.add_parser("pairs", help="Detect k8s/machine charm pairs → pairs.json.")
     p_pairs.add_argument("results", type=Path, help="Path to results.json (or scored.json).")

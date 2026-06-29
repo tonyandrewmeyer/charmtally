@@ -19,6 +19,11 @@ on:
   schedule:
     - cron: "0 2 * * 1"   # Mondays 02:00 UTC
   workflow_dispatch:       # manual trigger from the GitHub UI
+    inputs:
+      llm_score:
+        description: "Run the LLM scoring pass after rule-based scoring (uses OPENROUTER_API_KEY)"
+        type: boolean
+        default: false
 
 # Single in-flight scan; queue any extras.
 concurrency:
@@ -75,15 +80,30 @@ jobs:
             --overrides corpus-overrides.yaml \
             --out scored.json
 
+      - name: LLM scoring pass
+        if: ${{ inputs.llm_score == true }}
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          uv run --with pyyaml charmtally llm-score \
+            scored.json \
+            --workdir /tmp/charm-workdir \
+            --cache-dir /tmp/charm-workdir/.llm-verdicts \
+            --out llm-scored.json
+
       - name: Render dashboard
         run: |
+          SCORED=scored.json
+          if [ -f llm-scored.json ]; then SCORED=llm-scored.json; fi
           uv run --with pyyaml charmtally dashboard \
-            scored.json --out dashboard.html
+            "$SCORED" --out dashboard.html
 
       - name: Write dated snapshot
         run: |
           mkdir -p snapshots
-          cp scored.json "snapshots/scored-$(date -u +%Y-%m-%d).json"
+          SCORED=scored.json
+          if [ -f llm-scored.json ]; then SCORED=llm-scored.json; fi
+          cp "$SCORED" "snapshots/scored-$(date -u +%Y-%m-%d).json"
 
       - name: Commit refreshed artefacts
         env:
@@ -93,6 +113,7 @@ jobs:
           git config user.name  "charmtally-bot"
           git config user.email "charmtally-bot@aotearoa.dev"
           git add results.json scored.json dashboard.html snapshots/
+          [ -f llm-scored.json ] && git add llm-scored.json || true
           if git diff --cached --quiet; then
             echo "no changes to commit"
             exit 0

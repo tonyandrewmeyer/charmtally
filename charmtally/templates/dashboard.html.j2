@@ -112,6 +112,14 @@
   .arch-pct .pct-mid { color: #b67; }
   .arch-pct .pct-lo { color: #b00; }
   .arch-pct .pct-na { color: #888; font-weight: 400; }
+
+  /* AI-escalated badge (LLM upgraded worth-considering → clear-gap) */
+  .ai-badge {
+    display: inline-block; font-size: 10px; padding: 1px 5px; margin-left: 4px;
+    border-radius: 9px; background: #e8f0fe; color: #1a56db;
+    border: 1px solid #c0d4f7; white-space: nowrap; cursor: help;
+    vertical-align: middle;
+  }
 </style>
 </head>
 <body>
@@ -203,7 +211,10 @@
       </td>
       <td class="lib-{{ f.library }}">{{ f.library }}</td>
       <td class="num ok">{{ f.present }}</td>
-      <td class="num{% if f.clear_gap %} gap{% endif %}">{{ f.clear_gap }}</td>
+      <td class="num{% if f.clear_gap %} gap{% endif %}">
+        {{ f.clear_gap }}
+        {% if f.clear_gap_ai %}<span class="ai-badge" title="{{ f.clear_gap_ai }} of these were escalated from worth-considering by the LLM scoring pass">AI&nbsp;{{ f.clear_gap_ai }}</span>{% endif %}
+      </td>
       <td class="num{% if f.worth %} worth{% endif %}">{{ f.worth }}</td>
       <td class="num">{{ f.na }}</td>
       <td>
@@ -303,7 +314,7 @@
       <td class="num{% if c.worth %} worth{% endif %}">{{ c.worth }}</td>
       <td>
         {% for g in c.gaps -%}
-          <span class="gap" title="{{ g.rationale }}">{{ g.feature }}</span>{% if not loop.last %}, {% endif %}
+          <span class="gap" title="{{ g.rationale }}">{{ g.feature }}</span>{% if g.ai_escalated %}<span class="ai-badge" title="LLM escalated this from worth-considering to clear-gap">AI</span>{% endif %}{% if not loop.last %}, {% endif %}
         {%- endfor %}
       </td>
     </tr>
