@@ -44,7 +44,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@v6.2.0
+        uses: actions/setup-python@v6.3.0
         with:
           python-version: "3.12"
 
@@ -58,7 +58,7 @@ jobs:
       # canonical/hyrum on every run and lives at workdir/corpus.csv
       # (re-clones are bounded by the per-row diff anyway).
       - name: Cache charm workdir
-        uses: actions/cache@v5.0.5
+        uses: actions/cache@v6.1.0
         with:
           path: /tmp/charm-workdir
           key: charm-workdir-${{ hashFiles('corpus-overrides.yaml') }}-${{ github.run_number }}
