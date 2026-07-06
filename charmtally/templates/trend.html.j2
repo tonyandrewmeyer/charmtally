@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>charmtally — history</title>
+<style>
+  body { font: 14px/1.4 system-ui, sans-serif; margin: 2em; max-width: 1600px; }
+  h1 { margin-bottom: 0; }
+  .meta { color: #666; font-size: 12px; margin-bottom: 1.5em; }
+  table { border-collapse: collapse; margin-bottom: 2em; }
+  th, td { border: 1px solid #ddd; padding: 4px 8px; text-align: left; vertical-align: top; }
+  th { background: #f4f4f4; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .gap { color: #b00; font-weight: 600; }
+  .worth { color: #b67; }
+  .ok { color: #060; }
+  nav a { margin-right: 1em; }
+
+  .tabbar { display: flex; gap: .5em; margin: 1em 0; }
+  .tabbar button {
+    border: 1px solid #ccc; background: #fff; color: #333;
+    padding: 5px 14px; border-radius: 9px; cursor: pointer; font: inherit;
+  }
+  .tabbar button:hover { background: #f4f4f4; }
+  .tabbar button.active { background: #224; color: #fff; border-color: #224; }
+
+  .rename-list { font-size: 13px; color: #555; }
+
+  .cell-present         { background: #e6f4e6; color: #163; text-align: center; }
+  .cell-clear-gap       { background: #fbe2e2; color: #900; text-align: center; }
+  .cell-worth-considering { background: #fdf0d8; color: #85560a; text-align: center; }
+  .cell-not-applicable   { background: #f4f4f4; color: #888; text-align: center; }
+  .cell-not-in-corpus    { background: #fff; color: #bbb; text-align: center; font-style: italic; }
+  .cell-not-scanned      { background: #fff; color: #bbb; text-align: center; font-style: italic; }
+
+  .filters {
+    display: flex; flex-wrap: wrap; gap: .4em .8em;
+    align-items: center; margin: 0 0 .8em 0; font-size: 12px;
+  }
+  .filters select, .filters input[type="search"] {
+    border: 1px solid #ccc; border-radius: 9px; padding: 3px 10px; font: inherit;
+  }
+</style>
+</head>
+<body>
+
+<h1>charmtally — history</h1>
+<p class="meta">
+  Adoption trend across CI snapshots.
+  {% if generated_at %}Generated {{ generated_at }}.{% endif %}
+  {% if feature_filter %}Filtered to feature <strong>{{ feature_filter }}</strong>.{% endif %}
+</p>
+
+<nav>
+  <a href="dashboard.html">← Current</a>
+</nav>
+
+<div class="tabbar" data-tabbar="history">
+  <button data-tab="diff" class="active">Diff</button>
+  <button data-tab="adoption">Adoption</button>
+  <button data-tab="timeline">Timeline</button>
+</div>
+
+<div data-tab-panel="diff">
+  <h2>Diff: {{ diff.base_date }} → {{ diff.latest_date }}</h2>
+
+  {% if diff.possible_renames %}
+  <p class="rename-list">
+    <strong>{{ diff.possible_renames|length }} possible rename{{ "" if diff.possible_renames|length == 1 else "s" }}</strong>
+    (matched by identical repo URL; excluded from the flip lists below):
+  {% for r in diff.possible_renames %}
+    <code>{{ r.old_slug }}</code> → <code>{{ r.new_slug }}</code>{% if not loop.last %}, {% endif %}
+  {% endfor %}
+  </p>
+  {% endif %}
+
+  <h3>Regressions ({{ regressions|length }}) — present → absent</h3>
+  {% if regressions %}
+  <table>
+    <thead><tr><th>Charm</th><th>Feature</th></tr></thead>
+    <tbody>
+      {% for f in regressions %}
+      <tr><td>{{ f.charm }}</td><td class="gap">{{ f.feature }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="meta">None.</p>
+  {% endif %}
+
+  <h3>New adoptions ({{ adoptions|length }}) — absent → present</h3>
+  {% if adoptions %}
+  <table>
+    <thead><tr><th>Charm</th><th>Feature</th></tr></thead>
+    <tbody>
+      {% for f in adoptions %}
+      <tr><td>{{ f.charm }}</td><td class="ok">{{ f.feature }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="meta">None.</p>
+  {% endif %}
+</div>
+
+<div data-tab-panel="adoption" hidden>
+  <h2>Adoption over time</h2>
+  <div id="adoption-chart"></div>
+  <p class="meta">Static fallback (percent of scanned charms with the feature present, per snapshot date):</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Feature</th>
+        {% for d in adoption_dates %}<th class="num">{{ d }}</th>{% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for fname, by_date in adoption_table.items() %}
+      <tr>
+        <td>{{ fname }}</td>
+        {% for d in adoption_dates %}
+          <td class="num">{{ (by_date[d] ~ "%") if d in by_date else "—" }}</td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div data-tab-panel="timeline" hidden>
+  <h2>Per-charm timeline</h2>
+  <div class="filters">
+    <label>Feature: <select id="timeline-feature"></select></label>
+    <input type="search" id="timeline-search" placeholder="filter by charm…" autocomplete="off">
+  </div>
+  <p class="meta">
+    Static fallback shows charms with at least one change between
+    {{ diff.base_date }} and {{ diff.latest_date }}{% if feature_filter %} for
+    <strong>{{ feature_filter }}</strong>{% endif %}. Use the feature dropdown
+    above (requires JS) to browse any feature across the full corpus.
+  </p>
+  <table id="timeline-table">
+    <thead>
+      <tr>
+        <th>Charm</th>
+        <th>Feature</th>
+        {% for s in (static_timeline_rows[0].cells if static_timeline_rows else []) %}<th>{{ s.date }}</th>{% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in static_timeline_rows %}
+      <tr>
+        <td>{{ row.charm }}</td>
+        <td>{{ row.feature }}</td>
+        {% for cell in row.cells %}
+          <td class="cell-{{ cell.state }}">{{ cell.state }}</td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script type="application/json" id="timeline-data">{{ timeline_condensed|tojson }}</script>
+<script type="application/json" id="timeline-dates-data">{{ timeline_dates|tojson }}</script>
+<script type="application/json" id="adoption-data">{{ adoption|tojson }}</script>
+<script type="application/json" id="adoption-dates-data">{{ adoption_dates|tojson }}</script>
+
+<script>
+// Tab switching — progressive enhancement. Without JS, every panel above
+// stays visible (the `hidden` attribute is only ever set here), so the page
+// degrades to three stacked static tables rather than losing content.
+(function () {
+  const bar = document.querySelector('[data-tabbar="history"]');
+  if (!bar) return;
+  const panels = document.querySelectorAll('[data-tab-panel]');
+  function show(tab) {
+    panels.forEach(p => { p.hidden = p.dataset.tabPanel !== tab; });
+    bar.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  }
+  bar.querySelectorAll('button').forEach(b => b.addEventListener('click', () => show(b.dataset.tab)));
+  show('diff');
+})();
+
+// Timeline feature dropdown + charm search, backed by the embedded JSON blob.
+(function () {
+  const dataEl = document.getElementById('timeline-data');
+  if (!dataEl) return;
+  const rows = JSON.parse(dataEl.textContent);
+  const dates = JSON.parse(document.getElementById('timeline-dates-data').textContent);
+  const featureSel = document.getElementById('timeline-feature');
+  const searchEl = document.getElementById('timeline-search');
+  const table = document.getElementById('timeline-table');
+  if (!featureSel || !rows.length) return;
+
+  const features = Array.from(new Set(rows.map(r => r.feature))).sort();
+  features.forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f;
+    opt.textContent = f;
+    featureSel.appendChild(opt);
+  });
+  const preferred = {{ (feature_filter or "")|tojson }};
+  featureSel.value = features.includes(preferred) ? preferred : features[0];
+
+  function render() {
+    const feature = featureSel.value;
+    const q = (searchEl.value || '').trim().toLowerCase();
+    const filtered = rows.filter(r => r.feature === feature && (!q || r.charm.toLowerCase().includes(q)));
+
+    const thead = table.tHead;
+    thead.innerHTML = '<tr><th>Charm</th><th>Feature</th>' + dates.map(d => `<th>${d}</th>`).join('') + '</tr>';
+
+    const tbody = table.tBodies[0];
+    tbody.innerHTML = filtered.map(r =>
+      '<tr><td>' + r.charm + '</td><td>' + r.feature + '</td>' +
+      r.states.map(s => `<td class="cell-${s}">${s}</td>`).join('') +
+      '</tr>'
+    ).join('');
+  }
+
+  featureSel.addEventListener('change', render);
+  searchEl.addEventListener('input', render);
+  render();
+})();
+</script>
+
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script>
+// Adoption chart — progressive enhancement over the static table above.
+// If the CDN script fails to load (offline, CSP), Plotly is undefined and
+// this block is a no-op; the static table remains the source of truth.
+(function () {
+  if (typeof Plotly === 'undefined') return;
+  const chartEl = document.getElementById('adoption-chart');
+  const adoption = JSON.parse(document.getElementById('adoption-data').textContent);
+  const dates = JSON.parse(document.getElementById('adoption-dates-data').textContent);
+  if (!chartEl || !dates.length) return;
+
+  const traces = Object.entries(adoption).map(([feature, series]) => {
+    const byDate = {};
+    series.forEach(p => { byDate[p.date] = p.percent; });
+    return {
+      name: feature,
+      x: dates,
+      y: dates.map(d => (d in byDate ? byDate[d] : null)),
+      mode: 'lines+markers',
+      connectgaps: false,
+    };
+  });
+
+  Plotly.newPlot(chartEl, traces, {
+    yaxis: { title: '% of scanned charms present', rangemode: 'tozero' },
+    xaxis: { title: 'snapshot date' },
+    margin: { t: 20 },
+    height: 500,
+  }, { responsive: true });
+})();
+</script>
+
+</body>
+</html>

@@ -40,6 +40,7 @@ from . import llm_score as _llm_score
 from . import metadata as _metadata
 from . import pairs as _pairs
 from . import scoring as _scoring
+from . import trend as _trend
 
 DEFAULT_CATALOGUE = Path(__file__).resolve().parent.parent / "features.yaml"
 
@@ -380,6 +381,45 @@ def cmd_pairs(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_trend(args: argparse.Namespace) -> int:
+    """Adoption trend, per-charm timeline, and diff list across CI snapshots.
+
+    Reads `snapshots/scored-*.json` (plus the live scored.json, unless a
+    snapshot for today already exists) and writes a standalone History page.
+    See trend.py for the corpus-drift / feature-drift / rename guards.
+    """
+    snapshots = _trend.load_snapshots(args.snapshots_dir, args.live)
+    if not snapshots:
+        print(f"no snapshots found under {args.snapshots_dir}", file=sys.stderr)
+        return 1
+
+    ranged = _trend.select_range(snapshots, args.since)
+    if not ranged:
+        print(f"no snapshots on/after --since {args.since}", file=sys.stderr)
+        return 1
+
+    base = ranged[0]
+    latest = snapshots[-1]
+    diff = _trend.compute_diff(base, latest)
+    if args.feature:
+        diff["flips"] = [f for f in diff["flips"] if f["feature"] == args.feature]
+
+    adoption = _trend.compute_adoption(ranged, feature=args.feature)
+    timeline = _trend.compute_timeline(ranged, feature=args.feature)
+
+    html = dashboard.render_trend(diff, adoption, timeline, feature_filter=args.feature)
+    args.out.write_text(html)
+    print(f"wrote {args.out}", file=sys.stderr)
+
+    if args.emit_json:
+        json_out = args.out.with_suffix(".json")
+        payload = {"diff": diff, "adoption": adoption, "timeline": timeline}
+        json_out.write_text(json.dumps(payload, indent=2) + "\n")
+        print(f"wrote {json_out}", file=sys.stderr)
+
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="charmtally")
     p.add_argument(
@@ -541,6 +581,36 @@ def main(argv: list[str] | None = None) -> int:
     p_pairs.add_argument("results", type=Path, help="Path to results.json (or scored.json).")
     p_pairs.add_argument("--out", type=Path, default=Path("pairs.json"))
     p_pairs.set_defaults(func=cmd_pairs)
+
+    p_trend = sub.add_parser("trend", help="Adoption trend + diff list across CI snapshots → trend.html.")
+    p_trend.add_argument(
+        "--snapshots-dir",
+        type=Path,
+        default=Path("snapshots"),
+        dest="snapshots_dir",
+        help="Directory of scored-YYYY-MM-DD.json snapshots (default: snapshots/).",
+    )
+    p_trend.add_argument(
+        "--live",
+        type=Path,
+        default=Path("scored.json"),
+        help="Live scored.json, included as today's snapshot unless one already exists (default: scored.json).",
+    )
+    p_trend.add_argument("--feature", default=None, help="Restrict adoption/timeline/diff to this feature.")
+    p_trend.add_argument(
+        "--since",
+        default=None,
+        metavar="DATE",
+        help="ISO date (YYYY-MM-DD). Overrides the diff base snapshot and trims the adoption/timeline range.",
+    )
+    p_trend.add_argument("--out", type=Path, default=Path("trend.html"))
+    p_trend.add_argument(
+        "--json",
+        action="store_true",
+        dest="emit_json",
+        help="Also write the computed trend data as JSON alongside the HTML (<out>.json).",
+    )
+    p_trend.set_defaults(func=cmd_trend)
 
     args = p.parse_args(argv)
     return args.func(args)
