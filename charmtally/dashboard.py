@@ -327,3 +327,60 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
         pairs=pairs or [],
         generated_at=dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
     )
+
+
+def render_trend(
+    diff: dict,
+    adoption: dict[str, list[dict]],
+    timeline: list[dict],
+    *,
+    feature_filter: str | None = None,
+) -> str:
+    """Render the `trend` subcommand's output — a standalone History page
+    with a diff list (default view), an adoption-over-time chart, and a
+    per-(charm, feature) timeline. See trend.py for how these are computed
+    and the corpus/feature-drift guards applied along the way.
+    """
+    env = jinja2.Environment(
+        loader=jinja2.FileSystemLoader(_TEMPLATE_DIR),
+        autoescape=jinja2.select_autoescape(["html"]),
+    )
+    tmpl = env.get_template("trend.html.j2")
+
+    regressions = [f for f in diff["flips"] if f["kind"] == "regression"]
+    adoptions = [f for f in diff["flips"] if f["kind"] == "adoption"]
+
+    interesting_charms = {f["charm"] for f in diff["flips"]}
+    if feature_filter:
+        static_timeline_rows = timeline
+    else:
+        static_timeline_rows = [row for row in timeline if row["charm"] in interesting_charms]
+
+    adoption_dates: list[str] = sorted({point["date"] for series in adoption.values() for point in series})
+    adoption_table = {
+        fname: {point["date"]: point["percent"] for point in series} for fname, series in adoption.items()
+    }
+
+    # Condensed embed for the JS-powered timeline browser: every row shares the
+    # same date axis, so drop the per-cell date repetition (dates + per-row
+    # state list only) rather than the full [{date, state}, ...] shape —
+    # meaningfully smaller once the corpus runs into the hundreds of charms.
+    timeline_dates = [c["date"] for c in timeline[0]["cells"]] if timeline else []
+    timeline_condensed = [
+        {"charm": row["charm"], "feature": row["feature"], "states": [c["state"] for c in row["cells"]]}
+        for row in timeline
+    ]
+
+    return tmpl.render(
+        diff=diff,
+        regressions=regressions,
+        adoptions=adoptions,
+        adoption=adoption,
+        adoption_table=adoption_table,
+        adoption_dates=adoption_dates,
+        static_timeline_rows=static_timeline_rows,
+        timeline_dates=timeline_dates,
+        timeline_condensed=timeline_condensed,
+        feature_filter=feature_filter,
+        generated_at=dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+    )
