@@ -107,10 +107,13 @@ def load(path: Path) -> list[CharmRef]:
             repo = (row.get("Repository") or "").strip()
             if not repo:
                 continue
+            name = (row.get("Charm Name") or "").strip()
+            if not name:
+                name = repo.rstrip("/").removesuffix(".git").rsplit("/", 1)[-1]
             out.append(
                 CharmRef(
                     team=(row.get("Team") or "").strip(),
-                    name=(row.get("Charm Name") or "").strip(),
+                    name=name,
                     repo_url=repo,
                     key_charm=(row.get("Key Charm for this Team") or "").strip().upper() == "TRUE",
                     branch=(row.get("Branch (if not the default)") or "").strip() or None,
