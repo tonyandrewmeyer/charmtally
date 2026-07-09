@@ -8,11 +8,11 @@ repos:
         exclude: ^(results|scored|snapshots/.*)\.json$
       - id: check-added-large-files
         args: [--maxkb=500]
-        exclude: ^(dashboard\.html|results\.json|scored\.json|snapshots/.*\.json)$
+        exclude: ^(dashboard\.html|trend\.html|results\.json|scored\.json|snapshots/.*\.json)$
       - id: end-of-file-fixer
-        exclude: ^(dashboard\.html|results\.json|scored\.json|snapshots/.*\.json)$
+        exclude: ^(dashboard\.html|trend\.html|results\.json|scored\.json|snapshots/.*\.json)$
       - id: trailing-whitespace
-        exclude: ^(dashboard\.html|results\.json|scored\.json|snapshots/.*\.json)$
+        exclude: ^(dashboard\.html|trend\.html|results\.json|scored\.json|snapshots/.*\.json)$
 
   - repo: local
     hooks:
@@ -34,4 +34,4 @@ repos:
         entry: uv run codespell
         language: system
         types: [text]
-        exclude: ^(dashboard\.html|results\.json|scored\.json|snapshots/.*\.json|uv\.lock)$
+        exclude: ^(dashboard\.html|trend\.html|results\.json|scored\.json|snapshots/.*\.json|uv\.lock)$

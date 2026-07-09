@@ -105,6 +105,15 @@ jobs:
           if [ -f llm-scored.json ]; then SCORED=llm-scored.json; fi
           cp "$SCORED" "snapshots/scored-$(date -u +%Y-%m-%d).json"
 
+      - name: Render trend (History page)
+        run: |
+          SCORED=scored.json
+          if [ -f llm-scored.json ]; then SCORED=llm-scored.json; fi
+          uv run --with pyyaml charmtally trend \
+            --snapshots-dir snapshots \
+            --live "$SCORED" \
+            --out trend.html
+
       - name: Commit refreshed artefacts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -112,7 +121,7 @@ jobs:
         run: |
           git config user.name  "charmtally-bot"
           git config user.email "charmtally-bot@aotearoa.dev"
-          git add results.json scored.json dashboard.html snapshots/
+          git add results.json scored.json dashboard.html trend.html snapshots/
           if [ -f llm-scored.json ]; then git add llm-scored.json; fi
           if git diff --cached --quiet; then
             echo "no changes to commit"
