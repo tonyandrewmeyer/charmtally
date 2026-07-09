@@ -530,3 +530,73 @@ def test_requires_interface_invert_does_not_fire_when_some_match(tmp_path: Path)
 def test_requires_interface_invert_does_not_fire_without_metadata(tmp_path: Path) -> None:
     ev = detect_feature(tmp_path, _requires_feature(["postgresql_client"], invert=True))
     assert ev == []
+
+
+# ── relation-count (requires-N / provides-N buckets) ─────────────────────────
+
+
+def _count_feature(role: str, min_: int, max_: int | None = None, optional: bool = False) -> Feature:
+    cfg: dict = {"role": role, "min": min_}
+    if max_ is not None:
+        cfg["max"] = max_
+    if optional:
+        cfg["optional"] = True
+    return Feature(
+        name="count.test",
+        library="metadata",
+        summary="t",
+        scope="any",
+        detectors=(Detector(kind="relation-count", config=cfg),),
+    )
+
+
+def test_relation_count_fires_on_exact_bucket(tmp_path: Path) -> None:
+    _write_metadata(
+        tmp_path,
+        "name: t\nrequires:\n  a: {interface: x}\n  b: {interface: y}\n  c: {interface: z}\n",
+    )
+    ev = detect_feature(tmp_path, _count_feature("requires", 3, 3))
+    assert len(ev) == 1 and "requires=3" in ev[0].snippet
+
+
+def test_relation_count_misses_when_outside_range(tmp_path: Path) -> None:
+    _write_metadata(
+        tmp_path,
+        "name: t\nrequires:\n  a: {interface: x}\n",
+    )
+    # Bucket 2..2 shouldn't fire for 1 requires.
+    assert detect_feature(tmp_path, _count_feature("requires", 2, 2)) == []
+
+
+def test_relation_count_open_ended_upper(tmp_path: Path) -> None:
+    _write_metadata(
+        tmp_path,
+        "name: t\nprovides:\n" + "".join(f"  r{i}: {{interface: i{i}}}\n" for i in range(7)),
+    )
+    assert detect_feature(tmp_path, _count_feature("provides", 6)) != []
+    assert detect_feature(tmp_path, _count_feature("provides", 8)) == []
+
+
+def test_relation_count_zero_bucket_fires_when_role_absent(tmp_path: Path) -> None:
+    _write_metadata(tmp_path, "name: t\n")
+    assert detect_feature(tmp_path, _count_feature("requires", 0, 0)) != []
+
+
+def test_relation_count_optional_counts_only_optional_true(tmp_path: Path) -> None:
+    _write_metadata(
+        tmp_path,
+        "name: t\nrequires:\n"
+        "  a: {interface: x, optional: true}\n"
+        "  b: {interface: y, optional: true}\n"
+        "  c: {interface: z}\n",
+    )
+    # Total is 3, optional is 2.
+    assert detect_feature(tmp_path, _count_feature("requires", 3, 3)) != []
+    assert detect_feature(tmp_path, _count_feature("requires", 2, 2, optional=True)) != []
+    assert detect_feature(tmp_path, _count_feature("requires", 3, 3, optional=True)) == []
+
+
+def test_relation_count_requires_metadata_file(tmp_path: Path) -> None:
+    # No metadata → detector stays silent even for the zero bucket, so we
+    # don't count random directories as "0-requires charms".
+    assert detect_feature(tmp_path, _count_feature("requires", 0, 0)) == []

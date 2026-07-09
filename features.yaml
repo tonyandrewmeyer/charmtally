@@ -686,6 +686,229 @@ features:
           - arangodb
           - db2
 
+  # ── relation-count buckets (metadata: requires / provides) ─────────────────
+  #
+  # Descriptive: bucket each charm by how many requires / provides
+  # relations it declares in charmcraft.yaml / metadata.yaml. Exactly
+  # one bucket per role fires per charm. Buckets are exact up to the
+  # point where the corpus starts thinning, then collapse into a range.
+  # Peers are omitted intentionally — most charms have 0 or 1.
+
+  - name: requires-0
+    library: metadata
+    summary: Charm declares no requires relations.
+    scope: any
+    detect:
+      - kind: relation-count
+        role: requires
+        min: 0
+        max: 0
+
+  - name: requires-1
+    library: metadata
+    summary: Charm declares 1 requires relation.
+    scope: any
+    detect:
+      - kind: relation-count
+        role: requires
+        min: 1
+        max: 1
+
+  - name: requires-2
+    library: metadata
+    summary: Charm declares 2 requires relations.
+    scope: any
+    detect:
+      - kind: relation-count
+        role: requires
+        min: 2
+        max: 2
+
+  - name: requires-3
+    library: metadata
+    summary: Charm declares 3 requires relations.
+    scope: any
+    detect:
+      - kind: relation-count
+        role: requires
+        min: 3
+        max: 3
+
+  - name: requires-4
+    library: metadata
+    summary: Charm declares 4 requires relations.
+    scope: any
+    detect:
+      - kind: relation-count
+        role: requires
+        min: 4
+        max: 4
+
+  - name: requires-5
+    library: metadata
+    summary: Charm declares 5 requires relations.
+    scope: any
+    detect:
+      - kind: relation-count
+        role: requires
+        min: 5
+        max: 5
+
+  - name: requires-6-10
+    library: metadata
+    summary: Charm declares 6–10 requires relations.
+    scope: any
+    detect:
+      - kind: relation-count
+        role: requires
+        min: 6
+        max: 10
+
+  - name: requires-11-plus
+    library: metadata
+    summary: Charm declares 11 or more requires relations.
+    scope: any
+    expected_rare: true
+    detect:
+      - kind: relation-count
+        role: requires
+        min: 11
+
+  - name: provides-0
+    library: metadata
+    summary: Charm declares no provides relations.
+    scope: any
+    detect:
+      - kind: relation-count
+        role: provides
+        min: 0
+        max: 0
+
+  - name: provides-1
+    library: metadata
+    summary: Charm declares 1 provides relation.
+    scope: any
+    detect:
+      - kind: relation-count
+        role: provides
+        min: 1
+        max: 1
+
+  - name: provides-2
+    library: metadata
+    summary: Charm declares 2 provides relations.
+    scope: any
+    detect:
+      - kind: relation-count
+        role: provides
+        min: 2
+        max: 2
+
+  - name: provides-3
+    library: metadata
+    summary: Charm declares 3 provides relations.
+    scope: any
+    detect:
+      - kind: relation-count
+        role: provides
+        min: 3
+        max: 3
+
+  - name: provides-4
+    library: metadata
+    summary: Charm declares 4 provides relations.
+    scope: any
+    detect:
+      - kind: relation-count
+        role: provides
+        min: 4
+        max: 4
+
+  - name: provides-5
+    library: metadata
+    summary: Charm declares 5 provides relations.
+    scope: any
+    detect:
+      - kind: relation-count
+        role: provides
+        min: 5
+        max: 5
+
+  - name: provides-6-plus
+    library: metadata
+    summary: Charm declares 6 or more provides relations.
+    scope: any
+    detect:
+      - kind: relation-count
+        role: provides
+        min: 6
+
+  - name: requires-optional-0
+    library: metadata
+    summary: Charm has no requires relations marked optional.
+    scope: any
+    detect:
+      - kind: relation-count
+        role: requires
+        optional: true
+        min: 0
+        max: 0
+
+  - name: requires-optional-1
+    library: metadata
+    summary: Charm has 1 requires relation marked optional.
+    scope: any
+    detect:
+      - kind: relation-count
+        role: requires
+        optional: true
+        min: 1
+        max: 1
+
+  - name: requires-optional-2
+    library: metadata
+    summary: Charm has 2 requires relations marked optional.
+    scope: any
+    detect:
+      - kind: relation-count
+        role: requires
+        optional: true
+        min: 2
+        max: 2
+
+  - name: requires-optional-3
+    library: metadata
+    summary: Charm has 3 requires relations marked optional.
+    scope: any
+    detect:
+      - kind: relation-count
+        role: requires
+        optional: true
+        min: 3
+        max: 3
+
+  - name: requires-optional-4-5
+    library: metadata
+    summary: Charm has 4–5 requires relations marked optional.
+    scope: any
+    detect:
+      - kind: relation-count
+        role: requires
+        optional: true
+        min: 4
+        max: 5
+
+  - name: requires-optional-6-plus
+    library: metadata
+    summary: Charm has 6 or more requires relations marked optional.
+    scope: any
+    expected_rare: true
+    detect:
+      - kind: relation-count
+        role: requires
+        optional: true
+        min: 6
+
 # ── architecture patterns ──────────────────────────────────────────────────────
 #
 # Architectural-style labels, orthogonal to per-API features. Detected per charm

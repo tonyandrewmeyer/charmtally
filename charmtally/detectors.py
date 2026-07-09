@@ -397,6 +397,53 @@ def _detect_requires_interface(charm_root: Path, config: dict) -> list[Evidence]
     return matches
 
 
+def _detect_relation_count(charm_root: Path, config: dict) -> list[Evidence]:
+    """Bucket a charm by its requires / provides relation count.
+
+    config:
+      role:     "requires" | "provides" | "peers".
+      min:      inclusive lower bound on the count.
+      max:      inclusive upper bound; open-ended if omitted.
+      optional: bool — if True, count only relations declared
+                ``optional: true`` under `role` (Juju "optional relations",
+                Juju 3.6+ / interpreted by charmcraft). Defaults to False.
+
+    Relations are deduped by name across charmcraft.yaml + metadata.yaml,
+    matching the merge that metadata.read() does; a relation counts as
+    optional if any file declares it optional.
+    """
+    role = config["role"]
+    min_ = int(config["min"])
+    max_ = int(config["max"]) if "max" in config else None
+    only_optional = bool(config.get("optional", False))
+
+    meta_files = _metadata._find_metadata_files(charm_root)
+    if not meta_files:
+        return []
+    seen: dict[str, bool] = {}
+    first_rel: str | None = None
+    for meta_path in meta_files:
+        data = _metadata._load_yaml(meta_path)
+        if not data:
+            continue
+        if first_rel is None:
+            first_rel = str(meta_path.relative_to(charm_root))
+        block = data.get(role) or {}
+        if not isinstance(block, dict):
+            continue
+        for name, info in block.items():
+            opt = bool(info.get("optional")) if isinstance(info, dict) else False
+            seen[name] = seen.get(name, False) or opt
+
+    count = sum(1 for opt in seen.values() if opt) if only_optional else len(seen)
+    if count < min_:
+        return []
+    if max_ is not None and count > max_:
+        return []
+    label = f"{role}{'-optional' if only_optional else ''}={count}"
+    return [Evidence(first_rel or "charmcraft.yaml", 0, "relation-count", label)]
+
+
 def detect_feature(charm_root: Path, feature: Feature) -> list[Evidence]:
     files = _select_files(charm_root, feature.scope)
     evidence: list[Evidence] = []
@@ -408,6 +455,8 @@ def detect_feature(charm_root: Path, feature: Feature) -> list[Evidence]:
             evidence.extend(_detect_pytest_config_key(charm_root, det.config))
         elif det.kind == "requires-interface":
             evidence.extend(_detect_requires_interface(charm_root, det.config))
+        elif det.kind == "relation-count":
+            evidence.extend(_detect_relation_count(charm_root, det.config))
 
     # Pre-compile observe-event regexes per detector.
     observe_pats: dict[int, list[re.Pattern[str]]] = {}
