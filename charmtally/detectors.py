@@ -25,6 +25,7 @@ try:
 except ModuleNotFoundError:  # pragma: no cover — exercised only on 3.10
     import tomli as tomllib
 
+from . import metadata as _metadata
 from .catalogue import Feature
 
 
@@ -358,15 +359,55 @@ def _detect_pytest_config_key(charm_root: Path, config: dict) -> list[Evidence]:
     return results
 
 
+def _detect_requires_interface(charm_root: Path, config: dict) -> list[Evidence]:
+    """Match `requires:` block interfaces in charmcraft.yaml / metadata.yaml.
+
+    config:
+      interfaces: list of interface names to match on the `requires` block.
+      invert:     bool — if True, evidence is emitted only when the charm
+                  has metadata but NONE of the listed interfaces are required
+                  (used for `db.none`-style "absence of any known variant"
+                  features). Defaults to False.
+    """
+    wanted = set(config.get("interfaces") or [])
+    invert = bool(config.get("invert", False))
+    meta_files = _metadata._find_metadata_files(charm_root)
+    if not meta_files:
+        return []
+    matches: list[Evidence] = []
+    first_meta_rel: str | None = None
+    for meta_path in meta_files:
+        data = _metadata._load_yaml(meta_path)
+        if not data:
+            continue
+        rel = str(meta_path.relative_to(charm_root))
+        if first_meta_rel is None:
+            first_meta_rel = rel
+        block = data.get("requires") or {}
+        if not isinstance(block, dict):
+            continue
+        for name, info in block.items():
+            iface = (info or {}).get("interface", "") if isinstance(info, dict) else ""
+            if iface in wanted:
+                matches.append(Evidence(rel, 0, "requires-interface", f"requires {name}: {iface}"[:120]))
+    if invert:
+        if first_meta_rel is not None and not matches:
+            return [Evidence(first_meta_rel, 0, "requires-interface", "no listed interface required")]
+        return []
+    return matches
+
+
 def detect_feature(charm_root: Path, feature: Feature) -> list[Evidence]:
     files = _select_files(charm_root, feature.scope)
     evidence: list[Evidence] = []
 
     # File-independent detectors run once over the charm root, not per
-    # Python file in scope. Today: pytest-config-key.
+    # Python file in scope. Today: pytest-config-key, requires-interface.
     for det in feature.detectors:
         if det.kind == "pytest-config-key":
             evidence.extend(_detect_pytest_config_key(charm_root, det.config))
+        elif det.kind == "requires-interface":
+            evidence.extend(_detect_requires_interface(charm_root, det.config))
 
     # Pre-compile observe-event regexes per detector.
     observe_pats: dict[int, list[re.Pattern[str]]] = {}

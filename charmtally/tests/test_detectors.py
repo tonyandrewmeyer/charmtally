@@ -465,3 +465,68 @@ class C:
     )
     ev = detect_feature(tmp_path, _reconcile_feature())
     assert ev == []
+
+
+# ── requires-interface (db.* features) ───────────────────────────────────────
+
+
+def _requires_feature(interfaces: list[str], invert: bool = False) -> Feature:
+    cfg: dict = {"interfaces": interfaces}
+    if invert:
+        cfg["invert"] = True
+    return Feature(
+        name="db.test",
+        library="metadata",
+        summary="t",
+        scope="any",
+        detectors=(Detector(kind="requires-interface", config=cfg),),
+    )
+
+
+def _write_metadata(tmp_path: Path, body: str) -> Path:
+    (tmp_path / "metadata.yaml").write_text(body)
+    return tmp_path
+
+
+def test_requires_interface_matches_listed_interface(tmp_path: Path) -> None:
+    _write_metadata(
+        tmp_path,
+        "name: t\nrequires:\n  db:\n    interface: postgresql_client\n",
+    )
+    ev = detect_feature(tmp_path, _requires_feature(["postgresql_client", "pgsql"]))
+    assert len(ev) == 1
+    assert "postgresql_client" in ev[0].snippet
+
+
+def test_requires_interface_ignores_provides_and_peers(tmp_path: Path) -> None:
+    _write_metadata(
+        tmp_path,
+        "name: t\n"
+        "provides:\n  db:\n    interface: postgresql_client\n"
+        "peers:\n  cluster:\n    interface: postgresql_client\n",
+    )
+    ev = detect_feature(tmp_path, _requires_feature(["postgresql_client"]))
+    assert ev == []
+
+
+def test_requires_interface_invert_fires_when_none_match(tmp_path: Path) -> None:
+    _write_metadata(
+        tmp_path,
+        "name: t\nrequires:\n  ingress:\n    interface: ingress\n",
+    )
+    ev = detect_feature(tmp_path, _requires_feature(["postgresql_client", "mysql_client"], invert=True))
+    assert len(ev) == 1
+
+
+def test_requires_interface_invert_does_not_fire_when_some_match(tmp_path: Path) -> None:
+    _write_metadata(
+        tmp_path,
+        "name: t\nrequires:\n  db:\n    interface: mysql_client\n",
+    )
+    ev = detect_feature(tmp_path, _requires_feature(["postgresql_client", "mysql_client"], invert=True))
+    assert ev == []
+
+
+def test_requires_interface_invert_does_not_fire_without_metadata(tmp_path: Path) -> None:
+    ev = detect_feature(tmp_path, _requires_feature(["postgresql_client"], invert=True))
+    assert ev == []

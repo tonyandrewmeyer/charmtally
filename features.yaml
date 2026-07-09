@@ -505,6 +505,187 @@ features:
     verified: []
     negative: []
 
+  # ── database integrations (metadata: requires:) ────────────────────────────
+  #
+  # Descriptive facts derived from the charm's `requires:` block in
+  # charmcraft.yaml / metadata.yaml. Machine and k8s variants collapse
+  # into a single feature per database engine — the k8s vs machine
+  # distinction is already surfaced by the has_containers flag.
+  #
+  # `db.none` fires when the charm requires none of the interfaces
+  # listed in any db.* feature. Keep the invert-list in sync with the
+  # union of every db.* interfaces list below.
+
+  - name: db.postgresql
+    library: metadata
+    summary: Charm requires a PostgreSQL integration.
+    scope: any
+    detect:
+      - kind: requires-interface
+        interfaces: [postgresql_client, pgsql, postgresql_async, postgresql_watcher]
+
+  - name: db.mysql
+    library: metadata
+    summary: Charm requires a MySQL integration.
+    scope: any
+    detect:
+      - kind: requires-interface
+        interfaces:
+          - mysql_client
+          - mysql-shared
+          - mysql
+          - mysql_async
+          - mysql-async-replication
+          - mysql-router
+          - mysql_datastore
+          - mysql-monitor
+          - mysql-root
+
+  - name: db.mongodb
+    library: metadata
+    summary: Charm requires a MongoDB integration.
+    scope: any
+    detect:
+      - kind: requires-interface
+        interfaces: [mongodb_client, mongodb, mongos_client]
+
+  - name: db.redis
+    library: metadata
+    summary: Charm requires a Redis integration.
+    scope: any
+    detect:
+      - kind: requires-interface
+        interfaces: [redis]
+
+  - name: db.opensearch
+    library: metadata
+    summary: Charm requires an OpenSearch integration.
+    scope: any
+    detect:
+      - kind: requires-interface
+        interfaces: [opensearch_client]
+
+  - name: db.elasticsearch
+    library: metadata
+    summary: Charm requires an Elasticsearch integration.
+    scope: any
+    detect:
+      - kind: requires-interface
+        interfaces: [elasticsearch, elasticsearch-datastore, elastic-beats]
+
+  - name: db.kafka
+    library: metadata
+    summary: Charm requires a Kafka integration.
+    scope: any
+    detect:
+      - kind: requires-interface
+        interfaces: [kafka_client, kafka]
+
+  - name: db.cassandra
+    library: metadata
+    summary: Charm requires a Cassandra integration.
+    scope: any
+    expected_rare: true
+    detect:
+      - kind: requires-interface
+        interfaces: [cassandra, cassandra_client]
+
+  - name: db.etcd
+    library: metadata
+    summary: Charm requires an etcd integration.
+    scope: any
+    detect:
+      - kind: requires-interface
+        interfaces: [etcd, etcd_client, etcd-proxy]
+
+  - name: db.memcached
+    library: metadata
+    summary: Charm requires a memcached integration.
+    scope: any
+    expected_rare: true
+    detect:
+      - kind: requires-interface
+        interfaces: [memcache]
+
+  - name: db.influxdb
+    library: metadata
+    summary: Charm requires an InfluxDB integration.
+    scope: any
+    expected_rare: true
+    detect:
+      - kind: requires-interface
+        interfaces: [influxdb-api]
+
+  - name: db.zookeeper
+    library: metadata
+    summary: Charm requires a ZooKeeper integration.
+    scope: any
+    expected_rare: true
+    detect:
+      - kind: requires-interface
+        interfaces: [zookeeper]
+
+  - name: db.arangodb
+    library: metadata
+    summary: Charm requires an ArangoDB integration.
+    scope: any
+    expected_rare: true
+    detect:
+      - kind: requires-interface
+        interfaces: [arangodb]
+
+  - name: db.db2
+    library: metadata
+    summary: Charm requires an IBM Db2 integration.
+    scope: any
+    expected_rare: true
+    detect:
+      - kind: requires-interface
+        interfaces: [db2]
+
+  - name: db.none
+    library: metadata
+    summary: Charm requires no database integration.
+    scope: any
+    detect:
+      - kind: requires-interface
+        invert: true
+        interfaces:
+          # Keep in sync with the union of every db.* interfaces list above.
+          - postgresql_client
+          - pgsql
+          - postgresql_async
+          - postgresql_watcher
+          - mysql_client
+          - mysql-shared
+          - mysql
+          - mysql_async
+          - mysql-async-replication
+          - mysql-router
+          - mysql_datastore
+          - mysql-monitor
+          - mysql-root
+          - mongodb_client
+          - mongodb
+          - mongos_client
+          - redis
+          - opensearch_client
+          - elasticsearch
+          - elasticsearch-datastore
+          - elastic-beats
+          - kafka_client
+          - kafka
+          - cassandra
+          - cassandra_client
+          - etcd
+          - etcd_client
+          - etcd-proxy
+          - memcache
+          - influxdb-api
+          - zookeeper
+          - arangodb
+          - db2
+
 # ── architecture patterns ──────────────────────────────────────────────────────
 #
 # Architectural-style labels, orthogonal to per-API features. Detected per charm
