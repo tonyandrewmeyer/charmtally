@@ -175,10 +175,12 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
     for c in charms:
         present = clear_gap = clear_gap_ai = worth = 0
         gaps = []
+        present_features: list[str] = []
         for fname in feat_names:
             rec = c["features"].get(fname, {})
             if rec.get("present"):
                 present += 1
+                present_features.append(fname)
             elif rec.get("score") == "clear-gap":
                 clear_gap += 1
                 if rec.get("ai_escalated"):
@@ -209,6 +211,7 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
             "clear_gap_ai": clear_gap_ai,
             "worth": worth,
             "gaps": gaps,
+            "present_features": present_features,
             "architecture": arch_labels,
             "k8s": m.get("has_containers", False),
             "is_reactive": m.get("is_reactive", False),

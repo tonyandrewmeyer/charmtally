@@ -99,6 +99,22 @@
     padding: 3px 10px; font: inherit; min-width: 14em;
   }
   .filters input[type="search"]:focus { outline: 2px solid #ace; outline-offset: -1px; }
+  .filters input[list] {
+    border: 1px solid #ccc; border-radius: 9px;
+    padding: 3px 10px; font: inherit; min-width: 12em;
+  }
+  .filters input[list]:focus { outline: 2px solid #ace; outline-offset: -1px; }
+  .feature-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .feature-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; padding: 2px 4px 2px 8px; border-radius: 9px;
+    background: #224; color: #fff; white-space: nowrap;
+  }
+  .feature-chip button {
+    border: none; background: transparent; color: #fff;
+    cursor: pointer; padding: 0 4px; font-size: 13px; line-height: 1;
+  }
+  .feature-chip button:hover { color: #f88; }
   tr.hidden { display: none; }
 
   /* Per-architecture adoption pill in the feature view. */
@@ -271,6 +287,13 @@
     <button data-status="clean">no clear-gap</button>
   </div>
   <input type="search" id="charm-search" placeholder="search charm / team / repo…" autocomplete="off">
+  <span class="label">Has feature:</span>
+  <input list="charm-feature-list" id="charm-feature-input"
+         placeholder="add feature…" autocomplete="off">
+  <datalist id="charm-feature-list">
+    {% for f in features %}<option value="{{ f.name }}">{% endfor %}
+  </datalist>
+  <div class="feature-chips" id="charm-feature-chips"></div>
   <span class="visible-count" id="charm-visible-count"></span>
 </div>
 
@@ -293,6 +316,7 @@
       data-arch="{{ c.architecture|join(' ') }}"
       data-shape="{{ 'k8s' if c.k8s else 'machine' }}"
       data-status="{{ 'has-gaps' if c.clear_gap else 'clean' }}"
+      data-features="{{ c.present_features|join(' ') }}"
       data-search="{{ (c.name + ' ' + c.team + ' ' + c.repo_url)|lower }}"
     >
       <td><a href="{{ c.repo_url }}">{{ c.name }}</a></td>
@@ -443,7 +467,13 @@
   const rows  = Array.from(table.tBodies[0].rows);
   const countEl = document.getElementById('charm-visible-count');
   const searchEl = document.getElementById('charm-search');
-  const state = { arch: '', shape: '', status: '', search: '' };
+  const featureInput = document.getElementById('charm-feature-input');
+  const featureChipsEl = document.getElementById('charm-feature-chips');
+  const featureList = document.getElementById('charm-feature-list');
+  const featureNames = new Set(
+    Array.from(featureList ? featureList.options : []).map(o => o.value)
+  );
+  const state = { arch: '', shape: '', status: '', search: '', features: [] };
 
   function apply() {
     let visible = 0;
@@ -453,11 +483,59 @@
       const shapeMatch  = !state.shape  || r.dataset.shape === state.shape;
       const statusMatch = !state.status || r.dataset.status === state.status;
       const searchMatch = !q || (r.dataset.search || '').includes(q);
-      const show = archMatch && shapeMatch && statusMatch && searchMatch;
+      let featureMatch = true;
+      if (state.features.length) {
+        const present = new Set((r.dataset.features || '').split(' ').filter(Boolean));
+        featureMatch = state.features.every(f => present.has(f));
+      }
+      const show = archMatch && shapeMatch && statusMatch && searchMatch && featureMatch;
       r.classList.toggle('hidden', !show);
       if (show) visible++;
     });
     countEl.textContent = `${visible} / ${rows.length} shown`;
+  }
+
+  function renderFeatureChips() {
+    if (!featureChipsEl) return;
+    featureChipsEl.innerHTML = '';
+    state.features.forEach(name => {
+      const chip = document.createElement('span');
+      chip.className = 'feature-chip';
+      chip.textContent = name;
+      const x = document.createElement('button');
+      x.type = 'button';
+      x.textContent = '×';
+      x.title = `remove ${name}`;
+      x.addEventListener('click', () => {
+        state.features = state.features.filter(f => f !== name);
+        renderFeatureChips();
+        apply();
+      });
+      chip.appendChild(x);
+      featureChipsEl.appendChild(chip);
+    });
+  }
+
+  function addFeature(name) {
+    name = (name || '').trim();
+    if (!name || !featureNames.has(name)) return false;
+    if (state.features.includes(name)) return false;
+    state.features.push(name);
+    renderFeatureChips();
+    apply();
+    return true;
+  }
+
+  if (featureInput) {
+    featureInput.addEventListener('change', () => {
+      if (addFeature(featureInput.value)) featureInput.value = '';
+    });
+    featureInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (addFeature(featureInput.value)) featureInput.value = '';
+      }
+    });
   }
 
   bar.querySelectorAll('.group').forEach(group => {
