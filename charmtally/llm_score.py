@@ -282,7 +282,7 @@ def _save_cache_entry(cache_dir: Path, key: str, entry: dict) -> None:
 def prune_cache(cache_dir: Path, ttl_days: int = _CACHE_TTL_DAYS) -> int:
     """Remove cache entries older than *ttl_days* (AI-DESIGN.md §7.3).
 
-    Returns the count of entries removed. Entries with unparseable timestamps
+    Returns the count of entries removed. Entries with unparsable timestamps
     are left intact.
     """
     if not cache_dir.is_dir():

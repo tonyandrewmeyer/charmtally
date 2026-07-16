@@ -359,12 +359,13 @@ def test_against_real_snapshots() -> None:
         "2026-06-25",
         "2026-06-29",
         "2026-07-06",
+        "2026-07-13",
     ]
 
     base, latest = snapshots[0], snapshots[-1]
     diff = trend.compute_diff(base, latest)
     assert diff["base_date"] == "2026-06-11"
-    assert diff["latest_date"] == "2026-07-06"
+    assert diff["latest_date"] == "2026-07-13"
     # Every flip must be between charms present in both ends of the range —
     # the corpus grew from ~344 to 761 charms over this window, so most
     # charms are correctly excluded by the corpus-drift guard.
