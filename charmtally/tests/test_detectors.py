@@ -467,6 +467,172 @@ class C:
     assert ev == []
 
 
+# ── CALIBRATION #21 cut #1: relation-scoped shared-handler exclusion ────────
+
+
+def test_reconcile_excludes_single_relation_lifecycle(tmp_path: Path) -> None:
+    """chopsticks shape: one peer relation's own lifecycle bound to a single
+    handler is relation-scoped plumbing, not reconcile."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework):
+        self.framework.observe(self.on.cluster_relation_joined, self._on_cluster_changed)
+        self.framework.observe(self.on.cluster_relation_changed, self._on_cluster_changed)
+        self.framework.observe(self.on.cluster_relation_departed, self._on_cluster_changed)
+    def _on_cluster_changed(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert ev == []
+
+
+def test_reconcile_excludes_single_relation_lifecycle_discourse_shape(tmp_path: Path) -> None:
+    """discourse-k8s-operator shape: one oauth relation's lifecycle regenerating
+    client config is relation-scoped, not charm-wide convergence."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework):
+        self.framework.observe(self.on.oauth_relation_created, self._on_oauth_relation_changed)
+        self.framework.observe(self.on.oauth_relation_joined, self._on_oauth_relation_changed)
+        self.framework.observe(self.on.oauth_relation_changed, self._on_oauth_relation_changed)
+    def _on_oauth_relation_changed(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert ev == []
+
+
+def test_reconcile_excludes_two_mirrored_relations_standard_lifecycle(tmp_path: Path) -> None:
+    """loki-k8s-operator shape: two mirrored relation endpoints, each
+    contributing only standard lifecycle events, is still relation-scoped."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework):
+        self.framework.observe(self.on.grafana_source_relation_created, self._on_grafana_source_changed)
+        self.framework.observe(self.on.grafana_source_relation_joined, self._on_grafana_source_changed)
+        self.framework.observe(self.on.grafana_source_relation_changed, self._on_grafana_source_changed)
+        self.framework.observe(self.on.send_datasource_relation_created, self._on_grafana_source_changed)
+        self.framework.observe(self.on.send_datasource_relation_joined, self._on_grafana_source_changed)
+        self.framework.observe(self.on.send_datasource_relation_changed, self._on_grafana_source_changed)
+    def _on_grafana_source_changed(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert ev == []
+
+
+def test_reconcile_fires_when_three_or_more_relation_endpoints(tmp_path: Path) -> None:
+    """Cut #1 caps at 2 relation endpoints — a handler spanning 3+ relations'
+    lifecycles is charm-wide convergence again, not narrow plumbing."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework):
+        self.framework.observe(self.on.db_relation_changed, self._reconcile)
+        self.framework.observe(self.on.cache_relation_changed, self._reconcile)
+        self.framework.observe(self.on.mq_relation_changed, self._reconcile)
+    def _reconcile(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert len(ev) == 3
+
+
+# ── CALIBRATION #21 cut #2: symmetric-resource fan-out exclusion ────────────
+
+
+def test_reconcile_excludes_symmetric_storage_detaching(tmp_path: Path) -> None:
+    """mysql-operators shape: N symmetric storage mounts' `*_storage_detaching`
+    events into one cleanup handler is resource fan-out, not reconcile."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework):
+        self.framework.observe(self.on.data_storage_detaching, self._on_storage_detaching)
+        self.framework.observe(self.on.logs_storage_detaching, self._on_storage_detaching)
+        self.framework.observe(self.on.certs_storage_detaching, self._on_storage_detaching)
+        self.framework.observe(self.on.config_storage_detaching, self._on_storage_detaching)
+    def _on_storage_detaching(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert ev == []
+
+
+def test_reconcile_excludes_symmetric_pebble_ready(tmp_path: Path) -> None:
+    """Same fan-out shape for N containers' `*_pebble_ready` events."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework):
+        self.framework.observe(self.on.api_pebble_ready, self._on_any_pebble_ready)
+        self.framework.observe(self.on.worker_pebble_ready, self._on_any_pebble_ready)
+        self.framework.observe(self.on.scheduler_pebble_ready, self._on_any_pebble_ready)
+    def _on_any_pebble_ready(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert ev == []
+
+
+def test_reconcile_fires_when_resource_suffixes_mixed(tmp_path: Path) -> None:
+    """Mixing storage-detaching and pebble-ready events isn't a single
+    symmetric-resource fan-out (two different suffixes) — still reconcile."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework):
+        self.framework.observe(self.on.data_storage_detaching, self._reconcile)
+        self.framework.observe(self.on.api_pebble_ready, self._reconcile)
+        self.framework.observe(self.on.worker_pebble_ready, self._reconcile)
+    def _reconcile(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert len(ev) == 3
+
+
+# ── CALIBRATION #21 regression: strong-TP with no naming tells stays reconcile ──
+
+
+def test_reconcile_regression_kfp_api_shape_still_fires(tmp_path: Path) -> None:
+    """kfp-api's `_on_event` — heterogeneous lifecycle/config/relation events
+    funnelled into one full-state-convergence handler, no naming tells — must
+    still classify as reconcile after both CALIBRATION #21 cuts land."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework):
+        self.framework.observe(self.on.install, self._on_event)
+        self.framework.observe(self.on.config_changed, self._on_event)
+        self.framework.observe(self.on.leader_elected, self._on_event)
+        self.framework.observe(self.on.mysql_relation_changed, self._on_event)
+        self.framework.observe(self.on.kfp_api_pebble_ready, self._on_event)
+        self.framework.observe(self.on.upgrade_charm, self._on_event)
+    def _on_event(self, event):
+        self._check_leader()
+        self._check_config()
+        self._apply_k8s_resources()
+        self._reconcile_authorization_policies()
+        self._ensure_bucket_exists()
+        self.update_layer()
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert len(ev) == 6
+
+
 # ── requires-interface (db.* features) ───────────────────────────────────────
 
 

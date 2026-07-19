@@ -222,6 +222,86 @@ def _detect_ast_init_call(tree: ast.Module, cfg: dict) -> Iterator[ast.AST]:
                 yield from _self_attr_calls(item.body, attrs)
 
 
+_RELATION_LIFECYCLE_SUFFIXES = (
+    "relation_created",
+    "relation_joined",
+    "relation_changed",
+    "relation_departed",
+    "relation_broken",
+)
+
+_SYMMETRIC_RESOURCE_SUFFIXES = (
+    "storage_attached",
+    "storage_detaching",
+    "pebble_ready",
+    "pebble_custom_notice",
+    "pebble_check_failed",
+    "pebble_check_recovered",
+)
+
+
+def _relation_prefix(event: str) -> str | None:
+    """Return the relation-name prefix if `event` is a standard relation
+    lifecycle event (`<relation>_relation_{created,joined,changed,departed,broken}`),
+    else None.
+    """
+    for suffix in _RELATION_LIFECYCLE_SUFFIXES:
+        marker = "_" + suffix
+        if event.endswith(marker) and len(event) > len(marker):
+            return event[: -len(marker)]
+    return None
+
+
+def _is_relation_scoped_binding(events: set[str]) -> bool:
+    """CALIBRATION #21 cut #1: every qualifying event is a standard
+    relation-lifecycle event, and they come from at most 2 distinct relation
+    endpoints — relation-scoped plumbing, not charm-wide convergence.
+
+    Covers both the single-relation shape (`chopsticks`, `discourse-k8s-operator`
+    — one relation's own lifecycle) and the mirrored-relation shape
+    (`loki-k8s-operator` — two relation endpoints, each contributing only
+    standard lifecycle events).
+    """
+    prefixes: set[str] = set()
+    for event in events:
+        prefix = _relation_prefix(event)
+        if prefix is None:
+            return False
+        prefixes.add(prefix)
+    return len(prefixes) <= 2
+
+
+def _symmetric_resource_split(event: str) -> tuple[str, str] | None:
+    """Split `event` into (instance-prefix, suffix) if it ends with a known
+    per-instance resource event suffix (storage/pebble events ops generates
+    once per storage mount or container). Returns None otherwise.
+    """
+    for suffix in _SYMMETRIC_RESOURCE_SUFFIXES:
+        marker = "_" + suffix
+        if event.endswith(marker) and len(event) > len(marker):
+            return event[: -len(marker)], suffix
+    return None
+
+
+def _is_symmetric_resource_fanout(events: set[str]) -> bool:
+    """CALIBRATION #21 cut #2: every qualifying event shares one common
+    non-relation suffix (e.g. `*_storage_detaching`, `*_pebble_ready`) across
+    what look like N distinct resource instances — symmetric-resource
+    fan-out, not reconcile. Covers the `mysql-operators` shape (4 storage
+    mounts' `*_storage_detaching` events into one handler).
+    """
+    suffixes: set[str] = set()
+    prefixes: set[str] = set()
+    for event in events:
+        split = _symmetric_resource_split(event)
+        if split is None:
+            return False
+        prefix, suffix = split
+        prefixes.add(prefix)
+        suffixes.add(suffix)
+    return len(suffixes) == 1 and len(prefixes) == len(events)
+
+
 def _detect_ast_observe_shared_handler(tree: ast.Module, cfg: dict) -> Iterator[ast.AST]:
     """Match the holistic `reconcile` pattern: a single handler method is
     bound to >= `min_events` distinct events via `framework.observe(...)`.
@@ -237,6 +317,11 @@ def _detect_ast_observe_shared_handler(tree: ast.Module, cfg: dict) -> Iterator[
     `reconcile-all` loop variable). Handler identifier: trailing attribute
     name of `args[1]`. Events matching any suffix in `exclude_suffixes`
     (default: `_error`) are filtered out before counting.
+
+    Two further exclusions (CALIBRATION #21 follow-ups #1/#2) declassify
+    otherwise-qualifying bindings that are relation-scoped plumbing or
+    symmetric-resource fan-out rather than charm-wide convergence — see
+    `_is_relation_scoped_binding` / `_is_symmetric_resource_fanout`.
     """
     min_events = int(cfg.get("min_events", 3))
     exclude_suffixes = tuple(cfg.get("exclude_suffixes", ["_error"]))
@@ -260,8 +345,13 @@ def _detect_ast_observe_shared_handler(tree: ast.Module, cfg: dict) -> Iterator[
         per_handler_events.setdefault(handler, set()).add(event)
         per_handler_calls.setdefault(handler, []).append(node)
     for handler, events in per_handler_events.items():
-        if len(events) >= min_events:
-            yield from per_handler_calls[handler]
+        if len(events) < min_events:
+            continue
+        if _is_relation_scoped_binding(events):
+            continue
+        if _is_symmetric_resource_fanout(events):
+            continue
+        yield from per_handler_calls[handler]
 
 
 def _detect_ast_shared_method(tree: ast.Module, cfg: dict) -> Iterator[ast.AST]:
