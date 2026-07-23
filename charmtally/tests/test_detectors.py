@@ -545,6 +545,69 @@ class C:
     assert len(ev) == 3
 
 
+# ── CALIBRATION #22 follow-up #7: bare-prefix relation endpoint ─────────────
+
+
+def test_reconcile_excludes_bare_relation_prefix_single_endpoint(tmp_path: Path) -> None:
+    """cos-coordinated-workers shape: `self.on[relation_name].relation_created`
+    (dynamic/reusable relation name) produces a bare `relation_created` event
+    with an empty prefix. One such bare endpoint's standard lifecycle quintet
+    is still relation-scoped plumbing, not reconcile."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework, relation_name):
+        self.framework.observe(self.on[relation_name].relation_created, self._on_cluster_changed)
+        self.framework.observe(self.on[relation_name].relation_joined, self._on_cluster_changed)
+        self.framework.observe(self.on[relation_name].relation_changed, self._on_cluster_changed)
+        self.framework.observe(self.on[relation_name].relation_departed, self._on_cluster_changed)
+        self.framework.observe(self.on[relation_name].relation_broken, self._on_cluster_changed)
+    def _on_cluster_changed(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert ev == []
+
+
+def test_reconcile_excludes_bare_plus_one_named_relation_prefix(tmp_path: Path) -> None:
+    """Named-prefix behaviour is unchanged by the bare-prefix fix: a bare
+    endpoint (1) plus one named-prefix endpoint (2) is still <= 2 relation
+    endpoints, so it's excluded the same as two named prefixes would be."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework, relation_name):
+        self.framework.observe(self.on[relation_name].relation_created, self._on_changed)
+        self.framework.observe(self.on[relation_name].relation_changed, self._on_changed)
+        self.framework.observe(self.on.cluster_relation_changed, self._on_changed)
+    def _on_changed(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert ev == []
+
+
+def test_reconcile_fires_when_bare_prefix_pushes_past_two_endpoints(tmp_path: Path) -> None:
+    """Boundary at the <= 2 count: a bare-prefix endpoint plus two distinct
+    named-prefix endpoints is 3 relation endpoints total -- past cut #1's cap,
+    so this is charm-wide convergence again, not narrow plumbing."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework, relation_name):
+        self.framework.observe(self.on[relation_name].relation_changed, self._reconcile)
+        self.framework.observe(self.on.db_relation_changed, self._reconcile)
+        self.framework.observe(self.on.cache_relation_changed, self._reconcile)
+    def _reconcile(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert len(ev) == 3
+
+
 # ── CALIBRATION #21 cut #2: symmetric-resource fan-out exclusion ────────────
 
 

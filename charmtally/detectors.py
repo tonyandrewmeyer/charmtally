@@ -244,8 +244,17 @@ def _relation_prefix(event: str) -> str | None:
     """Return the relation-name prefix if `event` is a standard relation
     lifecycle event (`<relation>_relation_{created,joined,changed,departed,broken}`),
     else None.
+
+    A bare event with no prefix at all (`self.on[relation_name].relation_created`,
+    the dynamic/reusable-relation-name idiom) resolves to the trailing attribute
+    name alone -- e.g. `relation_created` -- with nothing to strip. CALIBRATION
+    #22 follow-up #7: treat that bare form as its own single relation endpoint
+    (prefix `""`) rather than falling through to `None`, which previously let
+    it dodge the relation-scoped classification entirely.
     """
     for suffix in _RELATION_LIFECYCLE_SUFFIXES:
+        if event == suffix:
+            return ""
         marker = "_" + suffix
         if event.endswith(marker) and len(event) > len(marker):
             return event[: -len(marker)]
