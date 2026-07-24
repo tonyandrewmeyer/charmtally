@@ -354,7 +354,7 @@ class C:
     def __init__(self, framework):
         self.framework.observe(self.on.install, self._reconcile)
         self.framework.observe(self.on.config_changed, self._reconcile)
-        self.framework.observe(self.on.start, self._reconcile)
+        self.framework.observe(self.on.leader_elected, self._reconcile)
     def _reconcile(self, event): pass
 """,
     )
@@ -389,11 +389,12 @@ class C:
         self.framework.observe(self.on.install, self._handle)
         self.framework.observe(self.on.config_changed, self._handle)
         self.framework.observe(self.on.upgrade_charm, self._handle)
+        self.framework.observe(self.on.leader_elected, self._handle)
     def _handle(self, event): pass
 """,
     )
     ev = detect_feature(tmp_path, _reconcile_feature())
-    assert len(ev) == 3
+    assert len(ev) == 4
 
 
 def test_reconcile_excludes_error_events(tmp_path: Path) -> None:
@@ -694,6 +695,89 @@ class C:
     )
     ev = detect_feature(tmp_path, _reconcile_feature())
     assert len(ev) == 6
+
+
+# ── CALIBRATION #22 follow-up #6 / #24: baseline-lifecycle-only exclusion ───
+
+
+def test_reconcile_excludes_baseline_lifecycle_only(tmp_path: Path) -> None:
+    """`install`/`config_changed`/`upgrade_charm` alone is idempotent-
+    reconfiguration boilerplate, not reconcile (CALIBRATION #22 follow-up
+    #6 / #24 — charmed-linstor/linstor-controller, auditd-operator,
+    chrony-client-operator all share exactly this shape)."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework):
+        self.framework.observe(self.on.install, self._set_pod_spec)
+        self.framework.observe(self.on.config_changed, self._set_pod_spec)
+        self.framework.observe(self.on.upgrade_charm, self._set_pod_spec)
+    def _set_pod_spec(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert ev == []
+
+
+def test_reconcile_excludes_baseline_lifecycle_plus_update_status_start_stop(
+    tmp_path: Path,
+) -> None:
+    """The exclusion covers the full six-hook baseline set, not just the
+    three-hook triad."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework):
+        self.framework.observe(self.on.config_changed, self._configure)
+        self.framework.observe(self.on.update_status, self._configure)
+        self.framework.observe(self.on.start, self._configure)
+        self.framework.observe(self.on.stop, self._configure)
+    def _configure(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert ev == []
+
+
+def test_reconcile_fires_when_baseline_plus_one_relation_event(tmp_path: Path) -> None:
+    """One non-baseline event (a relation event here) alongside the
+    baseline triad is enough to keep the binding qualifying — the
+    exclusion only fires when *every* event is baseline."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework):
+        self.framework.observe(self.on.install, self._reconcile)
+        self.framework.observe(self.on.config_changed, self._reconcile)
+        self.framework.observe(self.on.upgrade_charm, self._reconcile)
+        self.framework.observe(self.on.foo_relation_changed, self._reconcile)
+    def _reconcile(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert len(ev) == 4
+
+
+def test_reconcile_fires_when_baseline_plus_pebble_event(tmp_path: Path) -> None:
+    """A pebble-ready event alongside baseline hooks is not excluded by
+    the baseline-only cut — that's a distinct, not-yet-cut shape
+    (CALIBRATION #24 follow-up, kube-state-metrics-operator)."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework):
+        self.framework.observe(self.on.workload_pebble_ready, self._manage_workload)
+        self.framework.observe(self.on.config_changed, self._manage_workload)
+        self.framework.observe(self.on.upgrade_charm, self._manage_workload)
+    def _manage_workload(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert len(ev) == 3
 
 
 # ── requires-interface (db.* features) ───────────────────────────────────────
