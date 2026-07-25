@@ -311,6 +311,25 @@ def _is_symmetric_resource_fanout(events: set[str]) -> bool:
     return len(suffixes) == 1 and len(prefixes) == len(events)
 
 
+# The six baseline, non-relational Juju lifecycle hooks every charm
+# eventually observes regardless of architecture. A shared handler bound
+# only to a subset of these is idempotent-reconfiguration boilerplate, not
+# a reconcile-shaped convergence signal -- CALIBRATION.md #22 follow-up #6,
+# confirmed by a third real-world instance in #24 (charmed-linstor's
+# linstor-controller, alongside #22's auditd-operator and
+# chrony-client-operator).
+_BASELINE_LIFECYCLE_EVENTS = frozenset({"install", "config_changed", "upgrade_charm", "update_status", "start", "stop"})
+
+
+def _is_baseline_lifecycle_only(events: set[str]) -> bool:
+    """True when every event in `events` is one of the six baseline Juju
+    lifecycle hooks (`install`/`config_changed`/`upgrade_charm`, optionally
+    plus `update_status`/`start`/`stop`) and nothing else -- no relation,
+    leader, secret, cert, pebble, or custom-library event is present.
+    """
+    return bool(events) and events <= _BASELINE_LIFECYCLE_EVENTS
+
+
 def _detect_ast_observe_shared_handler(tree: ast.Module, cfg: dict) -> Iterator[ast.AST]:
     """Match the holistic `reconcile` pattern: a single handler method is
     bound to >= `min_events` distinct events via `framework.observe(...)`.
@@ -319,7 +338,10 @@ def _detect_ast_observe_shared_handler(tree: ast.Module, cfg: dict) -> Iterator[
     `_reconcile_state` / `_handle` / `_update` method that receives three
     or more event types is reconcile-shaped. Two shared bindings (e.g.
     `leader_elected + leader_settings_changed -> _on_leader`) is a
-    single-responsibility pattern, not reconcile.
+    single-responsibility pattern, not reconcile. A binding whose events
+    are entirely drawn from the six baseline Juju lifecycle hooks (see
+    `_is_baseline_lifecycle_only`) is excluded too — see CALIBRATION.md
+    #22 follow-up #6 / #24.
 
     Event identifier: the trailing attribute name of `args[0]` (works for
     `self.on.<x>`, `self.on['c'].<x>`, etc.; skips bare names like the
@@ -359,6 +381,8 @@ def _detect_ast_observe_shared_handler(tree: ast.Module, cfg: dict) -> Iterator[
         if _is_relation_scoped_binding(events):
             continue
         if _is_symmetric_resource_fanout(events):
+            continue
+        if _is_baseline_lifecycle_only(events):
             continue
         yield from per_handler_calls[handler]
 
