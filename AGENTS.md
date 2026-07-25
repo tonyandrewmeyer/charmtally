@@ -15,7 +15,7 @@ needed; uv installs the default dev group).
 | Format | `uv run ruff format path/to/file.py` |
 | Test | `uv run pytest charmtally/tests/test_X.py` |
 
-Full suite: `make lint`, `make format`, `make test`. `make pre-commit` runs
+Full suite: `make lint`, `make format`, `make unit`. `make pre-commit` runs
 every hook against every file.
 
 ## Commit attribution

@@ -18,7 +18,7 @@ uv run pre-commit install
 ```console
 make lint          # ruff + codespell
 make format        # ruff format + ruff check --fix
-make test          # the unit suite (runs in <1s)
+make unit          # the unit suite (runs in <1s)
 make pre-commit    # all pre-commit hooks against every file
 ```
 
