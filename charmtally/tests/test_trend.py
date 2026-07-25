@@ -345,36 +345,34 @@ def test_select_base_returns_none_when_nothing_matches() -> None:
     assert trend.select_base(snapshots, "2099-01-01") is None
 
 
-# --- integration against the real 6 snapshots -----------------------------
+# --- integration against the real snapshots ---------------------------------
+#
+# The weekly `scan` workflow adds a snapshot to `snapshots/` every Monday, so
+# nothing here may hardcode a date or a count — expectations are derived from
+# whatever is on disk.
 
 
 def test_against_real_snapshots() -> None:
     snapshot_dir = Path(__file__).resolve().parent.parent.parent / "snapshots"
     snapshots = trend.load_snapshots(snapshot_dir)
 
-    assert [s.date for s in snapshots] == [
-        "2026-06-11",
-        "2026-06-15",
-        "2026-06-22",
-        "2026-06-25",
-        "2026-06-29",
-        "2026-07-06",
-        "2026-07-13",
-    ]
+    on_disk = sorted(p.name[len("scored-") : -len(".json")] for p in snapshot_dir.glob("scored-*.json"))
+    assert len(on_disk) >= 2, "need at least two snapshots to diff"
+    assert [s.date for s in snapshots] == on_disk
 
     base, latest = snapshots[0], snapshots[-1]
     diff = trend.compute_diff(base, latest)
-    assert diff["base_date"] == "2026-06-11"
-    assert diff["latest_date"] == "2026-07-13"
+    assert diff["base_date"] == base.date
+    assert diff["latest_date"] == latest.date
     # Every flip must be between charms present in both ends of the range —
-    # the corpus grew from ~344 to 761 charms over this window, so most
-    # charms are correctly excluded by the corpus-drift guard.
+    # the corpus grows as new charms are added, so charms that only appear at
+    # one end are correctly excluded by the corpus-drift guard.
     common_slugs = set(base.charms) & set(latest.charms)
     for f in diff["flips"]:
         assert f["charm"] in common_slugs
 
     adoption = trend.compute_adoption(snapshots)
-    assert set(adoption) == base.feature_names | latest.feature_names
+    assert set(adoption) == frozenset().union(*(s.feature_names for s in snapshots))
     # Features present in the live catalogue but not in the earliest
     # snapshot must not get a fabricated 0% data point for that date.
     newer_only = latest.feature_names - base.feature_names
