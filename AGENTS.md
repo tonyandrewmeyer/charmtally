@@ -47,6 +47,8 @@ overrides ──┘                       (optional) llm-score ─────�
 - The corpus is **fetched at run time** from canonical/hyrum's
   `charm-list/charms.csv` (`corpus.HYRUM_CHARMS_CSV_URL`); there is no CSV
   checked into this repo. `--corpus <local.csv>` pins it for offline runs.
+  A failed fetch retries, then falls back to the cached copy under the
+  workdir rather than failing the run.
 - `charmtally/features.yaml` — catalogue of features the detectors look for,
   plus the `architecture:` patterns. It lives **inside the package**, not at
   the repo root: it is package data, and resolving it relative to the repo

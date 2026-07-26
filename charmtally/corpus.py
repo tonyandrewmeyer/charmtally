@@ -18,6 +18,8 @@ records URLs to skip and per-URL branch overrides.
 from __future__ import annotations
 
 import csv
+import sys
+import time
 import urllib.request
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
@@ -131,17 +133,55 @@ def load(path: Path) -> list[CharmRef]:
     return out
 
 
-def fetch_to(url: str, dest: Path) -> Path:
+def fetch_to(url: str, dest: Path, *, retries: int = 3, backoff: float = 2.0) -> Path:
     """Download ``url`` to ``dest`` (creating parents). Returns ``dest``.
 
     Stdlib-only so the scanner has no extra network dep. Use this to materialise
     the hyrum CSV under a workdir before calling :func:`load`.
+
+    Fetching the corpus is the first thing a scan does, so a single transient
+    failure used to abandon the whole run. Retries ``retries`` times with
+    exponential ``backoff``, then falls back to whatever ``dest`` already holds
+    — the workdir is cached across CI runs, so that is usually last week's
+    copy of the same file. Scanning a slightly stale corpus beats scanning
+    nothing; the fallback is announced on stderr rather than taken silently.
+
+    Raises the final error only when there is no usable ``dest`` to fall back
+    to. ``OSError`` covers the lot: ``URLError`` (and so ``HTTPError``) and
+    ``TimeoutError`` are both subclasses of it.
     """
     dest.parent.mkdir(parents=True, exist_ok=True)
-    with urllib.request.urlopen(url, timeout=30) as resp:  # ruff: ignore[suspicious-url-open-usage]
-        body = resp.read()
-    dest.write_bytes(body)
-    return dest
+    last_error: OSError | None = None
+    for attempt in range(1, retries + 1):
+        try:
+            # Suppression on its own line: at this indent a trailing one would
+            # run past the line limit.
+            # ruff: ignore[suspicious-url-open-usage]
+            with urllib.request.urlopen(url, timeout=30) as resp:
+                body = resp.read()
+        except OSError as exc:
+            last_error = exc
+            if attempt < retries:
+                delay = backoff ** (attempt - 1)
+                print(f"  corpus fetch failed ({exc}); retrying in {delay:.0f}s", file=sys.stderr)
+                time.sleep(delay)
+            continue
+        # Only replace `dest` once the body is fully in hand, so a failed
+        # fetch can never leave a truncated corpus behind for the fallback
+        # below to pick up on the next run.
+        dest.write_bytes(body)
+        return dest
+
+    if last_error is None:  # retries <= 0: nothing was ever attempted
+        raise ValueError(f"retries must be >= 1, got {retries}")
+    if dest.is_file():
+        print(
+            f"warning: corpus fetch failed after {retries} attempts ({last_error}); "
+            f"falling back to the cached copy at {dest} — results may reflect a stale corpus",
+            file=sys.stderr,
+        )
+        return dest
+    raise last_error
 
 
 def load_overrides(path: Path) -> CorpusOverrides:
