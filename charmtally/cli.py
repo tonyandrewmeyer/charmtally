@@ -35,7 +35,7 @@ import sys
 from dataclasses import asdict
 from pathlib import Path
 
-from . import catalogue, corpus, dashboard, scan
+from . import __version__, catalogue, corpus, dashboard, scan
 from . import llm_score as _llm_score
 from . import metadata as _metadata
 from . import pairs as _pairs
@@ -314,6 +314,7 @@ def cmd_llm_score(args: argparse.Namespace) -> int:
         client,
         cache_dir,
         max_calls=args.max_llm_calls,
+        scanner_version=__version__,
         workdir=workdir,
     )
     out_path.write_text(json.dumps(result, indent=2) + "\n")
@@ -341,6 +342,7 @@ def cmd_llm_calibrate(args: argparse.Namespace) -> int:
         cache_dir,
         ground_truth,
         max_calls=args.max_llm_calls,
+        scanner_version=__version__,
         workdir=args.workdir,
     )
     print(

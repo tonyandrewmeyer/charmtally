@@ -21,6 +21,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
+from .. import llm_score
 from ..llm_score import (
     LLM_ELIGIBLE_FEATURES,
     _cache_key,
@@ -78,6 +79,7 @@ def _make_scored(
     has_containers: bool = False,
     architecture: list[str] | None = None,
     subpath: str = "",
+    repo_sha: str = "d34db33f",
 ) -> dict:
     charm: dict = {
         "name": slug.split("/")[-1],
@@ -93,6 +95,7 @@ def _make_scored(
                 "is_reactive": False,
                 "is_legacy_classic": False,
                 "architecture": architecture or [],
+                "repo_sha": repo_sha,
             },
             feature: {
                 "present": False,
@@ -241,6 +244,46 @@ def test_cache_key_differs_by_feature():
     assert k1 != k2
 
 
+def test_cache_key_differs_by_commit():
+    """A verdict must not outlive the source it was formed from."""
+    k1 = _cache_key("https://github.com/org/repo", "sha1", "ops.secrets", "1.0")
+    k2 = _cache_key("https://github.com/org/repo", "sha2", "ops.secrets", "1.0")
+    assert k1 != k2
+
+
+def test_cache_key_differs_by_scanner_version():
+    k1 = _cache_key("https://github.com/org/repo", "sha1", "ops.secrets", "1.0")
+    k2 = _cache_key("https://github.com/org/repo", "sha1", "ops.secrets", "1.1")
+    assert k1 != k2
+
+
+def test_cache_key_folds_in_the_prompt_version(monkeypatch):
+    """Editing the system prompt or switching models invalidates the cache."""
+    before = _cache_key("https://github.com/org/repo", "sha1", "ops.secrets", "1.0")
+    monkeypatch.setattr(llm_score, "_OPENROUTER_MODEL", "anthropic/some-other-model")
+    assert _cache_key("https://github.com/org/repo", "sha1", "ops.secrets", "1.0") != before
+
+    monkeypatch.setattr(llm_score, "_SYSTEM_PROMPT", llm_score._SYSTEM_PROMPT + "\nExtra guidance.")
+    assert _cache_key("https://github.com/org/repo", "sha1", "ops.secrets", "1.0") != before
+
+
+def test_charm_without_repo_sha_bypasses_the_cache(tmp_path):
+    """Without a commit we can't tell whether the source moved, so a verdict
+    is never written under a placeholder key that would live forever."""
+    scored = _make_scored("canonical/test", "ops.secrets", "worth-considering", repo_sha="")
+    client = FakeLLMClient([_clear_gap_response("Confirmed gap.")])
+    result = score_worth_considering(scored, client, tmp_path)
+
+    assert result["canonical/test"]["features"]["ops.secrets"]["score"] == "clear-gap"
+    assert len(client.calls) == 1
+    assert [p.name for p in tmp_path.glob("*.json")] == []
+
+    # A second run re-asks rather than serving a stale verdict.
+    client2 = FakeLLMClient([_clear_gap_response("Confirmed gap.")])
+    score_worth_considering(scored, client2, tmp_path)
+    assert len(client2.calls) == 1
+
+
 # ── score_worth_considering — happy path ──────────────────────────────────────
 
 
@@ -365,7 +408,7 @@ def test_score_wc_stops_when_budget_exhausted(tmp_path):
 def test_score_wc_cache_hit_skips_llm(tmp_path):
     repo_url = "https://github.com/canonical/test-charm"
     feature_id = "ops.secrets"
-    key = _cache_key(repo_url, "unknown", feature_id, "")
+    key = _cache_key(repo_url, "d34db33f", feature_id, "")
     cache_entry = {
         "key": key,
         "verdict": "clear-gap",
@@ -388,7 +431,7 @@ def test_score_wc_result_saved_to_cache(tmp_path):
     client = FakeLLMClient([_clear_gap_response("No checks in pebble layer.")])
     score_worth_considering(scored, client, tmp_path)
     repo_url = "https://github.com/canonical/test-charm"
-    key = _cache_key(repo_url, "unknown", "pebble.checks", "")
+    key = _cache_key(repo_url, "d34db33f", "pebble.checks", "")
     cached = _load_cache_entry(tmp_path, key)
     assert cached is not None
     assert cached["verdict"] == "clear-gap"
