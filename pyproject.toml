@@ -70,6 +70,16 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 include = ["charmtally"]
 exclude = ["charmtally/tests"]
 
+[[tool.ty.overrides]]
+# detectors.py's tomllib/tomli shim needs a suppression on both imports, and
+# whichever one the current interpreter *can* resolve then reports its
+# suppression as unused — 3.10 dev envs and CI's 3.12 lint job disagree about
+# which that is. See the comment on the try/except there.
+include = ["charmtally/detectors.py"]
+
+[tool.ty.overrides.rules]
+unused-ignore-comment = "ignore"
+
 [tool.codespell]
 ignore-words-list = "ths,re-uses"
 # Generated artefacts, committed or not: scored.json and friends are
