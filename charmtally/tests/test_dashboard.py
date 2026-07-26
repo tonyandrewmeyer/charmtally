@@ -261,3 +261,63 @@ def test_filter_data_attributes_are_escaped() -> None:
 
     assert 'onmouseover="alert(1)' not in html
     assert "&#34; onmouseover=&#34;alert(1)" in html
+
+
+# ── evidence permalinks ──────────────────────────────────────────────────────
+
+
+def _charm_with_evidence(
+    fname: str,
+    *,
+    file: str = "src/charm.py",
+    line: int = 12,
+    repo_sha: str | None = "a" * 40,
+    subpath: str | None = None,
+) -> dict:
+    charm = _charm("c1", present_features={fname}, all_features=[fname])
+    charm["repo_url"] = "https://github.com/canonical/foo-operator"
+    charm["features"][fname]["evidence"] = [
+        {"file": file, "line": line, "detector_kind": "import", "snippet": "x"}
+    ]
+    charm["features"]["__meta__"]["repo_sha"] = repo_sha
+    if subpath is not None:
+        charm["subpath"] = subpath
+    return charm
+
+
+def test_evidence_link_is_a_permalink_at_the_scanned_commit() -> None:
+    """Links pointed at `main`, so a line number drifted out from under the
+    evidence as upstream moved. The scan records the commit it ran at."""
+    charm = _charm_with_evidence("f1", repo_sha="deadbeef")
+    html = render({"c1": charm}, [_feature("f1")])
+
+    assert "https://github.com/canonical/foo-operator/blob/deadbeef/src/charm.py#L12" in html
+    assert "/blob/main/" not in html
+
+
+def test_evidence_link_of_a_sub_charm_includes_the_subpath() -> None:
+    """Evidence paths are relative to the charm root; monorepo records need
+    the sub-charm directory prepended or the link 404s."""
+    charm = _charm_with_evidence("f1", repo_sha="cafe", subpath="charms/bar")
+    html = render({"c1": charm}, [_feature("f1")])
+
+    assert "/blob/cafe/charms/bar/src/charm.py#L12" in html
+
+
+def test_evidence_link_falls_back_to_the_ref_without_a_repo_sha() -> None:
+    """`charmtally local` scans a directory that need not be a git checkout,
+    so repo_sha is None there."""
+    charm = _charm_with_evidence("f1", repo_sha=None)
+    html = render({"c1": charm}, [_feature("f1")])
+
+    assert "/blob/main/src/charm.py#L12" in html
+
+
+def test_evidence_link_drops_the_anchor_for_an_unlocated_line() -> None:
+    """The file-independent detectors report line 0 — a structural match with
+    no located line. `#L0` scrolled to nothing."""
+    charm = _charm_with_evidence("f1", file="charmcraft.yaml", line=0, repo_sha="cafe")
+    html = render({"c1": charm}, [_feature("f1")])
+
+    assert "/blob/cafe/charmcraft.yaml" in html
+    assert "#L0" not in html
