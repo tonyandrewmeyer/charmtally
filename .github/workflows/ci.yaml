@@ -45,5 +45,7 @@ jobs:
         with:
           enable-cache: true
       - run: uv sync
-      - run: uv run ruff check
-      - run: uv run ruff format --check
+      # Deliberately `make lint` rather than a hand-rolled ruff invocation:
+      # the two drifted apart, and codespell ran only locally, so a typo
+      # passed CI and then failed on the contributor's next commit.
+      - run: make lint

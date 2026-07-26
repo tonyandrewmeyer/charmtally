@@ -62,4 +62,6 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.codespell]
 ignore-words-list = "ths,re-uses"
-skip = "dashboard.html,trend.html,results.json,uv.lock,snapshots"
+# Generated artefacts, committed or not: scored.json and friends are
+# gitignored but still sit in a working tree after a local run.
+skip = "dashboard.html,trend.html,results.json,scored.json,llm-scored.json,pairs.json,uv.lock,snapshots"

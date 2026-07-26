@@ -5,14 +5,16 @@
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
+# Repo-wide, not just charmtally/: .github/ carries Python too, and CI now
+# runs this exact target, so anything scoped narrower would go unchecked.
 lint:  ## Lint with ruff and codespell
-	uv run --group dev ruff check charmtally
-	uv run --group dev ruff format --check charmtally
+	uv run --group dev ruff check
+	uv run --group dev ruff format --check
 	uv run --group dev codespell .
 
 format:  ## Format and auto-fix with ruff
-	uv run --group dev ruff format charmtally
-	uv run --group dev ruff check --fix charmtally
+	uv run --group dev ruff format
+	uv run --group dev ruff check --fix
 
 unit:  ## Run the unit tests
 	uv run --group dev pytest
