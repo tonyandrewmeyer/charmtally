@@ -96,12 +96,21 @@ jobs:
             --cache-dir /tmp/charm-workdir/.llm-verdicts \
             --out llm-scored.json
 
+      # Feeds the dashboard's Pairs view. Without this the view rendered
+      # empty on every published dashboard, because nothing ever produced
+      # pairs.json and the dashboard step never passed --pairs.
+      - name: Detect k8s/machine charm pairs
+        run: |
+          SCORED=scored.json
+          if [ -f llm-scored.json ]; then SCORED=llm-scored.json; fi
+          uv run charmtally pairs "$SCORED" --out pairs.json
+
       - name: Render dashboard
         run: |
           SCORED=scored.json
           if [ -f llm-scored.json ]; then SCORED=llm-scored.json; fi
           uv run charmtally dashboard \
-            "$SCORED" --out dashboard.html
+            "$SCORED" --pairs pairs.json --out dashboard.html
 
       - name: Write dated snapshot
         run: |
