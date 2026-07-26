@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 
 import yaml
 
@@ -23,6 +23,28 @@ import yaml
 class Detector:
     kind: str
     config: dict[str, Any]
+
+
+@runtime_checkable
+class Detectable(Protocol):
+    """What `detectors.detect_feature` actually needs from its subject.
+
+    Both Feature and Pattern are run through the same detector machinery;
+    this names the overlap that made that work rather than leaving Pattern
+    to be passed where a Feature was declared.
+    """
+
+    # Read-only properties rather than plain attributes: Feature and Pattern
+    # are frozen dataclasses, which a mutable protocol member would reject.
+    @property
+    def name(self) -> str: ...
+
+    @property
+    def scope(self) -> str:  # "src" | "tests" | "any"
+        ...
+
+    @property
+    def detectors(self) -> tuple[Detector, ...]: ...
 
 
 @dataclass(frozen=True)

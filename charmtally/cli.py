@@ -23,8 +23,25 @@ Usage:
         Re-apply rule-based scoring over an existing results.json.
         Useful for tweaking scoring rules without re-cloning.
 
-    charmtally dashboard results.json [--out dashboard.html]
-        Render results.json → dashboard.html (two sortable tables).
+    charmtally pairs scored.json [--out pairs.json]
+        Detect k8s/machine charm pairs; feeds the dashboard's Pairs view.
+
+    charmtally dashboard results.json [--pairs pairs.json]
+                                      [--out dashboard.html]
+        Render results.json → dashboard.html (sortable tables + Pairs view).
+
+    charmtally trend [--snapshots-dir snapshots] [--live scored.json]
+                     [--since DATE] [--feature F] [--out trend.html]
+        Adoption trend, per-charm timeline and diff list across the dated
+        snapshots → the standalone History page.
+
+    charmtally llm-score scored.json [--dry-run] [--out llm-scored.json]
+        Optional LLM pass over `worth-considering` records. Needs
+        OPENROUTER_API_KEY; capped by --max-llm-calls and a spend budget.
+
+    charmtally llm-calibrate scored.json ground-truth.json
+        Compare LLM verdicts against human labels; exits non-zero if
+        agreement falls below the threshold.
 """
 
 from __future__ import annotations
@@ -35,7 +52,7 @@ import sys
 from dataclasses import asdict
 from pathlib import Path
 
-from . import catalogue, corpus, dashboard, scan
+from . import __version__, catalogue, corpus, dashboard, scan
 from . import llm_score as _llm_score
 from . import metadata as _metadata
 from . import pairs as _pairs
@@ -88,7 +105,8 @@ def _resolve_corpus_path(args: argparse.Namespace) -> Path:
 
 def cmd_local(args: argparse.Namespace) -> int:
     feats = _filter(catalogue.load(args.features), args.only)
-    result = scan.scan_charm(args.charm_dir, feats)
+    pats = catalogue.load_patterns(args.features)
+    result = scan.scan_charm(args.charm_dir, feats, pats)
     json.dump({args.charm_dir.name: result}, sys.stdout, indent=2)
     sys.stdout.write("\n")
     return 0
@@ -96,6 +114,7 @@ def cmd_local(args: argparse.Namespace) -> int:
 
 def cmd_spike(args: argparse.Namespace) -> int:
     feats = _filter(catalogue.load(args.features), args.only)
+    pats = catalogue.load_patterns(args.features)
     refs = corpus.load(_resolve_corpus_path(args))
     if args.key_only:
         refs = [r for r in refs if r.key_charm]
@@ -113,7 +132,7 @@ def cmd_spike(args: argparse.Namespace) -> int:
             "name": ref.name,
             "team": ref.team,
             "repo_url": ref.repo_url,
-            "features": scan.scan_charm(path, feats),
+            "features": scan.scan_charm(path, feats, pats),
         }
 
     json.dump(results, sys.stdout, indent=2)
@@ -159,7 +178,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
         adjusted, exclude_reason = overrides.apply(ref)
         if adjusted is None:
             print(f"… {ref.name} ({ref.repo_url}) — excluded: {exclude_reason}", file=sys.stderr)
-            skipped[ref.slug] = exclude_reason
+            skipped[ref.slug] = exclude_reason or "excluded by corpus-overrides.yaml"
             continue
         ref = adjusted
 
@@ -230,29 +249,7 @@ def cmd_score(args: argparse.Namespace) -> int:
             continue
         features_dict = charm_data.get("features", {})
         meta_raw = features_dict.get("__meta__", {})
-        meta = _metadata.CharmMeta(
-            has_containers=meta_raw.get("has_containers", False),
-            relations=tuple(
-                _metadata.Relation(r["name"], r["role"], r.get("interface", "")) for r in meta_raw.get("relations", [])
-            ),
-            config_keys=tuple(meta_raw.get("config_keys", [])),
-            secret_like_config=tuple(meta_raw.get("secret_like_config", [])),
-            secret_typed_config=tuple(meta_raw.get("secret_typed_config", [])),
-            has_integration_tests=meta_raw.get("has_integration_tests", False),
-            is_reactive=meta_raw.get("is_reactive", False),
-            is_legacy_classic=meta_raw.get("is_legacy_classic", False),
-            is_subordinate=meta_raw.get("is_subordinate", False),
-            is_workload_less=meta_raw.get("is_workload_less", False),
-            charm_name=meta_raw.get("charm_name"),
-            charmcraft_plugins=tuple(meta_raw.get("charmcraft_plugins", [])),
-            bases=tuple(meta_raw.get("bases", [])),
-            min_juju_version=meta_raw.get("min_juju_version"),
-            library_count=int(meta_raw.get("library_count", 0)),
-            library_names=tuple(meta_raw.get("library_names", [])),
-            provides_own_library=bool(meta_raw.get("provides_own_library", False)),
-            has_terraform_module=bool(meta_raw.get("has_terraform_module", False)),
-            tooling=tuple(meta_raw.get("tooling", [])),
-        )
+        meta = _metadata.CharmMeta.from_dict(meta_raw)
         architecture = list(meta_raw.get("architecture") or [])
         for feat in feats:
             if feat.name not in features_dict:
@@ -336,6 +333,7 @@ def cmd_llm_score(args: argparse.Namespace) -> int:
         client,
         cache_dir,
         max_calls=args.max_llm_calls,
+        scanner_version=__version__,
         workdir=workdir,
     )
     out_path.write_text(json.dumps(result, indent=2) + "\n")
@@ -363,6 +361,7 @@ def cmd_llm_calibrate(args: argparse.Namespace) -> int:
         cache_dir,
         ground_truth,
         max_calls=args.max_llm_calls,
+        scanner_version=__version__,
         workdir=args.workdir,
     )
     print(

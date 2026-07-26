@@ -1,13 +1,23 @@
 """Run a single feature's detectors against a charm tree.
 
-Implements four detector kinds for the v1 spike:
+Four kinds run per Python file in scope:
     import         — AST: matches `import X` and `from X import Y` (with optional names filter)
     call           — AST: matches `*.<attr>(...)` where <attr> is the trailing dotted suffix
     observe-event  — regex: matches `observe(... on.<snake_name>(...)|on['<snake_name>'] ...)`
                      for each given event class (translated CamelCase→snake_case, dropping trailing 'Event')
     regex          — raw multiline regex over file contents
 
-The `yaml-key` kind is deferred — pebble.checks has a regex fallback that covers v1.
+Three more run per Python file and back the architecture axis:
+    ast-init-call               — a `self.X(...)` call inside `__init__`
+    ast-observe-shared-handler  — one handler bound to N distinct events
+    ast-shared-method           — N `_on_*` handlers delegating to one method
+
+Four are file-independent: they read the charm root directly rather than the
+Python files `_select_files` returns.
+    yaml-key           — a mapping key present in YAML matching a glob
+    pytest-config-key  — a pytest setting in pyproject/pytest.ini/setup.cfg/tox.ini
+    requires-interface — an interface named in the metadata `requires:` block
+    relation-count     — bucket the charm by its requires/provides/peers count
 """
 
 from __future__ import annotations
@@ -20,13 +30,18 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
+import yaml
+
+# Cross-version shim: tomllib is stdlib from 3.11, tomli is a conditional
+# dependency below that. Exactly one of these resolves on any given
+# interpreter, so a type checker pinned to either version flags the other.
 try:
-    import tomllib  # Python 3.11+ stdlib
+    import tomllib  # ty: ignore[unresolved-import]
 except ModuleNotFoundError:  # pragma: no cover — exercised only on 3.10
-    import tomli as tomllib
+    import tomli as tomllib  # ty: ignore[unresolved-import]
 
 from . import metadata as _metadata
-from .catalogue import Feature
+from .catalogue import Detectable
 
 
 @dataclass(frozen=True)
@@ -87,16 +102,76 @@ def _select_files(charm_root: Path, scope: str) -> list[Path]:
 # ── AST helpers ─────────────────────────────────────────────────────────────────
 
 
-def _parse(path: Path) -> ast.Module | None:
+def _parse_text(text: str, path: Path) -> ast.Module | None:
     try:
         with warnings.catch_warnings():
             # Scanned charm code frequently contains regex string literals with
             # invalid escape sequences (e.g. "\d"), which ast.parse reports as
             # SyntaxWarning. Those are noise, not scan failures.
             warnings.simplefilter("ignore", SyntaxWarning)
-            return ast.parse(path.read_text(encoding="utf-8", errors="replace"), filename=str(path))
+            return ast.parse(text, filename=str(path))
     except (SyntaxError, ValueError):
         return None
+
+
+def _parse(path: Path) -> ast.Module | None:
+    return _parse_text(path.read_text(encoding="utf-8", errors="replace"), path)
+
+
+# ── per-charm source cache ──────────────────────────────────────────────────────
+
+
+class SourceFile:
+    """One Python file, read and parsed at most once per charm scan."""
+
+    __slots__ = ("path", "rel", "text", "tree", "_lines")
+
+    def __init__(self, path: Path, charm_root: Path) -> None:
+        self.path = path
+        self.rel = str(path.relative_to(charm_root))
+        self.text = path.read_text(encoding="utf-8", errors="replace")
+        self.tree = _parse_text(self.text, path)
+        self._lines: list[str] | None = None
+
+    def line(self, lineno: int) -> str:
+        """The 1-indexed source line `lineno`, stripped, or "" if out of range."""
+        if self._lines is None:
+            self._lines = self.text.splitlines()
+        if 1 <= lineno <= len(self._lines):
+            return self._lines[lineno - 1].strip()
+        return ""
+
+
+class CharmSource:
+    """Per-charm cache of selected files, their text and their parsed AST.
+
+    A charm is matched against every feature and architecture pattern in the
+    catalogue — around 70 of them. Reading and re-parsing each file once per
+    feature made AST parsing roughly 95% of scan time; parsing once per file
+    and reusing the tree across all features cuts that to a single pass.
+
+    Files are cached by path rather than by scope, so a file selected by both
+    the "src" and "any" scopes is still only parsed once.
+    """
+
+    def __init__(self, charm_root: Path) -> None:
+        self.charm_root = charm_root
+        self._by_scope: dict[str, list[SourceFile]] = {}
+        self._by_path: dict[Path, SourceFile] = {}
+
+    def files(self, scope: str) -> list[SourceFile]:
+        cached = self._by_scope.get(scope)
+        if cached is None:
+            cached = [self._load(p) for p in _select_files(self.charm_root, scope)]
+            self._by_scope[scope] = cached
+        return cached
+
+    def _load(self, path: Path) -> SourceFile:
+        cached = self._by_path.get(path)
+        if cached is None:
+            cached = SourceFile(path, self.charm_root)
+            self._by_path[path] = cached
+        return cached
 
 
 def _attr_chain(node: ast.AST) -> list[str] | None:
@@ -114,7 +189,7 @@ def _attr_chain(node: ast.AST) -> list[str] | None:
 # ── detector kinds ──────────────────────────────────────────────────────────────
 
 
-def _detect_import(tree: ast.Module, cfg: dict) -> Iterator[ast.AST]:
+def _detect_import(tree: ast.Module, cfg: dict) -> Iterator[ast.Import | ast.ImportFrom]:
     module = cfg["module"]
     wanted_names = set(cfg.get("names") or [])
     for node in ast.walk(tree):
@@ -140,7 +215,7 @@ def _detect_import(tree: ast.Module, cfg: dict) -> Iterator[ast.AST]:
                             break
 
 
-def _detect_call(tree: ast.Module, cfg: dict) -> Iterator[ast.AST]:
+def _detect_call(tree: ast.Module, cfg: dict) -> Iterator[ast.Call]:
     """Match calls whose attribute chain ends with the configured dotted suffix.
 
     e.g. attr = "unit.open_port" matches `self.unit.open_port(80)` and
@@ -203,7 +278,7 @@ def _self_attr_calls(method_body: list[ast.stmt], attrs: set[str]) -> Iterator[a
             yield node
 
 
-def _detect_ast_init_call(tree: ast.Module, cfg: dict) -> Iterator[ast.AST]:
+def _detect_ast_init_call(tree: ast.Module, cfg: dict) -> Iterator[ast.Call]:
     """Match charms whose __init__ body contains a `self.X(...)` call where
     X is one of `cfg["attrs"]`. Signal for the `unconditional-init` pattern:
     reconcile runs on every charm invocation by virtue of being in __init__.
@@ -330,7 +405,7 @@ def _is_baseline_lifecycle_only(events: set[str]) -> bool:
     return bool(events) and events <= _BASELINE_LIFECYCLE_EVENTS
 
 
-def _detect_ast_observe_shared_handler(tree: ast.Module, cfg: dict) -> Iterator[ast.AST]:
+def _detect_ast_observe_shared_handler(tree: ast.Module, cfg: dict) -> Iterator[ast.Call]:
     """Match the holistic `reconcile` pattern: a single handler method is
     bound to >= `min_events` distinct events via `framework.observe(...)`.
 
@@ -387,7 +462,7 @@ def _detect_ast_observe_shared_handler(tree: ast.Module, cfg: dict) -> Iterator[
         yield from per_handler_calls[handler]
 
 
-def _detect_ast_shared_method(tree: ast.Module, cfg: dict) -> Iterator[ast.AST]:
+def _detect_ast_shared_method(tree: ast.Module, cfg: dict) -> Iterator[ast.Call]:
     """Match charms with the `part-reconcile` pattern: per-event `_on_*`
     handler methods that each delegate into a shared reconcile method.
 
@@ -482,6 +557,101 @@ def _detect_pytest_config_key(charm_root: Path, config: dict) -> list[Evidence]:
     return results
 
 
+# Directories a YAML sweep must not descend into: vendored charm libs ship
+# their own metadata, and virtualenvs / build trees carry vendored manifests
+# that say nothing about this charm.
+_YAML_SKIP_DIRS = {".git", ".tox", ".venv", "venv", "node_modules", "build", "dist", "vendor"}
+
+
+def _yaml_files(charm_root: Path, globs: list[str]) -> list[Path]:
+    """Files matching `globs` under `charm_root`, minus vendored/build trees.
+
+    Sorted and de-duplicated so overlapping globs (``**/*.yaml`` plus
+    ``**/*.yml``) yield each file once, in a stable order.
+    """
+    out: set[Path] = set()
+    for pattern in globs:
+        for path in charm_root.glob(pattern):
+            if not path.is_file():
+                continue
+            parts = path.relative_to(charm_root).parts
+            if any(p in _YAML_SKIP_DIRS or p.startswith(".") for p in parts[:-1]):
+                continue
+            if _is_vendored_lib(parts):
+                continue
+            out.add(path)
+    return sorted(out)
+
+
+def _yaml_documents(path: Path) -> list[object]:
+    """Parsed documents in `path`, or [] if it isn't loadable.
+
+    Uses ``safe_load_all`` because charm repos carry multi-document YAML
+    (k8s manifests, kustomize output) alongside charm metadata.
+    """
+    try:
+        return [doc for doc in yaml.safe_load_all(path.read_text(encoding="utf-8", errors="replace")) if doc]
+    except (yaml.YAMLError, OSError, RecursionError):
+        return []
+
+
+def _find_mapping_key(node: object, keys: set[str]) -> str | None:
+    """Return the first of `keys` present as a mapping key anywhere in `node`."""
+    if isinstance(node, dict):
+        for key in node:
+            if isinstance(key, str) and key in keys:
+                return key
+        for value in node.values():
+            found = _find_mapping_key(value, keys)
+            if found:
+                return found
+    elif isinstance(node, list):
+        for item in node:
+            found = _find_mapping_key(item, keys)
+            if found:
+                return found
+    return None
+
+
+def _detect_yaml_key(charm_root: Path, config: dict) -> list[Evidence]:
+    """Match YAML files declaring one of `keys` as a mapping key.
+
+    config:
+      files: list of globs relative to the charm root
+             (default: ``["**/*.yaml", "**/*.yml"]``).
+      key:   a single key name, or
+      keys:  a list of key names. At least one of the two is required.
+
+    Matching is structural rather than textual — the file is parsed and
+    searched at any nesting depth — so a `checks:` appearing inside a string
+    or a comment doesn't count. The reported line is found by scanning for
+    the key afterwards, purely so the dashboard can deep-link; a structural
+    match with no locatable line still reports line 0.
+    """
+    globs = list(config.get("files") or ["**/*.yaml", "**/*.yml"])
+    keys = set(config.get("keys") or [])
+    if "key" in config:
+        keys.add(config["key"])
+    if not keys:
+        return []
+
+    results: list[Evidence] = []
+    for path in _yaml_files(charm_root, globs):
+        documents = _yaml_documents(path)
+        if not documents:
+            continue
+        found = next((k for k in (_find_mapping_key(doc, keys) for doc in documents) if k), None)
+        if not found:
+            continue
+        rel = str(path.relative_to(charm_root))
+        text = path.read_text(encoding="utf-8", errors="replace")
+        key_re = re.compile(rf"^\s*[\"']?{re.escape(found)}[\"']?\s*:", re.MULTILINE)
+        match = key_re.search(text)
+        line = text.count("\n", 0, match.start()) + 1 if match else 0
+        results.append(Evidence(rel, line, "yaml-key", f"{found}:"))
+    return results
+
+
 def _detect_requires_interface(charm_root: Path, config: dict) -> list[Evidence]:
     """Match `requires:` block interfaces in charmcraft.yaml / metadata.yaml.
 
@@ -567,12 +737,19 @@ def _detect_relation_count(charm_root: Path, config: dict) -> list[Evidence]:
     return [Evidence(first_rel or "charmcraft.yaml", 0, "relation-count", label)]
 
 
-def detect_feature(charm_root: Path, feature: Feature) -> list[Evidence]:
-    files = _select_files(charm_root, feature.scope)
+def detect_feature(charm_root: Path, feature: Detectable, source: CharmSource | None = None) -> list[Evidence]:
+    """Evidence for `feature` in the charm at `charm_root`.
+
+    Pass `source` to share one read-and-parse pass across every feature in
+    the catalogue; omitting it builds a throwaway cache for this call alone.
+    """
+    if source is None:
+        source = CharmSource(charm_root)
     evidence: list[Evidence] = []
 
-    # File-independent detectors run once over the charm root, not per
-    # Python file in scope. Today: pytest-config-key, requires-interface.
+    # File-independent detectors run once over the charm root rather than per
+    # Python file in scope — they read YAML/INI/TOML, which `_select_files`
+    # (Python-only) would never hand them.
     for det in feature.detectors:
         if det.kind == "pytest-config-key":
             evidence.extend(_detect_pytest_config_key(charm_root, det.config))
@@ -580,6 +757,8 @@ def detect_feature(charm_root: Path, feature: Feature) -> list[Evidence]:
             evidence.extend(_detect_requires_interface(charm_root, det.config))
         elif det.kind == "relation-count":
             evidence.extend(_detect_relation_count(charm_root, det.config))
+        elif det.kind == "yaml-key":
+            evidence.extend(_detect_yaml_key(charm_root, det.config))
 
     # Pre-compile observe-event regexes per detector.
     observe_pats: dict[int, list[re.Pattern[str]]] = {}
@@ -597,43 +776,39 @@ def detect_feature(charm_root: Path, feature: Feature) -> list[Evidence]:
             if _charm_provides_lib(charm_root, mod):
                 provided_lib_detectors.add(i)
 
-    for path in files:
-        text = path.read_text(encoding="utf-8", errors="replace")
-        tree = _parse(path)
-        rel = str(path.relative_to(charm_root))
+    # AST-walking detector kinds, keyed by the walker they delegate to. All
+    # report the same way: one Evidence per node, snippet taken from the
+    # node's own source line.
+    ast_walkers = {
+        "ast-init-call": _detect_ast_init_call,
+        "ast-observe-shared-handler": _detect_ast_observe_shared_handler,
+        "ast-shared-method": _detect_ast_shared_method,
+    }
+
+    for src in source.files(feature.scope):
+        text, tree, rel = src.text, src.tree, src.rel
 
         for i, det in enumerate(feature.detectors):
             if det.kind == "import" and tree is not None:
                 if i in provided_lib_detectors:
                     continue
-                for node in _detect_import(tree, det.config):
-                    line = ast.get_source_segment(text, node) or ""
-                    evidence.append(Evidence(rel, node.lineno, det.kind, line.splitlines()[0][:120]))
+                for imp in _detect_import(tree, det.config):
+                    line = ast.get_source_segment(text, imp) or ""
+                    evidence.append(Evidence(rel, imp.lineno, det.kind, line.splitlines()[0][:120]))
             elif det.kind == "call" and tree is not None:
-                for node in _detect_call(tree, det.config):
-                    line = text.splitlines()[node.lineno - 1] if node.lineno <= len(text.splitlines()) else ""
-                    evidence.append(Evidence(rel, node.lineno, det.kind, line.strip()[:120]))
+                for call in _detect_call(tree, det.config):
+                    evidence.append(Evidence(rel, call.lineno, det.kind, src.line(call.lineno)[:120]))
             elif det.kind == "observe-event":
                 for pat in observe_pats[i]:
                     for m in pat.finditer(text):
                         lineno = text.count("\n", 0, m.start()) + 1
                         evidence.append(Evidence(rel, lineno, det.kind, m.group(0)[:120]))
-            elif det.kind == "ast-init-call" and tree is not None:
-                for node in _detect_ast_init_call(tree, det.config):
-                    line = text.splitlines()[node.lineno - 1] if node.lineno <= len(text.splitlines()) else ""
-                    evidence.append(Evidence(rel, node.lineno, det.kind, line.strip()[:120]))
-            elif det.kind == "ast-observe-shared-handler" and tree is not None:
-                for node in _detect_ast_observe_shared_handler(tree, det.config):
-                    line = text.splitlines()[node.lineno - 1] if node.lineno <= len(text.splitlines()) else ""
-                    evidence.append(Evidence(rel, node.lineno, det.kind, line.strip()[:120]))
-            elif det.kind == "ast-shared-method" and tree is not None:
-                for node in _detect_ast_shared_method(tree, det.config):
-                    line = text.splitlines()[node.lineno - 1] if node.lineno <= len(text.splitlines()) else ""
-                    evidence.append(Evidence(rel, node.lineno, det.kind, line.strip()[:120]))
+            elif det.kind in ast_walkers and tree is not None:
+                for node in ast_walkers[det.kind](tree, det.config):
+                    evidence.append(Evidence(rel, node.lineno, det.kind, src.line(node.lineno)[:120]))
             elif det.kind == "regex":
                 for m in _detect_regex(text, det.config["pattern"]):
                     lineno = text.count("\n", 0, m.start()) + 1
                     evidence.append(Evidence(rel, lineno, det.kind, m.group(0).strip()[:120]))
-            # yaml-key intentionally not implemented for v1 spike.
 
     return evidence

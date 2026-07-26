@@ -5,19 +5,38 @@ Two tables (PLAN.md §D):
   - Charm view:   row per charm, with totals + the list of clear-gap features.
 
 Evidence-to-GitHub links are derived from the corpus `repo_url` plus the
-charm-relative file path captured at scan time. We default to `main` as the
-ref since the spike doesn't capture commit SHAs yet (a v1+ improvement; see
-PLAN.md §9).
+charm-relative file path captured at scan time, against the `main` ref.
+Scans now record the commit they ran at as `__meta__.repo_sha`, so these
+could become permalinks; they aren't yet, and the file path is relative to
+the charm root rather than the repo root, which is wrong for monorepo
+sub-charms.
 """
 
 from __future__ import annotations
 
 import datetime as dt
 from pathlib import Path
+from typing import Any
 
 import jinja2
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
+
+
+def _environment() -> jinja2.Environment:
+    """Jinja environment for the dashboard and trend templates.
+
+    autoescape is set unconditionally rather than via select_autoescape:
+    the templates are named `*.html.j2`, and select_autoescape looks only at
+    the final extension, so `j2` was tested against the enabled list and
+    escaping was off. Every page interpolates data derived from third-party
+    charm repositories — names, repo URLs, rationale strings — and is
+    published to GitHub Pages.
+    """
+    return jinja2.Environment(
+        loader=jinja2.FileSystemLoader(_TEMPLATE_DIR),
+        autoescape=True,
+    )
 
 
 def _gh_blob(repo_url: str, ref: str, file_path: str, line: int) -> str:
@@ -39,7 +58,7 @@ def _exemplar(charm: dict, ref: str, evidence: list[dict]) -> dict:
 # Below this many present-counts across the full corpus a feature is flagged
 # as low-confidence in the feature view — the detector probably needs a
 # re-check. Suppress per-feature with `expected_rare: true` in features.yaml.
-# 5 hits on a ~340-charm corpus is ~1.5%.
+# 5 hits is well under 1% of the current ~750-charm corpus.
 _PRECISION_FLOOR = 5
 
 _ARCH_PRIORITY = (
@@ -85,7 +104,7 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
     arch_of_charm = {c["name"]: _primary_arch(c["features"].get("__meta__", {})) for c in charms}
 
     # Feature view rows.
-    feature_rows = []
+    feature_rows: list[dict[str, Any]] = []
     for fname in feat_names:
         present = 0
         clear_gap = 0
@@ -171,7 +190,7 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
     # row carries its architecture label, stack (plugin/base/juju/libs/tooling),
     # and k8s/reactive/lib-provider/terraform flags — surfaced as chips +
     # a compact stack cell in the rendered HTML.
-    charm_rows = []
+    charm_rows: list[dict[str, Any]] = []
     for c in charms:
         present = clear_gap = clear_gap_ai = worth = 0
         gaps = []
@@ -231,7 +250,7 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
     # questions "which team has the most gaps to migrate?" and "what's team
     # X's architectural footprint?" Counts are at the (charm × feature) level
     # for present/clear-gap/worth, and at the charm level for architecture.
-    team_acc: dict[str, dict] = {}
+    team_acc: dict[str, dict[str, Any]] = {}
     for r in charm_rows:
         team = r["team"] or "(no team)"
         bucket = team_acc.setdefault(
@@ -263,7 +282,7 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
         for g in r["gaps"]:
             bucket["gap_features"][g["feature"]] = bucket["gap_features"].get(g["feature"], 0) + 1
 
-    team_rows = []
+    team_rows: list[dict[str, Any]] = []
     for bucket in team_acc.values():
         team_rows.append({
             "team": bucket["team"],
@@ -322,7 +341,7 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
     }
 
     # Evidence log (all clear-gap findings, flattened).
-    evidence_log = []
+    evidence_log: list[dict[str, Any]] = []
     for c in charms:
         for fname in feat_names:
             rec = c["features"].get(fname, {})
@@ -334,10 +353,7 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
                     "rationale": rec.get("rationale", ""),
                 })
 
-    env = jinja2.Environment(
-        loader=jinja2.FileSystemLoader(_TEMPLATE_DIR),
-        autoescape=jinja2.select_autoescape(["html"]),
-    )
+    env = _environment()
     tmpl = env.get_template("dashboard.html.j2")
     return tmpl.render(
         charms=charms,
@@ -364,10 +380,7 @@ def render_trend(
     per-(charm, feature) timeline. See trend.py for how these are computed
     and the corpus/feature-drift guards applied along the way.
     """
-    env = jinja2.Environment(
-        loader=jinja2.FileSystemLoader(_TEMPLATE_DIR),
-        autoescape=jinja2.select_autoescape(["html"]),
-    )
+    env = _environment()
     tmpl = env.get_template("trend.html.j2")
 
     regressions = [f for f in diff["flips"] if f["kind"] == "regression"]

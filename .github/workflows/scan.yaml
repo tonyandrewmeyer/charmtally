@@ -10,8 +10,13 @@
 #     locally-controlled axis).
 #   - Runs the full pipeline: scan -> score -> dashboard.
 #   - Writes a dated snapshot to snapshots/scored-YYYY-MM-DD.json for
-#     the trend code.
+#     the trend code. Snapshots stay uncompressed on purpose: consecutive
+#     scans are near-identical text, which git deltas down to tens of KiB,
+#     whereas gzipped snapshots would each be an opaque blob that cannot
+#     delta at all.
 #   - Commits the refreshed artefacts back to main if any changed.
+#     scored.json / llm-scored.json / pairs.json are build intermediates
+#     and deliberately not committed -- see .gitignore.
 
 name: scan
 
@@ -68,14 +73,14 @@ jobs:
 
       - name: Scan corpus
         run: |
-          uv run --with pyyaml charmtally scan \
+          uv run charmtally scan \
             --workdir /tmp/charm-workdir \
             --overrides corpus-overrides.yaml \
             --out results.json
 
       - name: Score
         run: |
-          uv run --with pyyaml charmtally score \
+          uv run charmtally score \
             results.json \
             --overrides corpus-overrides.yaml \
             --out scored.json
@@ -85,18 +90,27 @@ jobs:
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
-          uv run --with pyyaml charmtally llm-score \
+          uv run charmtally llm-score \
             scored.json \
             --workdir /tmp/charm-workdir \
             --cache-dir /tmp/charm-workdir/.llm-verdicts \
             --out llm-scored.json
 
+      # Feeds the dashboard's Pairs view. Without this the view rendered
+      # empty on every published dashboard, because nothing ever produced
+      # pairs.json and the dashboard step never passed --pairs.
+      - name: Detect k8s/machine charm pairs
+        run: |
+          SCORED=scored.json
+          if [ -f llm-scored.json ]; then SCORED=llm-scored.json; fi
+          uv run charmtally pairs "$SCORED" --out pairs.json
+
       - name: Render dashboard
         run: |
           SCORED=scored.json
           if [ -f llm-scored.json ]; then SCORED=llm-scored.json; fi
-          uv run --with pyyaml charmtally dashboard \
-            "$SCORED" --out dashboard.html
+          uv run charmtally dashboard \
+            "$SCORED" --pairs pairs.json --out dashboard.html
 
       - name: Write dated snapshot
         run: |
@@ -109,7 +123,7 @@ jobs:
         run: |
           SCORED=scored.json
           if [ -f llm-scored.json ]; then SCORED=llm-scored.json; fi
-          uv run --with pyyaml charmtally trend \
+          uv run charmtally trend \
             --snapshots-dir snapshots \
             --live "$SCORED" \
             --out trend.html
@@ -121,8 +135,7 @@ jobs:
         run: |
           git config user.name  "charmtally-bot"
           git config user.email "charmtally-bot@aotearoa.dev"
-          git add results.json scored.json dashboard.html trend.html snapshots/
-          if [ -f llm-scored.json ]; then git add llm-scored.json; fi
+          git add results.json dashboard.html trend.html snapshots/
           if git diff --cached --quiet; then
             echo "no changes to commit"
             exit 0

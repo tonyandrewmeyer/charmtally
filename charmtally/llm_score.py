@@ -258,9 +258,27 @@ class OpenRouterClient:
 # ── Cache helpers ─────────────────────────────────────────────────────────────
 
 
+def prompt_version() -> str:
+    """Short digest of the inputs that determine what a verdict means.
+
+    Folded into every cache key so that editing the system prompt or
+    switching models invalidates previously cached verdicts automatically —
+    relying on a hand-maintained version constant meant a prompt change
+    silently kept serving verdicts produced by the old one.
+    """
+    raw = f"{_SYSTEM_PROMPT}\x00{_OPENROUTER_MODEL}"
+    return hashlib.sha256(raw.encode()).hexdigest()[:12]
+
+
 def _cache_key(charm_url: str, charm_sha: str, feature_id: str, scanner_version: str) -> str:
-    """Stable SHA-256 cache key for a (charm, feature) pair (AI-DESIGN.md §7.1)."""
-    raw = f"{charm_url}@{charm_sha}:{feature_id}:{scanner_version}"
+    """Stable SHA-256 cache key for a (charm, feature) pair (AI-DESIGN.md §7.1).
+
+    `charm_sha` is the commit the charm was scanned at, so a verdict is
+    naturally invalidated when the charm's source moves on. `scanner_version`
+    covers detector/scoring changes that alter the evidence handed to the
+    model, and `prompt_version()` covers prompt and model changes.
+    """
+    raw = f"{charm_url}@{charm_sha}:{feature_id}:{scanner_version}:{prompt_version()}"
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
@@ -482,7 +500,10 @@ def score_worth_considering(
         charm_name = charm_data.get("name", slug)
         repo_url = charm_data.get("repo_url", "")
         subpath = charm_data.get("subpath", "")
-        charm_sha = meta_raw.get("repo_sha", "unknown")
+        # No recorded commit means we can't tell whether the charm's source has
+        # moved since a verdict was cached, so this charm bypasses the cache
+        # entirely rather than pinning a verdict to a placeholder SHA forever.
+        charm_sha = meta_raw.get("repo_sha") or ""
         architecture = list(meta_raw.get("architecture") or [])
 
         for feature_id in LLM_ELIGIBLE_FEATURES:
@@ -514,8 +535,8 @@ def score_worth_considering(
                 continue
 
             # Cache lookup.
-            key = _cache_key(repo_url, charm_sha, feature_id, scanner_version)
-            cached = _load_cache_entry(cache_dir, key)
+            key = _cache_key(repo_url, charm_sha, feature_id, scanner_version) if charm_sha else ""
+            cached = _load_cache_entry(cache_dir, key) if key else None
             if cached is not None:
                 verdict = cached.get("verdict", "worth-considering")
                 if verdict == "clear-gap":
@@ -569,22 +590,26 @@ def score_worth_considering(
             llm_rationale = validated["rationale"]
             llm_evidence_path = validated.get("evidence_path")
 
-            # Persist to cache.
-            _save_cache_entry(
-                cache_dir,
-                key,
-                {
-                    "key": key,
-                    "charm_slug": slug,
-                    "feature_id": feature_id,
-                    "verdict": llm_verdict,
-                    "rationale": llm_rationale,
-                    "evidence_path": llm_evidence_path,
-                    "model": _OPENROUTER_MODEL,
-                    "timestamp": now_str,
-                    "ttl_days": _CACHE_TTL_DAYS,
-                },
-            )
+            # Persist to cache (skipped when the charm has no recorded commit).
+            if key:
+                _save_cache_entry(
+                    cache_dir,
+                    key,
+                    {
+                        "key": key,
+                        "charm_slug": slug,
+                        "feature_id": feature_id,
+                        "verdict": llm_verdict,
+                        "rationale": llm_rationale,
+                        "evidence_path": llm_evidence_path,
+                        "model": _OPENROUTER_MODEL,
+                        "charm_sha": charm_sha,
+                        "prompt_version": prompt_version(),
+                        "scanner_version": scanner_version,
+                        "timestamp": now_str,
+                        "ttl_days": _CACHE_TTL_DAYS,
+                    },
+                )
 
             if llm_verdict == "clear-gap":
                 rec["score"] = "clear-gap"

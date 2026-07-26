@@ -225,7 +225,15 @@
 })();
 </script>
 
-<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+{# Subresource integrity is required: this page is served from GitHub Pages,
+   so a compromised or hijacked CDN response would execute in the context of
+   the published dashboard. The hash pins plotly-2.35.2.min.js exactly — it
+   must be regenerated whenever the version in the URL changes:
+     curl -sSfL <url> | openssl dgst -sha384 -binary | openssl base64 -A #}
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"
+        integrity="sha384-cCVCZkAjYNxaYKbM8lsArLznDF/SvMFr1jcZrvOpSTCa0W40ZAdLzHCEulnUa5i7"
+        crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
 <script>
 // Adoption chart — progressive enhancement over the static table above.
 // If the CDN script fails to load (offline, CSP), Plotly is undefined and

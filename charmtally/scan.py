@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import subprocess
 from dataclasses import asdict
 from pathlib import Path
@@ -11,7 +12,7 @@ import yaml
 from . import metadata, scoring
 from .catalogue import Feature, Pattern
 from .corpus import CharmRef
-from .detectors import detect_feature
+from .detectors import CharmSource, detect_feature
 
 # Directory names a fan-out walk should never descend into when looking for
 # sub-charms. Vendored charm libs ship `charmcraft.yaml` files for the lib
@@ -43,13 +44,16 @@ def scan_charm(
     in the per-charm ``__meta__`` block as ``architecture: [name, ...]``.
     The scoring layer uses these as inputs to per-feature gap rules.
     """
-    meta = metadata.read(charm_root)
-    architecture = _detect_architecture(charm_root, patterns or [])
+    meta = dataclasses.replace(metadata.read(charm_root), repo_sha=head_sha(charm_root))
+    # One read-and-parse pass over the charm's Python files, shared by every
+    # feature and pattern below.
+    source = CharmSource(charm_root)
+    architecture = _detect_architecture(charm_root, patterns or [], source)
     out: dict[str, dict] = {}
     # First pass: detection. Scoring needs the full features dict (rules can
     # reference cross-feature state), so we score in a second pass.
     for feat in features:
-        ev = detect_feature(charm_root, feat)
+        ev = detect_feature(charm_root, feat, source)
         out[feat.name] = {
             "present": bool(ev),
             "evidence": [asdict(e) for e in ev],
@@ -65,41 +69,23 @@ def scan_charm(
             s = scoring.score_absent(feat.name, out, meta, architecture)
             rec["score"] = s.label
             rec["rationale"] = s.rationale
-    out["__meta__"] = {
-        "has_containers": meta.has_containers,
-        "relations": [{"name": r.name, "role": r.role, "interface": r.interface} for r in meta.relations],
-        "config_keys": list(meta.config_keys),
-        "secret_like_config": list(meta.secret_like_config),
-        "secret_typed_config": list(meta.secret_typed_config),
-        "has_integration_tests": meta.has_integration_tests,
-        "is_reactive": meta.is_reactive,
-        "is_legacy_classic": meta.is_legacy_classic,
-        "is_subordinate": meta.is_subordinate,
-        "is_workload_less": meta.is_workload_less,
-        "architecture": architecture,
-        "charm_name": meta.charm_name,
-        "charmcraft_plugins": list(meta.charmcraft_plugins),
-        "bases": list(meta.bases),
-        "min_juju_version": meta.min_juju_version,
-        "library_count": meta.library_count,
-        "library_names": list(meta.library_names),
-        "provides_own_library": meta.provides_own_library,
-        "has_terraform_module": meta.has_terraform_module,
-        "tooling": list(meta.tooling),
-    }
+    # `architecture` is a detection result rather than charm metadata, so it
+    # rides alongside CharmMeta's own fields instead of living on the dataclass.
+    out["__meta__"] = {**meta.to_dict(), "architecture": architecture}
     return out
 
 
-def _detect_architecture(charm_root: Path, patterns: list[Pattern]) -> list[str]:
+def _detect_architecture(charm_root: Path, patterns: list[Pattern], source: CharmSource) -> list[str]:
     """Return the names of architecture patterns that match this charm.
 
-    Pattern detection re-uses the per-feature detector machinery. A pattern
-    matches if any of its detectors yields evidence — same `any` semantics
-    as features.
+    Pattern detection re-uses the per-feature detector machinery — Pattern
+    satisfies the same `catalogue.Detectable` protocol Feature does. A
+    pattern matches if any of its detectors yields evidence, the same `any`
+    semantics as features.
     """
     matched: list[str] = []
     for pat in patterns:
-        ev = detect_feature(charm_root, pat)  # duck-typed: needs scope + detectors
+        ev = detect_feature(charm_root, pat, source)
         if ev:
             matched.append(pat.name)
     return matched
@@ -175,21 +161,79 @@ def find_charm_roots(repo_root: Path) -> list[Path]:
     return sub_roots
 
 
+def _git(args: list[str], cwd: Path | None = None, timeout: int = 120) -> bool:
+    """Run a git command, returning True on success. Never raises."""
+    try:
+        subprocess.run(
+            ["git", *args],
+            cwd=None if cwd is None else str(cwd),
+            check=True,
+            capture_output=True,
+            timeout=timeout,
+        )
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):
+        return False
+    return True
+
+
+def head_sha(charm_root: Path) -> str | None:
+    """Return the commit SHA of the checkout containing `charm_root`.
+
+    Returns None when `charm_root` isn't inside a git checkout (a plain
+    directory passed to `charmtally local`, say). Git searches upwards, so
+    this resolves correctly for a monorepo sub-charm directory too.
+    """
+    try:
+        proc = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=str(charm_root),
+            check=True,
+            capture_output=True,
+            timeout=30,
+            text=True,
+        )
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):
+        return None
+    return proc.stdout.strip() or None
+
+
+def refresh_clone(dest: Path, ref: CharmRef) -> bool:
+    """Fast-forward an existing shallow clone onto the current remote tip.
+
+    Returns True if the clone now reflects the remote, False if the refresh
+    failed (network down, branch renamed away, repo gone private). The caller
+    keeps using the stale checkout on failure — a week-old scan of a charm
+    beats dropping it from the corpus entirely.
+
+    Fetches the override branch when one is pinned, otherwise the remote's
+    default HEAD, so a newly-added `branch_overrides` entry takes effect on
+    an already-cloned repo instead of being ignored forever.
+    """
+    target = ref.branch or "HEAD"
+    if not _git(["fetch", "--depth", "1", "origin", target], cwd=dest):
+        return False
+    return _git(["reset", "--hard", "FETCH_HEAD"], cwd=dest)
+
+
 def ensure_clone(ref: CharmRef, workdir: Path) -> Path | None:
     """Shallow-clone `ref.repo_url` into workdir/<slug>, returning the path.
+
+    An existing clone is refreshed rather than reused as-is: the scan workdir
+    is cached between CI runs, so returning early here froze every charm at
+    whatever commit it was first cloned at, and the trend page could never
+    show a charm adopting a feature.
 
     Returns None on clone failure. Uses HTTPS (no SSH key needed).
     """
     dest = workdir / ref.slug
     if dest.exists():
+        refresh_clone(dest, ref)
         return dest
     workdir.mkdir(parents=True, exist_ok=True)
-    cmd = ["git", "clone", "--depth", "1"]
+    cmd = ["clone", "--depth", "1"]
     if ref.branch:
         cmd += ["--branch", ref.branch]
     cmd += [ref.repo_url, str(dest)]
-    try:
-        subprocess.run(cmd, check=True, capture_output=True, timeout=120)
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+    if not _git(cmd):
         return None
     return dest

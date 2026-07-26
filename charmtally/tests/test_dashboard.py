@@ -111,3 +111,27 @@ def test_pairs_view_renders_when_pairs_passed() -> None:
     assert 'id="pairs-view"' in html
     assert "postgresql-k8s" in html
     assert "shared lib" in html
+
+
+# ── autoescaping ─────────────────────────────────────────────────────────────
+
+
+def test_charm_supplied_strings_are_escaped() -> None:
+    """Charm names, repo URLs and rationales come from third-party
+    repositories and the hyrum CSV, and the rendered page is published to
+    GitHub Pages. select_autoescape(["html"]) tested the `j2` extension of
+    `dashboard.html.j2` and returned False, so none of this was escaped.
+    """
+    feats = [_feature("ops.collect-status")]
+    charm = _charm("evil", present_features=set(), all_features=["ops.collect-status"])
+    charm["name"] = "<script>alert(1)</script>"
+    charm["repo_url"] = 'https://x/y" onmouseover="alert(1)'
+    charm["features"]["ops.collect-status"]["score"] = "clear-gap"
+    charm["features"]["ops.collect-status"]["rationale"] = "<img src=x onerror=alert(1)>"
+
+    html = render({"evil": charm}, feats)
+
+    assert "<script>alert(1)</script>" not in html
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in html
+    assert "<img src=x onerror=alert(1)>" not in html
+    assert 'onmouseover="alert(1)' not in html

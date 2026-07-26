@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..metadata import read
+from ..metadata import CharmMeta, Relation, read
 
 
 def _ops_charm(d: Path) -> Path:
@@ -306,3 +306,51 @@ def test_workload_less_other_requires_interfaces_dont_disqualify(tmp_path: Path)
         "type: charm\nname: x\nrequires:\n  db:\n    interface: postgresql_client\n"
     )
     assert read(tmp_path).is_workload_less is True
+
+
+def test_charm_meta_dict_round_trip() -> None:
+    """Every field survives to_dict() -> from_dict() unchanged."""
+    meta = CharmMeta(
+        has_containers=True,
+        relations=(Relation("db", "requires", "postgresql_client"),),
+        config_keys=("a", "b"),
+        secret_like_config=("api-key",),
+        secret_typed_config=("api-key",),
+        has_integration_tests=True,
+        is_reactive=False,
+        is_legacy_classic=False,
+        is_subordinate=True,
+        is_workload_less=True,
+        charm_name="demo",
+        charmcraft_plugins=("uv",),
+        bases=("ubuntu@24.04",),
+        min_juju_version="3.6",
+        library_count=2,
+        library_names=("foo", "bar"),
+        provides_own_library=True,
+        has_terraform_module=True,
+        tooling=("tox", "just"),
+        repo_sha="0123456789abcdef",
+    )
+    assert CharmMeta.from_dict(meta.to_dict()) == meta
+
+
+def test_charm_meta_from_dict_tolerates_missing_keys() -> None:
+    """Snapshots written by older scans still load, falling back to defaults."""
+    meta = CharmMeta.from_dict({})
+    assert meta == CharmMeta(
+        has_containers=False,
+        relations=(),
+        config_keys=(),
+        secret_like_config=(),
+        secret_typed_config=(),
+        has_integration_tests=False,
+        is_reactive=False,
+    )
+    assert meta.repo_sha is None
+
+
+def test_charm_meta_from_dict_ignores_unknown_keys() -> None:
+    """`architecture` rides alongside __meta__ but isn't a CharmMeta field."""
+    meta = CharmMeta.from_dict({"architecture": ["reconcile"], "has_containers": True})
+    assert meta.has_containers
