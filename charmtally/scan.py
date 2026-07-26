@@ -65,28 +65,9 @@ def scan_charm(
             s = scoring.score_absent(feat.name, out, meta, architecture)
             rec["score"] = s.label
             rec["rationale"] = s.rationale
-    out["__meta__"] = {
-        "has_containers": meta.has_containers,
-        "relations": [{"name": r.name, "role": r.role, "interface": r.interface} for r in meta.relations],
-        "config_keys": list(meta.config_keys),
-        "secret_like_config": list(meta.secret_like_config),
-        "secret_typed_config": list(meta.secret_typed_config),
-        "has_integration_tests": meta.has_integration_tests,
-        "is_reactive": meta.is_reactive,
-        "is_legacy_classic": meta.is_legacy_classic,
-        "is_subordinate": meta.is_subordinate,
-        "is_workload_less": meta.is_workload_less,
-        "architecture": architecture,
-        "charm_name": meta.charm_name,
-        "charmcraft_plugins": list(meta.charmcraft_plugins),
-        "bases": list(meta.bases),
-        "min_juju_version": meta.min_juju_version,
-        "library_count": meta.library_count,
-        "library_names": list(meta.library_names),
-        "provides_own_library": meta.provides_own_library,
-        "has_terraform_module": meta.has_terraform_module,
-        "tooling": list(meta.tooling),
-    }
+    # `architecture` is a detection result rather than charm metadata, so it
+    # rides alongside CharmMeta's own fields instead of living on the dataclass.
+    out["__meta__"] = {**meta.to_dict(), "architecture": architecture}
     return out
 
 

@@ -230,29 +230,7 @@ def cmd_score(args: argparse.Namespace) -> int:
             continue
         features_dict = charm_data.get("features", {})
         meta_raw = features_dict.get("__meta__", {})
-        meta = _metadata.CharmMeta(
-            has_containers=meta_raw.get("has_containers", False),
-            relations=tuple(
-                _metadata.Relation(r["name"], r["role"], r.get("interface", "")) for r in meta_raw.get("relations", [])
-            ),
-            config_keys=tuple(meta_raw.get("config_keys", [])),
-            secret_like_config=tuple(meta_raw.get("secret_like_config", [])),
-            secret_typed_config=tuple(meta_raw.get("secret_typed_config", [])),
-            has_integration_tests=meta_raw.get("has_integration_tests", False),
-            is_reactive=meta_raw.get("is_reactive", False),
-            is_legacy_classic=meta_raw.get("is_legacy_classic", False),
-            is_subordinate=meta_raw.get("is_subordinate", False),
-            is_workload_less=meta_raw.get("is_workload_less", False),
-            charm_name=meta_raw.get("charm_name"),
-            charmcraft_plugins=tuple(meta_raw.get("charmcraft_plugins", [])),
-            bases=tuple(meta_raw.get("bases", [])),
-            min_juju_version=meta_raw.get("min_juju_version"),
-            library_count=int(meta_raw.get("library_count", 0)),
-            library_names=tuple(meta_raw.get("library_names", [])),
-            provides_own_library=bool(meta_raw.get("provides_own_library", False)),
-            has_terraform_module=bool(meta_raw.get("has_terraform_module", False)),
-            tooling=tuple(meta_raw.get("tooling", [])),
-        )
+        meta = _metadata.CharmMeta.from_dict(meta_raw)
         architecture = list(meta_raw.get("architecture") or [])
         for feat in feats:
             if feat.name not in features_dict:

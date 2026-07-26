@@ -41,6 +41,11 @@ Descriptive facts surfaced for the dashboard (no scoring rules attached):
     has_terraform_module  — true if terraform/ dir or .tf files at root
     tooling               — subset of ["tox","make","just"] based on
                             tox.ini / Makefile / justfile presence
+    repo_sha              — commit the charm was scanned at, or None when the
+                            charm root isn't a git checkout
+
+`CharmMeta.to_dict` / `CharmMeta.from_dict` are the round-trip pair used to
+write and re-read the per-charm ``__meta__`` block in results.json.
 """
 
 from __future__ import annotations
@@ -89,6 +94,70 @@ class CharmMeta:
     provides_own_library: bool = False
     has_terraform_module: bool = False
     tooling: tuple[str, ...] = ()
+    # Commit the charm was scanned at (``git rev-parse HEAD`` of the clone),
+    # or None for a working tree that isn't a git checkout. Used to build
+    # permalinks in the dashboard and to key the LLM verdict cache.
+    repo_sha: str | None = None
+
+    def to_dict(self) -> dict:
+        """Serialise to the ``__meta__`` block written into results.json.
+
+        Paired with :meth:`from_dict`; keep the two in sync — the scan and
+        score commands round-trip through this pair, and every consumer of
+        ``__meta__`` (dashboard, llm_score, pairs) reads these key names.
+        """
+        return {
+            "has_containers": self.has_containers,
+            "relations": [{"name": r.name, "role": r.role, "interface": r.interface} for r in self.relations],
+            "config_keys": list(self.config_keys),
+            "secret_like_config": list(self.secret_like_config),
+            "secret_typed_config": list(self.secret_typed_config),
+            "has_integration_tests": self.has_integration_tests,
+            "is_reactive": self.is_reactive,
+            "is_legacy_classic": self.is_legacy_classic,
+            "is_subordinate": self.is_subordinate,
+            "is_workload_less": self.is_workload_less,
+            "charm_name": self.charm_name,
+            "charmcraft_plugins": list(self.charmcraft_plugins),
+            "bases": list(self.bases),
+            "min_juju_version": self.min_juju_version,
+            "library_count": self.library_count,
+            "library_names": list(self.library_names),
+            "provides_own_library": self.provides_own_library,
+            "has_terraform_module": self.has_terraform_module,
+            "tooling": list(self.tooling),
+            "repo_sha": self.repo_sha,
+        }
+
+    @classmethod
+    def from_dict(cls, raw: dict) -> CharmMeta:
+        """Rebuild a CharmMeta from a ``__meta__`` block.
+
+        Tolerant of missing keys so snapshots written by older scans still
+        load — every field falls back to the dataclass default.
+        """
+        return cls(
+            has_containers=bool(raw.get("has_containers", False)),
+            relations=tuple(Relation(r["name"], r["role"], r.get("interface", "")) for r in raw.get("relations") or []),
+            config_keys=tuple(raw.get("config_keys") or []),
+            secret_like_config=tuple(raw.get("secret_like_config") or []),
+            secret_typed_config=tuple(raw.get("secret_typed_config") or []),
+            has_integration_tests=bool(raw.get("has_integration_tests", False)),
+            is_reactive=bool(raw.get("is_reactive", False)),
+            is_legacy_classic=bool(raw.get("is_legacy_classic", False)),
+            is_subordinate=bool(raw.get("is_subordinate", False)),
+            is_workload_less=bool(raw.get("is_workload_less", False)),
+            charm_name=raw.get("charm_name"),
+            charmcraft_plugins=tuple(raw.get("charmcraft_plugins") or []),
+            bases=tuple(raw.get("bases") or []),
+            min_juju_version=raw.get("min_juju_version"),
+            library_count=int(raw.get("library_count", 0)),
+            library_names=tuple(raw.get("library_names") or []),
+            provides_own_library=bool(raw.get("provides_own_library", False)),
+            has_terraform_module=bool(raw.get("has_terraform_module", False)),
+            tooling=tuple(raw.get("tooling") or []),
+            repo_sha=raw.get("repo_sha"),
+        )
 
 
 def _load_yaml(path: Path) -> dict | None:
