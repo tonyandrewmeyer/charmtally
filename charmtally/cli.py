@@ -23,8 +23,25 @@ Usage:
         Re-apply rule-based scoring over an existing results.json.
         Useful for tweaking scoring rules without re-cloning.
 
-    charmtally dashboard results.json [--out dashboard.html]
-        Render results.json → dashboard.html (two sortable tables).
+    charmtally pairs scored.json [--out pairs.json]
+        Detect k8s/machine charm pairs; feeds the dashboard's Pairs view.
+
+    charmtally dashboard results.json [--pairs pairs.json]
+                                      [--out dashboard.html]
+        Render results.json → dashboard.html (sortable tables + Pairs view).
+
+    charmtally trend [--snapshots-dir snapshots] [--live scored.json]
+                     [--since DATE] [--feature F] [--out trend.html]
+        Adoption trend, per-charm timeline and diff list across the dated
+        snapshots → the standalone History page.
+
+    charmtally llm-score scored.json [--dry-run] [--out llm-scored.json]
+        Optional LLM pass over `worth-considering` records. Needs
+        OPENROUTER_API_KEY; capped by --max-llm-calls and a spend budget.
+
+    charmtally llm-calibrate scored.json ground-truth.json
+        Compare LLM verdicts against human labels; exits non-zero if
+        agreement falls below the threshold.
 """
 
 from __future__ import annotations

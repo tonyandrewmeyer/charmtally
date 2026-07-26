@@ -36,19 +36,35 @@ charmtally scan \
 # Re-score an existing results.json without re-cloning.
 charmtally score results.json --overrides corpus-overrides.yaml --out scored.json
 
+# Detect k8s/machine charm pairs (feeds the dashboard's Pairs view).
+charmtally pairs scored.json --out pairs.json
+
 # Render the dashboard.
-charmtally dashboard scored.json --out dashboard.html
+charmtally dashboard scored.json --pairs pairs.json --out dashboard.html
+
+# Render the History page from the dated snapshots under snapshots/.
+charmtally trend --snapshots-dir snapshots --live scored.json --out trend.html
+
+# Optional: re-score `worth-considering` records with an LLM.
+# Needs OPENROUTER_API_KEY; --dry-run reports what would be sent.
+charmtally llm-score scored.json --workdir /tmp/charms --dry-run
+
+# Optional: check LLM verdicts against a human-labelled ground-truth file.
+charmtally llm-calibrate scored.json ground-truth.json
 ```
 
 The weekly [`scan` workflow](.github/workflows/scan.yaml) runs that pipeline
-every Monday and commits the refreshed `dashboard.html` (plus a dated snapshot
-under `snapshots/`) back to `main`.
+every Monday and commits the refreshed `results.json`, `dashboard.html` and
+`trend.html` (plus a dated snapshot under `snapshots/`) back to `main`.
+`scored.json`, `llm-scored.json` and `pairs.json` are intermediates and are
+not committed.
 
 ## Development
 
 ```sh
 uv sync
-uv run pytest
-uv run ruff check
-uv run pre-commit run --all-files
+make unit          # pytest
+make lint          # ruff + ty + codespell, exactly what CI runs
+make format        # ruff format + ruff check --fix
+make pre-commit    # every hook against every file
 ```

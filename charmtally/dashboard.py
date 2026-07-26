@@ -5,9 +5,11 @@ Two tables (PLAN.md §D):
   - Charm view:   row per charm, with totals + the list of clear-gap features.
 
 Evidence-to-GitHub links are derived from the corpus `repo_url` plus the
-charm-relative file path captured at scan time. We default to `main` as the
-ref since the spike doesn't capture commit SHAs yet (a v1+ improvement; see
-PLAN.md §9).
+charm-relative file path captured at scan time, against the `main` ref.
+Scans now record the commit they ran at as `__meta__.repo_sha`, so these
+could become permalinks; they aren't yet, and the file path is relative to
+the charm root rather than the repo root, which is wrong for monorepo
+sub-charms.
 """
 
 from __future__ import annotations
@@ -56,7 +58,7 @@ def _exemplar(charm: dict, ref: str, evidence: list[dict]) -> dict:
 # Below this many present-counts across the full corpus a feature is flagged
 # as low-confidence in the feature view — the detector probably needs a
 # re-check. Suppress per-feature with `expected_rare: true` in features.yaml.
-# 5 hits on a ~340-charm corpus is ~1.5%.
+# 5 hits is well under 1% of the current ~750-charm corpus.
 _PRECISION_FLOOR = 5
 
 _ARCH_PRIORITY = (
