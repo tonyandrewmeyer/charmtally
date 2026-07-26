@@ -12,13 +12,24 @@ The catalogue has two top-level sections:
 
 from __future__ import annotations
 
+import importlib.resources
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+from pathlib import Path
+from typing import Any, Protocol, runtime_checkable
 
 import yaml
 
-if TYPE_CHECKING:
-    from pathlib import Path
+
+def default_path() -> Path:
+    """Path to the catalogue shipped inside the package.
+
+    `features.yaml` is package data, not repo config: resolving it relative to
+    the repo root worked from a checkout and broke in every installed
+    environment, where the wheel contains no such file. Resolved through
+    `importlib.resources` so it follows the package wherever it is installed.
+    """
+    # Named literally rather than via `__package__`, which is typed `str | None`.
+    return Path(str(importlib.resources.files("charmtally") / "features.yaml"))
 
 
 @dataclass(frozen=True)

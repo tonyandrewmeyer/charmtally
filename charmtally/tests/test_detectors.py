@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..catalogue import Detector, Feature
+from ..catalogue import Detector, Feature, default_path
 from ..catalogue import load as catalogue_load
 from ..detectors import detect_feature
 
@@ -1100,8 +1100,7 @@ def test_import_suppression_ignores_non_charmlib_modules(tmp_path: Path) -> None
 
 
 def _catalogue_feature(name: str) -> Feature:
-    path = Path(__file__).resolve().parent.parent.parent / "features.yaml"
-    return next(f for f in catalogue_load(path) if f.name == name)
+    return next(f for f in catalogue_load(default_path()) if f.name == name)
 
 
 def test_log_forwarding_fires_on_a_quoted_dict_key(tmp_path: Path) -> None:
