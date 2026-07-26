@@ -88,7 +88,8 @@ def _resolve_corpus_path(args: argparse.Namespace) -> Path:
 
 def cmd_local(args: argparse.Namespace) -> int:
     feats = _filter(catalogue.load(args.features), args.only)
-    result = scan.scan_charm(args.charm_dir, feats)
+    pats = catalogue.load_patterns(args.features)
+    result = scan.scan_charm(args.charm_dir, feats, pats)
     json.dump({args.charm_dir.name: result}, sys.stdout, indent=2)
     sys.stdout.write("\n")
     return 0
@@ -96,6 +97,7 @@ def cmd_local(args: argparse.Namespace) -> int:
 
 def cmd_spike(args: argparse.Namespace) -> int:
     feats = _filter(catalogue.load(args.features), args.only)
+    pats = catalogue.load_patterns(args.features)
     refs = corpus.load(_resolve_corpus_path(args))
     if args.key_only:
         refs = [r for r in refs if r.key_charm]
@@ -113,7 +115,7 @@ def cmd_spike(args: argparse.Namespace) -> int:
             "name": ref.name,
             "team": ref.team,
             "repo_url": ref.repo_url,
-            "features": scan.scan_charm(path, feats),
+            "features": scan.scan_charm(path, feats, pats),
         }
 
     json.dump(results, sys.stdout, indent=2)
