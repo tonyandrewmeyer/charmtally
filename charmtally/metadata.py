@@ -185,6 +185,23 @@ def _find_metadata_files(charm_root: Path) -> list[Path]:
     return out
 
 
+def declared_name(charm_root: Path) -> str | None:
+    """The charm's declared `name:`, or None if no metadata declares one.
+
+    Same first-non-empty-wins rule as :func:`read`, minus the rest of the
+    metadata scan — `detectors` needs only the name, to tell the charm that
+    *provides* a charm library from the many that merely vendor one.
+    """
+    for meta_path in _find_metadata_files(charm_root):
+        data = _load_yaml(meta_path)
+        if not data:
+            continue
+        name = data.get("name")
+        if isinstance(name, str):
+            return name
+    return None
+
+
 def _extract_charmcraft_plugins(data: dict) -> list[str]:
     """Distinct part plugins declared in charmcraft.yaml `parts:`."""
     parts = data.get("parts") or {}
