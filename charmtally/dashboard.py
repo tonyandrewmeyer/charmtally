@@ -20,6 +20,22 @@ import jinja2
 _TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
 
 
+def _environment() -> jinja2.Environment:
+    """Jinja environment for the dashboard and trend templates.
+
+    autoescape is set unconditionally rather than via select_autoescape:
+    the templates are named `*.html.j2`, and select_autoescape looks only at
+    the final extension, so `j2` was tested against the enabled list and
+    escaping was off. Every page interpolates data derived from third-party
+    charm repositories — names, repo URLs, rationale strings — and is
+    published to GitHub Pages.
+    """
+    return jinja2.Environment(
+        loader=jinja2.FileSystemLoader(_TEMPLATE_DIR),
+        autoescape=True,
+    )
+
+
 def _gh_blob(repo_url: str, ref: str, file_path: str, line: int) -> str:
     base = repo_url.rstrip("/").removesuffix(".git")
     return f"{base}/blob/{ref}/{file_path}#L{line}"
@@ -334,10 +350,7 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
                     "rationale": rec.get("rationale", ""),
                 })
 
-    env = jinja2.Environment(
-        loader=jinja2.FileSystemLoader(_TEMPLATE_DIR),
-        autoescape=jinja2.select_autoescape(["html"]),
-    )
+    env = _environment()
     tmpl = env.get_template("dashboard.html.j2")
     return tmpl.render(
         charms=charms,
@@ -364,10 +377,7 @@ def render_trend(
     per-(charm, feature) timeline. See trend.py for how these are computed
     and the corpus/feature-drift guards applied along the way.
     """
-    env = jinja2.Environment(
-        loader=jinja2.FileSystemLoader(_TEMPLATE_DIR),
-        autoescape=jinja2.select_autoescape(["html"]),
-    )
+    env = _environment()
     tmpl = env.get_template("trend.html.j2")
 
     regressions = [f for f in diff["flips"] if f["kind"] == "regression"]
