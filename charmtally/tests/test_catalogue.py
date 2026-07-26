@@ -2,21 +2,37 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
-from ..catalogue import load, load_patterns
+from ..catalogue import default_path, load, load_patterns
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+
+def test_default_path_resolves_inside_the_package():
+    """The catalogue ships as package data, so it must resolve without a checkout.
+
+    Resolving it relative to the repo root worked from a source tree and left
+    every installed environment with a CLI that died on a missing file — the
+    wheel contains no repo root. Keep this asserting on the package directory,
+    not just on existence.
+    """
+    path = default_path()
+    assert path.is_file(), f"{path} is missing — is features.yaml still inside charmtally/?"
+    assert path.parent.name == "charmtally"
 
 
 def test_load_features_still_works():
     """The original load() function is unchanged by the architecture refactor."""
-    feats = load(Path(__file__).resolve().parent.parent.parent / "features.yaml")
+    feats = load(default_path())
     assert len(feats) > 0
     assert all(f.name and f.detectors for f in feats)
 
 
 def test_load_patterns_returns_patterns():
     """The committed features.yaml defines an architecture section."""
-    pats = load_patterns(Path(__file__).resolve().parent.parent.parent / "features.yaml")
+    pats = load_patterns(default_path())
     names = {p.name for p in pats}
     assert "reconcile-all" in names
     assert "reconcile" in names

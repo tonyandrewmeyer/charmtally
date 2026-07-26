@@ -10,12 +10,13 @@ axes off `data-` attributes on the rows and builds the controls from the
 to be emitted as a row attribute (see `dashboard.html.j2`), and the filter
 state round-trips through the query string so a view can be linked.
 
-Evidence-to-GitHub links are derived from the corpus `repo_url` plus the
-charm-relative file path captured at scan time, against the `main` ref.
-Scans now record the commit they ran at as `__meta__.repo_sha`, so these
-could become permalinks; they aren't yet, and the file path is relative to
-the charm root rather than the repo root, which is wrong for monorepo
-sub-charms.
+Evidence-to-GitHub links are permalinks: the corpus `repo_url`, the commit the
+scan ran at (`__meta__.repo_sha`), and the evidence path re-based from the
+charm root onto the repo root via the record's `subpath`. Both parts matter —
+against `main` the line numbers drift as upstream moves, and without `subpath`
+every monorepo sub-charm link points at a path that doesn't exist. `ref` is the
+fallback for records with no `repo_sha` (a charm root that isn't a git
+checkout, i.e. `charmtally local`).
 """
 
 from __future__ import annotations
@@ -46,8 +47,32 @@ def _environment() -> jinja2.Environment:
 
 
 def _gh_blob(repo_url: str, ref: str, file_path: str, line: int) -> str:
+    """Build a GitHub blob URL for `file_path` at `ref`, anchored on `line`.
+
+    Line 0 means "this file, no particular line" — the file-independent
+    detectors (`yaml-key`, `requires-interface`, `relation-count`) report a
+    structural match with no located line. Emitting `#L0` for those made
+    GitHub scroll to nothing, so the anchor is dropped instead.
+    """
     base = repo_url.rstrip("/").removesuffix(".git")
-    return f"{base}/blob/{ref}/{file_path}#L{line}"
+    url = f"{base}/blob/{ref}/{file_path}"
+    return f"{url}#L{line}" if line > 0 else url
+
+
+def _evidence_ref(charm: dict, fallback: str) -> str:
+    """Return the commit to link evidence against: the scanned SHA, else `fallback`."""
+    return charm.get("features", {}).get("__meta__", {}).get("repo_sha") or fallback
+
+
+def _repo_path(charm: dict, file_path: str) -> str:
+    """Re-base a charm-root-relative evidence path onto the repo root.
+
+    Monorepo records carry the sub-charm directory as `subpath`; evidence
+    paths are relative to that directory, but the blob URL is relative to the
+    repo. Single-charm records have no `subpath` and pass through unchanged.
+    """
+    subpath = (charm.get("subpath") or "").strip("/")
+    return f"{subpath}/{file_path}" if subpath else file_path
 
 
 def _exemplar(charm: dict, ref: str, evidence: list[dict]) -> dict:
@@ -56,7 +81,12 @@ def _exemplar(charm: dict, ref: str, evidence: list[dict]) -> dict:
         e = evidence[0]
         return {
             "charm": charm["name"],
-            "url": _gh_blob(charm["repo_url"], ref, e["file"], e["line"]),
+            "url": _gh_blob(
+                charm["repo_url"],
+                _evidence_ref(charm, ref),
+                _repo_path(charm, e["file"]),
+                e["line"],
+            ),
         }
     return {"charm": charm["name"], "url": charm["repo_url"]}
 

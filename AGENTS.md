@@ -47,8 +47,13 @@ overrides ──┘                       (optional) llm-score ─────�
 - The corpus is **fetched at run time** from canonical/hyrum's
   `charm-list/charms.csv` (`corpus.HYRUM_CHARMS_CSV_URL`); there is no CSV
   checked into this repo. `--corpus <local.csv>` pins it for offline runs.
-- `features.yaml` — catalogue of features the detectors look for, plus the
-  `architecture:` patterns.
+  A failed fetch retries, then falls back to the cached copy under the
+  workdir rather than failing the run.
+- `charmtally/features.yaml` — catalogue of features the detectors look for,
+  plus the `architecture:` patterns. It lives **inside the package**, not at
+  the repo root: it is package data, and resolving it relative to the repo
+  root left every installed wheel with a CLI that died on a missing file.
+  Reach for it via `catalogue.default_path()`, never `__file__` arithmetic.
 - `corpus-overrides.yaml` — per-charm exclusions and feature-skip rules
   (silences shim-charm FPs, etc.). Loaded by `charmtally/corpus.py`.
 
@@ -117,8 +122,8 @@ ecosystem convention).
 
 - Scoring rules in `charmtally/scoring.py` — the rationale strings are
   user-facing; if you change a rule, update the rationale too.
-- `features.yaml` — adding a feature is fine; renaming or removing one
-  breaks every downstream snapshot. Prefer additive changes.
+- `charmtally/features.yaml` — adding a feature is fine; renaming or removing
+  one breaks every downstream snapshot. Prefer additive changes.
 - The LLM prompt or model in `charmtally/llm_score.py` — both feed
   `prompt_version()`, so editing either invalidates every cached verdict
   and the next run re-spends against the budget.

@@ -59,7 +59,7 @@ from . import pairs as _pairs
 from . import scoring as _scoring
 from . import trend as _trend
 
-DEFAULT_CATALOGUE = Path(__file__).resolve().parent.parent / "features.yaml"
+DEFAULT_CATALOGUE = catalogue.default_path()
 
 
 def _apply_feature_excludes(
@@ -435,7 +435,7 @@ def main(argv: list[str] | None = None) -> int:
         "--features",
         type=Path,
         default=DEFAULT_CATALOGUE,
-        help="Path to features.yaml (default: alongside this package)",
+        help="Path to features.yaml (default: the catalogue shipped in the package)",
     )
     sub = p.add_subparsers(dest="cmd", required=True)
 
