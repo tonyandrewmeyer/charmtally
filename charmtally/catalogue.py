@@ -13,14 +13,18 @@ The catalogue has two top-level sections:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 import yaml
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @dataclass(frozen=True)
 class Detector:
+    """One detection rule: a kind plus its rule-specific configuration."""
+
     kind: str
     config: dict[str, Any]
 
@@ -49,6 +53,8 @@ class Detectable(Protocol):
 
 @dataclass(frozen=True)
 class Feature:
+    """A library feature to survey for, and how to detect it."""
+
     name: str
     library: str
     summary: str
@@ -63,8 +69,10 @@ class Feature:
 
 @dataclass(frozen=True)
 class Pattern:
-    """An architectural pattern label. Same detector mechanics as Feature,
-    but no library/scoring — patterns are descriptive, not prescriptive."""
+    """An architectural pattern label. Same detector mechanics as Feature,.
+
+    but no library/scoring — patterns are descriptive, not prescriptive.
+    """
 
     name: str
     summary: str
@@ -73,23 +81,25 @@ class Pattern:
 
 
 def _parse_detectors(raw: list[dict[str, Any]]) -> tuple[Detector, ...]:
-    return tuple(Detector(kind=d["kind"], config={k: v for k, v in d.items() if k != "kind"}) for d in raw)
+    return tuple(
+        Detector(kind=d["kind"], config={k: v for k, v in d.items() if k != "kind"}) for d in raw
+    )
 
 
 def load(path: Path) -> list[Feature]:
+    """Load the feature catalogue from a features.yaml file."""
     data = yaml.safe_load(path.read_text())
-    out: list[Feature] = []
-    for raw in data["features"]:
-        out.append(
-            Feature(
-                name=raw["name"],
-                library=raw["library"],
-                summary=raw["summary"],
-                scope=raw["scope"],
-                detectors=_parse_detectors(raw["detect"]),
-                expected_rare=bool(raw.get("expected_rare", False)),
-            )
+    out: list[Feature] = [
+        Feature(
+            name=raw["name"],
+            library=raw["library"],
+            summary=raw["summary"],
+            scope=raw["scope"],
+            detectors=_parse_detectors(raw["detect"]),
+            expected_rare=bool(raw.get("expected_rare", False)),
         )
+        for raw in data["features"]
+    ]
     return out
 
 

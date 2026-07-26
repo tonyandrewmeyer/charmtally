@@ -24,13 +24,15 @@ import shutil
 import subprocess
 import sys
 import time
-from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from ..corpus import load_overrides
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterator
 
 _ENV_CACHE_DIR = "CHARMTALLY_CACHE_DIR"
 _ENV_AUDIT_TS = "AUDIT_TS"
@@ -253,7 +255,7 @@ def _sample(
     if len(pool) <= n:
         return list(pool)
     seed = _deterministic_seed(feature, bucket, seed_suffix)
-    return random.Random(seed).sample(pool, n)
+    return random.Random(seed).sample(pool, n)  # ruff: ignore[suspicious-non-cryptographic-random-usage]  # Deterministic sampling, not crypto.
 
 
 # ---------------------------------------------------------------------------
@@ -360,6 +362,7 @@ def _render_summary(
 
 
 def cmd_run(args: argparse.Namespace) -> int:
+    """Run a calibration audit for one feature and emit a Markdown report."""
     scored_path: Path = args.scored
     if not scored_path.exists():
         print(f"error: {scored_path} not found", file=sys.stderr)
@@ -399,7 +402,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         repo_dir: Path | None
         try:
             repo_dir = cache.checkout(repo_url, ref)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             print(f"  clone failed: {exc}", file=sys.stderr)
             repo_dir = None
 
@@ -419,14 +422,16 @@ def cmd_run(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_prune(args: argparse.Namespace) -> int:  # noqa: ARG001
+def cmd_prune(args: argparse.Namespace) -> int:
+    """Remove clone-cache entries older than the retention window."""
     cache = CloneCache()
     removed = cache.prune()
     print(f"pruned {removed} cache entries older than {_PRUNE_AGE_DAYS} days")
     return 0
 
 
-def cmd_cache_info(args: argparse.Namespace) -> int:  # noqa: ARG001
+def cmd_cache_info(args: argparse.Namespace) -> int:
+    """Print a summary of the clone cache's size and age."""
     cache = CloneCache()
     info = cache.info()
     print(f"Cache root:   {cache.root}")
@@ -438,6 +443,7 @@ def cmd_cache_info(args: argparse.Namespace) -> int:  # noqa: ARG001
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the charmtally audit command-line interface."""
     p = argparse.ArgumentParser(
         prog="python -m charmtally.tools.audit",
         description="Calibration audit tool for charmtally.",
@@ -447,20 +453,36 @@ def main(argv: list[str] | None = None) -> int:
     p_run = sub.add_parser("run", help="Run an audit pass and emit markdown.")
     p_run.add_argument("feature", help="Feature name, e.g. ops.collect-status.")
     p_run.add_argument("bucket", help="Score bucket: clear-gap / worth-considering / present.")
-    p_run.add_argument("--n", type=int, default=_DEFAULT_N, help=f"Sample size (default {_DEFAULT_N}).")
+    p_run.add_argument(
+        "--n", type=int, default=_DEFAULT_N, help=f"Sample size (default {_DEFAULT_N})."
+    )
     p_run.add_argument("--team", default=None, help="Filter to this team (case-insensitive).")
-    p_run.add_argument("--seed-suffix", default="", dest="seed_suffix", help="Appended to the seed string for reruns.")
-    p_run.add_argument("--scored", type=Path, default=Path("./scored.json"), help="Path to scored.json.")
+    p_run.add_argument(
+        "--seed-suffix",
+        default="",
+        dest="seed_suffix",
+        help="Appended to the seed string for reruns.",
+    )
+    p_run.add_argument(
+        "--scored", type=Path, default=Path("./scored.json"), help="Path to scored.json."
+    )
     p_run.add_argument(
         "--overrides",
         type=Path,
         default=Path("./corpus-overrides.yaml"),
         help="Path to corpus-overrides.yaml.",
     )
-    p_run.add_argument("--no-cache", action="store_true", dest="no_cache", help="Force re-clone regardless of cache.")
+    p_run.add_argument(
+        "--no-cache",
+        action="store_true",
+        dest="no_cache",
+        help="Force re-clone regardless of cache.",
+    )
     p_run.set_defaults(func=cmd_run)
 
-    p_prune = sub.add_parser("prune", help=f"Remove cache entries older than {_PRUNE_AGE_DAYS} days.")
+    p_prune = sub.add_parser(
+        "prune", help=f"Remove cache entries older than {_PRUNE_AGE_DAYS} days."
+    )
     p_prune.set_defaults(func=cmd_prune)
 
     p_info = sub.add_parser("cache-info", help="Print cache statistics.")

@@ -52,6 +52,8 @@ _GENERIC_SUFFIXES = ("-operator",)
 
 @dataclass(frozen=True)
 class Pair:
+    """A matched K8s/machine pair of charms for the same workload."""
+
     root: str
     k8s_name: str
     machine_name: str
@@ -81,8 +83,10 @@ def _normalise_machine(name: str) -> str:
 
 
 def _levenshtein(a: str, b: str) -> int:
-    """Plain Levenshtein. Bounded inputs (charm names are short), so the
-    cost of the naive O(len(a)*len(b)) table is fine."""
+    """Plain Levenshtein. Bounded inputs (charm names are short), so the.
+
+    cost of the naive O(len(a)*len(b)) table is fine.
+    """
     if a == b:
         return 0
     if not a:
@@ -106,7 +110,7 @@ def _strip_dot_git(url: str) -> str:
 
 
 def _normalise_lib_to_root(lib: str) -> str:
-    """A vendored lib `foo_bar_k8s` corresponds to charm root `foo-bar`."""
+    """Return a vendored lib `foo_bar_k8s` corresponds to charm root `foo-bar`."""
     underscored = lib.replace("_", "-")
     return _normalise_k8s(underscored)
 
@@ -117,9 +121,11 @@ def _shares_charmlib(
     a_root: str,
     b_root: str,
 ) -> bool:
-    """True if either side vendors a lib whose name normalises to the
+    """Return true if either side vendors a lib whose name normalises to the.
+
     other side's root. Catches both the "k8s charm vendors the machine
-    charm's lib" and the reverse case."""
+    charm's lib" and the reverse case.
+    """
     if not a_libs and not b_libs:
         return False
     if any(_normalise_lib_to_root(lib) == b_root for lib in a_libs):
@@ -175,7 +181,9 @@ def find_pairs(results: dict) -> list[Pair]:
             candidates = [best]
             confidence = "medium"
         for m in candidates:
-            same_repo = bool(k["repo_url"]) and _strip_dot_git(k["repo_url"]) == _strip_dot_git(m["repo_url"])
+            same_repo = bool(k["repo_url"]) and _strip_dot_git(k["repo_url"]) == _strip_dot_git(
+                m["repo_url"]
+            )
             shares = _shares_charmlib(k["libs"], m["libs"], root, m["root"])
             pairs.append(
                 Pair(

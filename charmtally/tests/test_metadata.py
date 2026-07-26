@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from ..metadata import CharmMeta, Relation, read
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def _ops_charm(d: Path) -> Path:
@@ -103,7 +106,9 @@ def test_charmcraft_plugins_extracted(tmp_path: Path) -> None:
 
 
 def test_bases_extracted_v2(tmp_path: Path) -> None:
-    (tmp_path / "charmcraft.yaml").write_text("type: charm\nname: c\nbase: ubuntu@22.04\nbuild-base: ubuntu@24.04\n")
+    (tmp_path / "charmcraft.yaml").write_text(
+        "type: charm\nname: c\nbase: ubuntu@22.04\nbuild-base: ubuntu@24.04\n"
+    )
     meta = read(tmp_path)
     assert meta.bases == ("ubuntu@22.04", "ubuntu@24.04")
 
@@ -117,7 +122,9 @@ def test_bases_extracted_v1(tmp_path: Path) -> None:
 
 
 def test_min_juju_version_from_assumes_list(tmp_path: Path) -> None:
-    (tmp_path / "charmcraft.yaml").write_text("type: charm\nname: c\nassumes: ['juju >= 3.4', 'k8s-api']\n")
+    (tmp_path / "charmcraft.yaml").write_text(
+        "type: charm\nname: c\nassumes: ['juju >= 3.4', 'k8s-api']\n"
+    )
     assert read(tmp_path).min_juju_version == "3.4"
 
 
@@ -273,7 +280,9 @@ def test_workload_less_false_with_pebble_layer_call_in_src(tmp_path: Path) -> No
     _ops_charm(tmp_path)
     src = tmp_path / "src"
     src.mkdir()
-    (src / "charm.py").write_text("from ops import pebble\nlayer = pebble.Layer({'services': {}})\n")
+    (src / "charm.py").write_text(
+        "from ops import pebble\nlayer = pebble.Layer({'services': {}})\n"
+    )
     assert read(tmp_path).is_workload_less is False
 
 

@@ -1,4 +1,5 @@
-"""Trend-over-time: read `snapshots/scored-*.json` (+ the live `scored.json`)
+"""Trend-over-time: read `snapshots/scored-*.json` (+ the live `scored.json`).
+
 and compute adoption series, per-charm timelines, and a diff list between two
 dates.
 
@@ -22,16 +23,25 @@ import datetime as dt
 import json
 import re
 from dataclasses import dataclass
-from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 _SNAPSHOT_RE = re.compile(r"scored-(\d{4}-\d{2}-\d{2})\.json$")
 
 
 @dataclass(frozen=True)
 class Snapshot:
+    """One dated scan result, used to compute trends between runs."""
+
     date: str  # ISO YYYY-MM-DD
-    charms: dict[str, dict]  # slug -> charm record (features dict, repo_url, ...), __skipped__ excluded
-    feature_names: frozenset[str]  # the feature catalogue as scanned at this date, from the data itself
+    charms: dict[
+        str, dict
+    ]  # slug -> charm record (features dict, repo_url, ...), __skipped__ excluded
+    feature_names: frozenset[
+        str
+    ]  # the feature catalogue as scanned at this date, from the data itself
 
 
 def _feature_names_of(charm: dict) -> set[str]:
@@ -87,7 +97,9 @@ def select_range(snapshots: list[Snapshot], since: str | None) -> list[Snapshot]
     return [s for s in snapshots if s.date >= since]
 
 
-def compute_adoption(snapshots: list[Snapshot], feature: str | None = None) -> dict[str, list[dict]]:
+def compute_adoption(
+    snapshots: list[Snapshot], feature: str | None = None
+) -> dict[str, list[dict]]:
     """Per-feature percent-present series, one point per snapshot date.
 
     Only counts a snapshot's charms toward a feature's denominator when that
@@ -177,7 +189,8 @@ def compute_timeline(
 
 
 def _detect_renames(base: Snapshot, latest: Snapshot) -> list[dict]:
-    """Match slugs that vanished from `base` against slugs that newly
+    """Match slugs that vanished from `base` against slugs that newly.
+
     appeared in `latest`, via identical `repo_url`. Ambiguous matches (more
     than one candidate sharing a repo_url on either side) are left unmatched
     — better to miss a rename than to report a wrong one.
@@ -247,8 +260,10 @@ def compute_diff(base: Snapshot, latest: Snapshot) -> dict:
 
 
 def select_base(snapshots: list[Snapshot], since: str | None) -> Snapshot | None:
-    """Pick the base snapshot for a diff: the earliest by default, or the
-    earliest snapshot dated on/after `since` when given."""
+    """Pick the base snapshot for a diff: the earliest by default, or the.
+
+    earliest snapshot dated on/after `since` when given.
+    """
     candidates = select_range(snapshots, since)
     if not candidates:
         return None

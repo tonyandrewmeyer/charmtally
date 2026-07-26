@@ -11,11 +11,14 @@ from __future__ import annotations
 import io
 import json
 from contextlib import redirect_stdout
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from ..catalogue import load, load_patterns
 from ..cli import DEFAULT_CATALOGUE, main
 from ..scan import scan_charm
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 # A reconcile-shaped charm: one handler bound to five distinct non-baseline
 # events. scoring.py suppresses the ops.collect-status gap for these.
@@ -41,7 +44,9 @@ def _write_charm(root: Path) -> Path:
     src = root / "src"
     src.mkdir(parents=True)
     (src / "charm.py").write_text(_RECONCILE_CHARM)
-    (root / "charmcraft.yaml").write_text("type: charm\nname: demo\nprovides:\n  db:\n    interface: pgsql\n")
+    (root / "charmcraft.yaml").write_text(
+        "type: charm\nname: demo\nprovides:\n  db:\n    interface: pgsql\n"
+    )
     return root
 
 

@@ -4,7 +4,8 @@ Four kinds run per Python file in scope:
     import         — AST: matches `import X` and `from X import Y` (with optional names filter)
     call           — AST: matches `*.<attr>(...)` where <attr> is the trailing dotted suffix
     observe-event  — regex: matches `observe(... on.<snake_name>(...)|on['<snake_name>'] ...)`
-                     for each given event class (translated CamelCase→snake_case, dropping trailing 'Event')
+                     for each given event class (translated CamelCase→snake_case,
+                     dropping trailing 'Event')
     regex          — raw multiline regex over file contents
 
 Three more run per Python file and back the architecture axis:
@@ -26,9 +27,7 @@ import ast
 import configparser
 import re
 import warnings
-from collections.abc import Iterator
 from dataclasses import dataclass
-from pathlib import Path
 
 import yaml
 
@@ -46,12 +45,21 @@ try:
 except ModuleNotFoundError:  # pragma: no cover — exercised only on 3.10
     import tomli as tomllib  # ty: ignore[unresolved-import]
 
+from typing import TYPE_CHECKING
+
 from . import metadata as _metadata
-from .catalogue import Detectable
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from pathlib import Path
+
+    from .catalogue import Detectable
 
 
 @dataclass(frozen=True)
 class Evidence:
+    """A single detector hit: where it matched and the matching text."""
+
     file: str  # path relative to charm root
     line: int
     detector_kind: str
@@ -71,7 +79,7 @@ def _is_vendored_lib(parts: tuple[str, ...]) -> bool:
 
 
 def _charm_provides_lib(charm_root: Path, module: str, charm_name: str | None) -> bool:
-    """True if this charm is the *provider* of the given charms.<pkg> library.
+    """Return true if this charm is the *provider* of the given charms.<pkg> library.
 
     Prevents flagging the lib-provider charm when it imports its own library
     from src/ — e.g. grafana-agent importing charms.grafana_agent because it
@@ -137,7 +145,7 @@ def _parse(path: Path) -> ast.Module | None:
 class SourceFile:
     """One Python file, read and parsed at most once per charm scan."""
 
-    __slots__ = ("path", "rel", "text", "tree", "_lines")
+    __slots__ = ("_lines", "path", "rel", "text", "tree")
 
     def __init__(self, path: Path, charm_root: Path) -> None:
         self.path = path
@@ -147,7 +155,7 @@ class SourceFile:
         self._lines: list[str] | None = None
 
     def line(self, lineno: int) -> str:
-        """The 1-indexed source line `lineno`, stripped, or "" if out of range."""
+        """Return the 1-indexed source line `lineno`, stripped, or "" if out of range."""
         if self._lines is None:
             self._lines = self.text.splitlines()
         if 1 <= lineno <= len(self._lines):
@@ -302,7 +310,8 @@ def _self_attr_calls(method_body: list[ast.stmt], attrs: set[str]) -> Iterator[a
 
 
 def _detect_ast_init_call(tree: ast.Module, cfg: dict) -> Iterator[ast.Call]:
-    """Match charms whose __init__ body contains a `self.X(...)` call where
+    """Match charms whose __init__ body contains a `self.X(...)` call where.
+
     X is one of `cfg["attrs"]`. Signal for the `unconditional-init` pattern:
     reconcile runs on every charm invocation by virtue of being in __init__.
 
@@ -339,7 +348,8 @@ _SYMMETRIC_RESOURCE_SUFFIXES = (
 
 
 def _relation_prefix(event: str) -> str | None:
-    """Return the relation-name prefix if `event` is a standard relation
+    """Return the relation-name prefix if `event` is a standard relation.
+
     lifecycle event (`<relation>_relation_{created,joined,changed,departed,broken}`),
     else None.
 
@@ -360,7 +370,8 @@ def _relation_prefix(event: str) -> str | None:
 
 
 def _is_relation_scoped_binding(events: set[str]) -> bool:
-    """CALIBRATION #21 cut #1: every qualifying event is a standard
+    """CALIBRATION #21 cut #1: every qualifying event is a standard.
+
     relation-lifecycle event, and they come from at most 2 distinct relation
     endpoints — relation-scoped plumbing, not charm-wide convergence.
 
@@ -379,7 +390,8 @@ def _is_relation_scoped_binding(events: set[str]) -> bool:
 
 
 def _symmetric_resource_split(event: str) -> tuple[str, str] | None:
-    """Split `event` into (instance-prefix, suffix) if it ends with a known
+    """Split `event` into (instance-prefix, suffix) if it ends with a known.
+
     per-instance resource event suffix (storage/pebble events ops generates
     once per storage mount or container). Returns None otherwise.
     """
@@ -391,7 +403,8 @@ def _symmetric_resource_split(event: str) -> tuple[str, str] | None:
 
 
 def _is_symmetric_resource_fanout(events: set[str]) -> bool:
-    """CALIBRATION #21 cut #2: every qualifying event shares one common
+    """CALIBRATION #21 cut #2: every qualifying event shares one common.
+
     non-relation suffix (e.g. `*_storage_detaching`, `*_pebble_ready`) across
     what look like N distinct resource instances — symmetric-resource
     fan-out, not reconcile. Covers the `mysql-operators` shape (4 storage
@@ -416,11 +429,19 @@ def _is_symmetric_resource_fanout(events: set[str]) -> bool:
 # confirmed by a third real-world instance in #24 (charmed-linstor's
 # linstor-controller, alongside #22's auditd-operator and
 # chrony-client-operator).
-_BASELINE_LIFECYCLE_EVENTS = frozenset({"install", "config_changed", "upgrade_charm", "update_status", "start", "stop"})
+_BASELINE_LIFECYCLE_EVENTS = frozenset({
+    "install",
+    "config_changed",
+    "upgrade_charm",
+    "update_status",
+    "start",
+    "stop",
+})
 
 
 def _is_baseline_lifecycle_only(events: set[str]) -> bool:
-    """True when every event in `events` is one of the six baseline Juju
+    """Return true when every event in `events` is one of the six baseline Juju.
+
     lifecycle hooks (`install`/`config_changed`/`upgrade_charm`, optionally
     plus `update_status`/`start`/`stop`) and nothing else -- no relation,
     leader, secret, cert, pebble, or custom-library event is present.
@@ -429,7 +450,8 @@ def _is_baseline_lifecycle_only(events: set[str]) -> bool:
 
 
 def _detect_ast_observe_shared_handler(tree: ast.Module, cfg: dict) -> Iterator[ast.Call]:
-    """Match the holistic `reconcile` pattern: a single handler method is
+    """Match the holistic `reconcile` pattern: a single handler method is.
+
     bound to >= `min_events` distinct events via `framework.observe(...)`.
 
     Bind-count is the discriminating signal, not the handler's name — a
@@ -486,7 +508,8 @@ def _detect_ast_observe_shared_handler(tree: ast.Module, cfg: dict) -> Iterator[
 
 
 def _detect_ast_shared_method(tree: ast.Module, cfg: dict) -> Iterator[ast.Call]:
-    """Match charms with the `part-reconcile` pattern: per-event `_on_*`
+    """Match charms with the `part-reconcile` pattern: per-event `_on_*`.
+
     handler methods that each delegate into a shared reconcile method.
 
     Fires when at least `cfg["min_callers"]` distinct `_on_*` (or otherwise
@@ -518,7 +541,8 @@ def _detect_ast_shared_method(tree: ast.Module, cfg: dict) -> Iterator[ast.Call]
 
 
 def _detect_pytest_config_key(charm_root: Path, config: dict) -> list[Evidence]:
-    """Look for pytest config keys (e.g. `log_level`) in the four standard
+    """Look for pytest config keys (e.g. `log_level`) in the four standard.
+
     config-file locations a charm might use.
 
     File / section conventions:
@@ -541,16 +565,16 @@ def _detect_pytest_config_key(charm_root: Path, config: dict) -> list[Evidence]:
             data = {}
         ini_opts = ((data.get("tool") or {}).get("pytest") or {}).get("ini_options") or {}
         if isinstance(ini_opts, dict):
-            for key in keys:
-                if key in ini_opts:
-                    results.append(
-                        Evidence(
-                            "pyproject.toml",
-                            0,
-                            "pytest-config-key",
-                            f"[tool.pytest.ini_options] {key}={ini_opts[key]!r}"[:120],
-                        )
-                    )
+            results.extend(
+                Evidence(
+                    "pyproject.toml",
+                    0,
+                    "pytest-config-key",
+                    f"[tool.pytest.ini_options] {key}={ini_opts[key]!r}"[:120],
+                )
+                for key in keys
+                if key in ini_opts
+            )
 
     for filename, section_name in (
         ("pytest.ini", "pytest"),
@@ -567,16 +591,16 @@ def _detect_pytest_config_key(charm_root: Path, config: dict) -> list[Evidence]:
             continue
         if section_name not in cp:
             continue
-        for key in keys:
-            if key in cp[section_name]:
-                results.append(
-                    Evidence(
-                        filename,
-                        0,
-                        "pytest-config-key",
-                        f"[{section_name}] {key}={cp[section_name][key]}"[:120],
-                    )
-                )
+        results.extend(
+            Evidence(
+                filename,
+                0,
+                "pytest-config-key",
+                f"[{section_name}] {key}={cp[section_name][key]}"[:120],
+            )
+            for key in keys
+            if key in cp[section_name]
+        )
     return results
 
 
@@ -607,13 +631,17 @@ def _yaml_files(charm_root: Path, globs: list[str]) -> list[Path]:
 
 
 def _yaml_documents(path: Path) -> list[object]:
-    """Parsed documents in `path`, or [] if it isn't loadable.
+    """Return the parsed documents in `path`, or [] if it isn't loadable.
 
     Uses ``safe_load_all`` because charm repos carry multi-document YAML
     (k8s manifests, kustomize output) alongside charm metadata.
     """
     try:
-        return [doc for doc in yaml.safe_load_all(path.read_text(encoding="utf-8", errors="replace")) if doc]
+        return [
+            doc
+            for doc in yaml.safe_load_all(path.read_text(encoding="utf-8", errors="replace"))
+            if doc
+        ]
     except (yaml.YAMLError, OSError, RecursionError):
         return []
 
@@ -686,7 +714,7 @@ def _detect_requires_interface(charm_root: Path, config: dict) -> list[Evidence]
                   features). Defaults to False.
     """
     wanted = set(config.get("interfaces") or [])
-    invert = bool(config.get("invert", False))
+    invert = bool(config.get("invert"))
     meta_files = _metadata._find_metadata_files(charm_root)
     if not meta_files:
         return []
@@ -705,10 +733,14 @@ def _detect_requires_interface(charm_root: Path, config: dict) -> list[Evidence]
         for name, info in block.items():
             iface = (info or {}).get("interface", "") if isinstance(info, dict) else ""
             if iface in wanted:
-                matches.append(Evidence(rel, 0, "requires-interface", f"requires {name}: {iface}"[:120]))
+                matches.append(
+                    Evidence(rel, 0, "requires-interface", f"requires {name}: {iface}"[:120])
+                )
     if invert:
         if first_meta_rel is not None and not matches:
-            return [Evidence(first_meta_rel, 0, "requires-interface", "no listed interface required")]
+            return [
+                Evidence(first_meta_rel, 0, "requires-interface", "no listed interface required")
+            ]
         return []
     return matches
 
@@ -731,7 +763,7 @@ def _detect_relation_count(charm_root: Path, config: dict) -> list[Evidence]:
     role = config["role"]
     min_ = int(config["min"])
     max_ = int(config["max"]) if "max" in config else None
-    only_optional = bool(config.get("optional", False))
+    only_optional = bool(config.get("optional"))
 
     meta_files = _metadata._find_metadata_files(charm_root)
     if not meta_files:
@@ -760,7 +792,9 @@ def _detect_relation_count(charm_root: Path, config: dict) -> list[Evidence]:
     return [Evidence(first_rel or "charmcraft.yaml", 0, "relation-count", label)]
 
 
-def detect_feature(charm_root: Path, feature: Detectable, source: CharmSource | None = None) -> list[Evidence]:
+def detect_feature(
+    charm_root: Path, feature: Detectable, source: CharmSource | None = None
+) -> list[Evidence]:
     """Evidence for `feature` in the charm at `charm_root`.
 
     Pass `source` to share one read-and-parse pass across every feature in
@@ -817,18 +851,24 @@ def detect_feature(charm_root: Path, feature: Detectable, source: CharmSource | 
                     continue
                 for imp in _detect_import(tree, det.config):
                     line = ast.get_source_segment(text, imp) or ""
-                    evidence.append(Evidence(rel, imp.lineno, det.kind, line.splitlines()[0][:120]))
+                    evidence.append(
+                        Evidence(rel, imp.lineno, det.kind, line.splitlines()[0][:120])
+                    )
             elif det.kind == "call" and tree is not None:
-                for call in _detect_call(tree, det.config):
-                    evidence.append(Evidence(rel, call.lineno, det.kind, src.line(call.lineno)[:120]))
+                evidence.extend(
+                    Evidence(rel, call.lineno, det.kind, src.line(call.lineno)[:120])
+                    for call in _detect_call(tree, det.config)
+                )
             elif det.kind == "observe-event":
                 for pat in observe_pats[i]:
                     for m in pat.finditer(text):
                         lineno = text.count("\n", 0, m.start()) + 1
                         evidence.append(Evidence(rel, lineno, det.kind, m.group(0)[:120]))
             elif det.kind in ast_walkers and tree is not None:
-                for node in ast_walkers[det.kind](tree, det.config):
-                    evidence.append(Evidence(rel, node.lineno, det.kind, src.line(node.lineno)[:120]))
+                evidence.extend(
+                    Evidence(rel, node.lineno, det.kind, src.line(node.lineno)[:120])
+                    for node in ast_walkers[det.kind](tree, det.config)
+                )
             elif det.kind == "regex":
                 for m in _detect_regex(text, det.config["pattern"]):
                     lineno = text.count("\n", 0, m.start()) + 1

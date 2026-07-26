@@ -13,7 +13,8 @@ from ..dashboard import render_trend
 
 def _charm(*, present: dict[str, bool], repo_url: str = "https://x/c") -> dict:
     features = {
-        fname: {"present": is_present, "evidence": [], "score": "clear-gap"} for fname, is_present in present.items()
+        fname: {"present": is_present, "evidence": [], "score": "clear-gap"}
+        for fname, is_present in present.items()
     }
     return {"name": "c", "team": "t", "repo_url": repo_url, "features": features}
 
@@ -62,7 +63,9 @@ def test_load_snapshots_skips_live_when_todays_snapshot_already_exists(tmp_path:
     _write_snapshot(tmp_path, "2026-06-11", {"a": _charm(present={"f": False})})
     _write_snapshot(tmp_path, "2026-06-20", {"a": _charm(present={"f": True})})
     live = tmp_path / "scored.json"
-    live.write_text(json.dumps({"a": _charm(present={"f": False})}))  # stale copy — must be ignored
+    live.write_text(
+        json.dumps({"a": _charm(present={"f": False})})
+    )  # stale copy — must be ignored
 
     snapshots = trend.load_snapshots(tmp_path, live, today=dt.date(2026, 6, 20))
 
@@ -122,7 +125,9 @@ def test_compute_adoption_percent_per_date() -> None:
 def test_compute_adoption_skips_dates_before_feature_existed() -> None:
     """Feature-catalogue drift: a feature added later has no data point for
     snapshots taken before it existed, instead of a misleading 0%."""
-    s1 = trend.Snapshot(date="2026-06-11", charms={"a": _charm(present={})}, feature_names=frozenset())
+    s1 = trend.Snapshot(
+        date="2026-06-11", charms={"a": _charm(present={})}, feature_names=frozenset()
+    )
     s2 = trend.Snapshot(
         date="2026-06-22",
         charms={"a": _charm(present={"new-feature": True})},
@@ -189,7 +194,9 @@ def test_compute_timeline_marks_corpus_drift() -> None:
 
 def test_compute_timeline_marks_feature_drift() -> None:
     """A feature not yet in the catalogue at an earlier date is 'not-scanned'."""
-    s1 = trend.Snapshot(date="2026-06-11", charms={"a": _charm(present={})}, feature_names=frozenset())
+    s1 = trend.Snapshot(
+        date="2026-06-11", charms={"a": _charm(present={})}, feature_names=frozenset()
+    )
     s2 = trend.Snapshot(
         date="2026-06-22",
         charms={"a": _charm(present={"new-feature": True})},
@@ -294,7 +301,9 @@ def test_compute_diff_detects_possible_rename() -> None:
 
     diff = trend.compute_diff(base, latest)
 
-    assert diff["possible_renames"] == [{"old_slug": "old-slug", "new_slug": "new-slug", "repo_url": "https://x/repo"}]
+    assert diff["possible_renames"] == [
+        {"old_slug": "old-slug", "new_slug": "new-slug", "repo_url": "https://x/repo"}
+    ]
     assert diff["flips"] == []
 
 
@@ -328,14 +337,16 @@ def test_compute_diff_does_not_guess_ambiguous_renames() -> None:
 
 def test_select_base_defaults_to_earliest() -> None:
     snapshots = [
-        trend.Snapshot(date=d, charms={}, feature_names=frozenset()) for d in ["2026-06-11", "2026-06-15", "2026-06-22"]
+        trend.Snapshot(date=d, charms={}, feature_names=frozenset())
+        for d in ["2026-06-11", "2026-06-15", "2026-06-22"]
     ]
     assert trend.select_base(snapshots, None).date == "2026-06-11"
 
 
 def test_select_base_honours_since() -> None:
     snapshots = [
-        trend.Snapshot(date=d, charms={}, feature_names=frozenset()) for d in ["2026-06-11", "2026-06-15", "2026-06-22"]
+        trend.Snapshot(date=d, charms={}, feature_names=frozenset())
+        for d in ["2026-06-11", "2026-06-15", "2026-06-22"]
     ]
     assert trend.select_base(snapshots, "2026-06-14").date == "2026-06-15"
 
@@ -356,7 +367,9 @@ def test_against_real_snapshots() -> None:
     snapshot_dir = Path(__file__).resolve().parent.parent.parent / "snapshots"
     snapshots = trend.load_snapshots(snapshot_dir)
 
-    on_disk = sorted(p.name[len("scored-") : -len(".json")] for p in snapshot_dir.glob("scored-*.json"))
+    on_disk = sorted(
+        p.name[len("scored-") : -len(".json")] for p in snapshot_dir.glob("scored-*.json")
+    )
     assert len(on_disk) >= 2, "need at least two snapshots to diff"
     assert [s.date for s in snapshots] == on_disk
 
@@ -415,7 +428,9 @@ def test_render_trend_produces_history_page() -> None:
 def test_trend_page_pins_the_plotly_cdn_script() -> None:
     """The History page is published to GitHub Pages, so its one external
     script must carry an integrity hash rather than trusting the CDN."""
-    html = render_trend({"base_date": "", "latest_date": "", "flips": [], "possible_renames": []}, {}, [])
+    html = render_trend(
+        {"base_date": "", "latest_date": "", "flips": [], "possible_renames": []}, {}, []
+    )
 
     script_lines = [line for line in html.splitlines() if "cdn.plot.ly" in line]
     assert script_lines, "expected the plotly CDN script tag"

@@ -102,6 +102,7 @@ def _primary_arch(meta: dict) -> str:
 
 
 def render(results: dict, features: list, ref: str = "main", *, pairs: list | None = None) -> str:
+    """Render the survey results as a standalone HTML dashboard."""
     charms = [v for k, v in results.items() if not k.startswith("__")]
     feat_meta = {f.name: f for f in features}
     feat_names = [f.name for f in features]
@@ -122,7 +123,9 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
         # we can show "delta 60% (123/204)" alongside the corpus-wide totals.
         # Reactive charms are kept in their own bucket and reported as N/A
         # because every feature score short-circuits to not-applicable for them.
-        by_arch: dict[str, dict[str, int]] = {a: {"present": 0, "total": 0} for a in _ARCH_PRIORITY}
+        by_arch: dict[str, dict[str, int]] = {
+            a: {"present": 0, "total": 0} for a in _ARCH_PRIORITY
+        }
         for c in charms:
             rec = c["features"].get(fname, {})
             arch = arch_of_charm[c["name"]]
@@ -170,7 +173,9 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
                 arch_adoption.append({
                     "arch": a,
                     "label": f"{pct}%",
-                    "tooltip": f"{stats['present']} / {stats['total']} {a} charms have this feature",
+                    "tooltip": (
+                        f"{stats['present']} / {stats['total']} {a} charms have this feature"
+                    ),
                     "is_na": False,
                     "pct": pct,
                 })
@@ -315,9 +320,8 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
         for g in r["gaps"]:
             bucket["gap_features"][g["feature"]] = bucket["gap_features"].get(g["feature"], 0) + 1
 
-    team_rows: list[dict[str, Any]] = []
-    for bucket in team_acc.values():
-        team_rows.append({
+    team_rows: list[dict[str, Any]] = [
+        {
             "team": bucket["team"],
             "charms": bucket["charms"],
             "present": bucket["present"],
@@ -326,7 +330,9 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
             "avg_gap": round(bucket["clear_gap"] / bucket["charms"], 1) if bucket["charms"] else 0,
             "architecture": sorted(bucket["architecture"].items(), key=lambda kv: -kv[1]),
             "top_gaps": sorted(bucket["gap_features"].items(), key=lambda kv: -kv[1])[:5],
-        })
+        }
+        for bucket in team_acc.values()
+    ]
     team_rows.sort(key=lambda r: -r["clear_gap"])
 
     # Top-of-page summary: distributions over the corpus that don't fit
@@ -422,7 +428,8 @@ def render_trend(
     *,
     feature_filter: str | None = None,
 ) -> str:
-    """Render the `trend` subcommand's output — a standalone History page
+    """Render the `trend` subcommand's output — a standalone History page.
+
     with a diff list (default view), an adoption-over-time chart, and a
     per-(charm, feature) timeline. See trend.py for how these are computed
     and the corpus/feature-drift guards applied along the way.
@@ -439,9 +446,12 @@ def render_trend(
     else:
         static_timeline_rows = [row for row in timeline if row["charm"] in interesting_charms]
 
-    adoption_dates: list[str] = sorted({point["date"] for series in adoption.values() for point in series})
+    adoption_dates: list[str] = sorted({
+        point["date"] for series in adoption.values() for point in series
+    })
     adoption_table = {
-        fname: {point["date"]: point["percent"] for point in series} for fname, series in adoption.items()
+        fname: {point["date"]: point["percent"] for point in series}
+        for fname, series in adoption.items()
     }
 
     # Condensed embed for the JS-powered timeline browser: every row shares the
@@ -450,7 +460,11 @@ def render_trend(
     # meaningfully smaller once the corpus runs into the hundreds of charms.
     timeline_dates = [c["date"] for c in timeline[0]["cells"]] if timeline else []
     timeline_condensed = [
-        {"charm": row["charm"], "feature": row["feature"], "states": [c["state"] for c in row["cells"]]}
+        {
+            "charm": row["charm"],
+            "feature": row["feature"],
+            "states": [c["state"] for c in row["cells"]],
+        }
         for row in timeline
     ]
 

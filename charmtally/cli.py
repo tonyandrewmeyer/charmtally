@@ -1,4 +1,4 @@
-"""Command-line entry point.
+r"""Command-line entry point.
 
 The corpus CSV is pulled from canonical/hyrum on each run by default
 (``--corpus-url``, see ``corpus.HYRUM_CHARMS_CSV_URL``). Override with
@@ -104,6 +104,7 @@ def _resolve_corpus_path(args: argparse.Namespace) -> Path:
 
 
 def cmd_local(args: argparse.Namespace) -> int:
+    """Scan a single local charm directory and print the result as JSON."""
     feats = _filter(catalogue.load(args.features), args.only)
     pats = catalogue.load_patterns(args.features)
     result = scan.scan_charm(args.charm_dir, feats, pats)
@@ -113,6 +114,7 @@ def cmd_local(args: argparse.Namespace) -> int:
 
 
 def cmd_spike(args: argparse.Namespace) -> int:
+    """Scan the whole corpus and write the combined scan results."""
     feats = _filter(catalogue.load(args.features), args.only)
     pats = catalogue.load_patterns(args.features)
     refs = corpus.load(_resolve_corpus_path(args))
@@ -151,7 +153,9 @@ def cmd_scan(args: argparse.Namespace) -> int:
     feats = _filter(catalogue.load(args.features), args.only)
     pats = catalogue.load_patterns(args.features)
     refs = corpus.load(_resolve_corpus_path(args))
-    overrides = corpus.load_overrides(args.overrides) if args.overrides else corpus.CorpusOverrides.empty()
+    overrides = (
+        corpus.load_overrides(args.overrides) if args.overrides else corpus.CorpusOverrides.empty()
+    )
 
     # Filter: union of team match and key_charm flag.
     # --team X --key-only → include rows in team X OR rows with key_charm=True.
@@ -241,7 +245,9 @@ def cmd_scan(args: argparse.Namespace) -> int:
 def cmd_score(args: argparse.Namespace) -> int:
     """Re-apply rule-based scoring to an existing results.json → scored.json."""
     feats = catalogue.load(args.features)
-    overrides = corpus.load_overrides(args.overrides) if args.overrides else corpus.CorpusOverrides.empty()
+    overrides = (
+        corpus.load_overrides(args.overrides) if args.overrides else corpus.CorpusOverrides.empty()
+    )
     results: dict = json.loads(args.results.read_text())
 
     for slug, charm_data in results.items():
@@ -280,6 +286,7 @@ def cmd_score(args: argparse.Namespace) -> int:
 
 
 def cmd_dashboard(args: argparse.Namespace) -> int:
+    """Render the HTML dashboard from a scan results file."""
     feats = catalogue.load(args.features)
     results = json.loads(args.results.read_text())
     pairs_payload = None
@@ -321,7 +328,8 @@ def cmd_llm_score(args: argparse.Namespace) -> int:
     api_key = os.environ.get("OPENROUTER_API_KEY", "")
     if not api_key:
         print(
-            "warning: OPENROUTER_API_KEY not set; LLM calls will fail. Use --dry-run to skip or set the env var.",
+            "warning: OPENROUTER_API_KEY not set; LLM calls will fail. Use --dry-run to skip or "
+            "set the env var.",
             file=sys.stderr,
         )
 
@@ -372,6 +380,7 @@ def cmd_llm_calibrate(args: argparse.Namespace) -> int:
 
 
 def cmd_pairs(args: argparse.Namespace) -> int:
+    """Find K8s/machine charm pairs in the results and write them as JSON."""
     results = json.loads(args.results.read_text())
     pairs = _pairs.find_pairs(results)
     payload = {"pairs": [asdict(p) for p in pairs]}
@@ -420,6 +429,7 @@ def cmd_trend(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the charmtally command-line interface."""
     p = argparse.ArgumentParser(prog="charmtally")
     p.add_argument(
         "--features",
@@ -435,7 +445,12 @@ def main(argv: list[str] | None = None) -> int:
     p_local.set_defaults(func=cmd_local)
 
     p_spike = sub.add_parser("spike", help="Clone+scan a slice of the corpus.")
-    p_spike.add_argument("--corpus", type=Path, default=None, help="Path to a local CSV. Default: fetch --corpus-url.")
+    p_spike.add_argument(
+        "--corpus",
+        type=Path,
+        default=None,
+        help="Path to a local CSV. Default: fetch --corpus-url.",
+    )
     p_spike.add_argument(
         "--corpus-url",
         default=corpus.HYRUM_CHARMS_CSV_URL,
@@ -448,12 +463,23 @@ def main(argv: list[str] | None = None) -> int:
         help="Where to clone charms (reused if already present).",
     )
     p_spike.add_argument("--limit", type=int, default=5)
-    p_spike.add_argument("--key-only", action="store_true", help="Only scan rows marked 'Key Charm for this Team'.")
-    p_spike.add_argument("--only", nargs="+", help="Restrict to these feature names (default: all in features.yaml).")
+    p_spike.add_argument(
+        "--key-only", action="store_true", help="Only scan rows marked 'Key Charm for this Team'."
+    )
+    p_spike.add_argument(
+        "--only",
+        nargs="+",
+        help="Restrict to these feature names (default: all in features.yaml).",
+    )
     p_spike.set_defaults(func=cmd_spike)
 
     p_scan = sub.add_parser("scan", help="Full corpus scan → results.json.")
-    p_scan.add_argument("--corpus", type=Path, default=None, help="Path to a local CSV. Default: fetch --corpus-url.")
+    p_scan.add_argument(
+        "--corpus",
+        type=Path,
+        default=None,
+        help="Path to a local CSV. Default: fetch --corpus-url.",
+    )
     p_scan.add_argument(
         "--corpus-url",
         default=corpus.HYRUM_CHARMS_CSV_URL,
@@ -464,7 +490,9 @@ def main(argv: list[str] | None = None) -> int:
         "--team",
         nargs="+",
         metavar="TEAM",
-        help="Include charms from these teams (case-insensitive). Combined with --key-only via OR.",
+        help=(
+            "Include charms from these teams (case-insensitive). Combined with --key-only via OR."
+        ),
     )
     p_scan.add_argument("--key-only", action="store_true", help="Include all key_charm=TRUE rows.")
     p_scan.add_argument("--only", nargs="+", help="Restrict to these feature names.")
@@ -490,7 +518,10 @@ def main(argv: list[str] | None = None) -> int:
         "--overrides",
         type=Path,
         default=None,
-        help="Path to corpus-overrides.yaml; applies the same feature_excludes the scan command would apply.",
+        help=(
+            "Path to corpus-overrides.yaml; applies the same feature_excludes "
+            "the scan command would apply."
+        ),
     )
     p_score.set_defaults(func=cmd_score)
 
@@ -505,7 +536,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     p_dash.set_defaults(func=cmd_dashboard)
 
-    p_llm_score = sub.add_parser("llm-score", help="LLM scoring pass over worth-considering records → llm-scored.json.")
+    p_llm_score = sub.add_parser(
+        "llm-score", help="LLM scoring pass over worth-considering records → llm-scored.json."
+    )
     p_llm_score.add_argument("results", type=Path, help="Path to scored.json.")
     p_llm_score.add_argument(
         "--out",
@@ -547,7 +580,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     p_llm_score.set_defaults(func=cmd_llm_score)
 
-    p_llm_cal = sub.add_parser("llm-calibrate", help="Pre-flight calibration: compare LLM to human ground truth.")
+    p_llm_cal = sub.add_parser(
+        "llm-calibrate", help="Pre-flight calibration: compare LLM to human ground truth."
+    )
     p_llm_cal.add_argument("results", type=Path, help="Path to scored.json.")
     p_llm_cal.add_argument(
         "ground_truth",
@@ -581,7 +616,9 @@ def main(argv: list[str] | None = None) -> int:
     p_pairs.add_argument("--out", type=Path, default=Path("pairs.json"))
     p_pairs.set_defaults(func=cmd_pairs)
 
-    p_trend = sub.add_parser("trend", help="Adoption trend + diff list across CI snapshots → trend.html.")
+    p_trend = sub.add_parser(
+        "trend", help="Adoption trend + diff list across CI snapshots → trend.html."
+    )
     p_trend.add_argument(
         "--snapshots-dir",
         type=Path,
@@ -593,14 +630,22 @@ def main(argv: list[str] | None = None) -> int:
         "--live",
         type=Path,
         default=Path("scored.json"),
-        help="Live scored.json, included as today's snapshot unless one already exists (default: scored.json).",
+        help=(
+            "Live scored.json, included as today's snapshot unless one already "
+            "exists (default: scored.json)."
+        ),
     )
-    p_trend.add_argument("--feature", default=None, help="Restrict adoption/timeline/diff to this feature.")
+    p_trend.add_argument(
+        "--feature", default=None, help="Restrict adoption/timeline/diff to this feature."
+    )
     p_trend.add_argument(
         "--since",
         default=None,
         metavar="DATE",
-        help="ISO date (YYYY-MM-DD). Overrides the diff base snapshot and trims the adoption/timeline range.",
+        help=(
+            "ISO date (YYYY-MM-DD). Overrides the diff base snapshot and trims "
+            "the adoption/timeline range."
+        ),
     )
     p_trend.add_argument("--out", type=Path, default=Path("trend.html"))
     p_trend.add_argument(
