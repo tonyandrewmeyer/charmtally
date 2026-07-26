@@ -5,14 +5,18 @@ from __future__ import annotations
 import dataclasses
 import subprocess
 from dataclasses import asdict
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import yaml
 
 from . import metadata, scoring
-from .catalogue import Feature, Pattern
-from .corpus import CharmRef
 from .detectors import CharmSource, detect_feature
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from .catalogue import Feature, Pattern
+    from .corpus import CharmRef
 
 # Directory names a fan-out walk should never descend into when looking for
 # sub-charms. Vendored charm libs ship `charmcraft.yaml` files for the lib
@@ -75,7 +79,9 @@ def scan_charm(
     return out
 
 
-def _detect_architecture(charm_root: Path, patterns: list[Pattern], source: CharmSource) -> list[str]:
+def _detect_architecture(
+    charm_root: Path, patterns: list[Pattern], source: CharmSource
+) -> list[str]:
     """Return the names of architecture patterns that match this charm.
 
     Pattern detection re-uses the per-feature detector machinery — Pattern
@@ -92,7 +98,7 @@ def _detect_architecture(charm_root: Path, patterns: list[Pattern], source: Char
 
 
 def _is_bundle_charmcraft(path: Path) -> bool:
-    """True if `path` is a charmcraft.yaml with ``type: bundle``.
+    """Return true if `path` is a charmcraft.yaml with ``type: bundle``.
 
     Bundles are deploy-time recipes, not charms — they have no src/, no
     handlers, no features to scan. A repo whose root charmcraft.yaml is a

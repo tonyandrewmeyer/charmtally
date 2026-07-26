@@ -11,8 +11,10 @@ LLM refinement is a later optional pass (see PLAN.md §C "LLM-assisted").
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-from .metadata import CharmMeta
+if TYPE_CHECKING:
+    from .metadata import CharmMeta
 
 SCORE_NOT_APPLICABLE = "not-applicable"
 SCORE_WORTH_CONSIDERING = "worth-considering"
@@ -21,6 +23,8 @@ SCORE_CLEAR_GAP = "clear-gap"
 
 @dataclass(frozen=True)
 class Score:
+    """The score assigned to one charm/feature combination, with its rationale."""
+
     label: str
     rationale: str
 
@@ -73,7 +77,8 @@ def score_absent(
         if "component-graph" in architecture:
             return Score(
                 SCORE_NOT_APPLICABLE,
-                "component-graph charm (chisme / ops_sunbeam / coordinated_workers) — framework handles this",
+                "component-graph charm (chisme / ops_sunbeam / coordinated_workers) — framework "
+                "handles this",
             )
         if "reconcile-all" in architecture:
             return Score(
@@ -81,7 +86,10 @@ def score_absent(
                 "reconcile-all charm — single handler bound to every event covers this",
             )
         if "reconcile" in architecture:
-            return Score(SCORE_NOT_APPLICABLE, "reconcile-style charm — shared reconcile handler covers this")
+            return Score(
+                SCORE_NOT_APPLICABLE,
+                "reconcile-style charm — shared reconcile handler covers this",
+            )
         if "unconditional-init" in architecture:
             return Score(
                 SCORE_NOT_APPLICABLE,
@@ -92,7 +100,8 @@ def score_absent(
         if meta.has_containers:
             return Score(
                 SCORE_WORTH_CONSIDERING,
-                "K8s workload charm (has `containers:`) — pebble checks are the standard health-check mechanism",
+                "K8s workload charm (has `containers:`) — pebble checks are the standard "
+                "health-check mechanism",
             )
         return Score(SCORE_NOT_APPLICABLE, "not a K8s workload charm")
 
@@ -100,7 +109,8 @@ def score_absent(
         if meta.has_containers:
             return Score(
                 SCORE_WORTH_CONSIDERING,
-                "K8s workload charm — custom notices let the workload signal events back to the charm",
+                "K8s workload charm — custom notices let the workload signal events back to the "
+                "charm",
             )
         return Score(SCORE_NOT_APPLICABLE, "not a K8s workload charm")
 
@@ -108,7 +118,8 @@ def score_absent(
         if meta.has_containers:
             return Score(
                 SCORE_CLEAR_GAP,
-                "K8s workload charm with no pebble-ready handler — almost certainly missing setup logic",
+                "K8s workload charm with no pebble-ready handler — almost certainly missing setup "
+                "logic",
             )
         return Score(SCORE_NOT_APPLICABLE, "not a K8s workload charm")
 
@@ -117,7 +128,8 @@ def score_absent(
         if non_peer:
             return Score(
                 SCORE_WORTH_CONSIDERING,
-                f"charm has {len(non_peer)} provides/requires relations — app-scope data is the canonical bag",
+                f"charm has {len(non_peer)} provides/requires relations — app-scope data is the "
+                "canonical bag",
             )
         return Score(SCORE_NOT_APPLICABLE, "no provides/requires relations")
 
@@ -127,7 +139,8 @@ def score_absent(
         if _is_present(features, "ops.status-set-directly"):
             return Score(
                 SCORE_CLEAR_GAP,
-                "charm sets status directly — migrate to collect-status for proper status aggregation",
+                "charm sets status directly — migrate to collect-status for proper status "
+                "aggregation",
             )
         # PLAN.md: "Has active relations but no CollectAppStatusEvent" → clear gap.
         # Read "active relations" as having any provides/requires/peers — most
@@ -135,7 +148,8 @@ def score_absent(
         if meta.relations:
             return Score(
                 SCORE_CLEAR_GAP,
-                "charm has integrations — collect-status is the right way to aggregate status across handlers",
+                "charm has integrations — collect-status is the right way to aggregate status "
+                "across handlers",
             )
         return Score(
             SCORE_WORTH_CONSIDERING,
@@ -161,7 +175,8 @@ def score_absent(
             suffix = "…" if len(still_plain) > 3 else ""
             return Score(
                 SCORE_WORTH_CONSIDERING,
-                f"some secret-like options still plain-typed ({names}{suffix}); rest already use `type: secret`",
+                f"some secret-like options still plain-typed ({names}{suffix}); rest already use "
+                "`type: secret`",
             )
         if secret_like:
             names = ", ".join(sorted(secret_like)[:3])
@@ -176,14 +191,17 @@ def score_absent(
         if meta.has_integration_tests:
             return Score(
                 SCORE_WORTH_CONSIDERING,
-                "charm has tests/integration/ but no jubilant import — likely using older harness/pytest-operator",
+                "charm has tests/integration/ but no jubilant import — likely using older "
+                "harness/pytest-operator",
             )
         return Score(SCORE_NOT_APPLICABLE, "no integration tests present")
 
     if feature_name == "ops.stored-state":
         # Special case: presence is a flag for *migration away from*. Absence
         # is the desired state.
-        return Score(SCORE_NOT_APPLICABLE, "absence is desirable — StoredState is discouraged for new code")
+        return Score(
+            SCORE_NOT_APPLICABLE, "absence is desirable — StoredState is discouraged for new code"
+        )
 
     return Score(SCORE_NOT_APPLICABLE, "no rule defined for this feature")
 

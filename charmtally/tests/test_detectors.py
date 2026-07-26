@@ -109,7 +109,9 @@ class MyCharm:
         pass
 """,
     )
-    ev = detect_feature(tmp_path, _feature("ast-shared-method", attrs=["_reconcile"], min_callers=2))
+    ev = detect_feature(
+        tmp_path, _feature("ast-shared-method", attrs=["_reconcile"], min_callers=2)
+    )
     assert len(ev) == 2  # one evidence per qualifying caller
     assert all(e.detector_kind == "ast-shared-method" for e in ev)
 
@@ -129,7 +131,9 @@ class MyCharm:
     def _reconcile(self): pass
 """,
     )
-    ev = detect_feature(tmp_path, _feature("ast-shared-method", attrs=["_reconcile"], min_callers=2))
+    ev = detect_feature(
+        tmp_path, _feature("ast-shared-method", attrs=["_reconcile"], min_callers=2)
+    )
     assert ev == []
 
 
@@ -150,7 +154,9 @@ class MyCharm:
     def _reconcile(self): pass
 """,
     )
-    ev = detect_feature(tmp_path, _feature("ast-shared-method", attrs=["_reconcile"], min_callers=2))
+    ev = detect_feature(
+        tmp_path, _feature("ast-shared-method", attrs=["_reconcile"], min_callers=2)
+    )
     # Only 1 _on_* caller, below threshold even though two helpers also call.
     assert ev == []
 
@@ -171,7 +177,9 @@ class MyCharm:
     )
     ev = detect_feature(
         tmp_path,
-        _feature("ast-shared-method", attrs=["_reconcile"], min_callers=2, handler_re=r"^_handle_"),
+        _feature(
+            "ast-shared-method", attrs=["_reconcile"], min_callers=2, handler_re=r"^_handle_"
+        ),
     )
     assert len(ev) == 2
 
@@ -185,7 +193,9 @@ def _caplog_feature() -> Feature:
         library="python",
         summary="test",
         scope="tests",
-        detectors=(Detector(kind="regex", config={"pattern": r"def\s+test_\w*\s*\([^)]*\bcaplog\b"}),),
+        detectors=(
+            Detector(kind="regex", config={"pattern": r"def\s+test_\w*\s*\([^)]*\bcaplog\b"}),
+        ),
     )
 
 
@@ -828,7 +838,9 @@ def test_requires_interface_invert_fires_when_none_match(tmp_path: Path) -> None
         tmp_path,
         "name: t\nrequires:\n  ingress:\n    interface: ingress\n",
     )
-    ev = detect_feature(tmp_path, _requires_feature(["postgresql_client", "mysql_client"], invert=True))
+    ev = detect_feature(
+        tmp_path, _requires_feature(["postgresql_client", "mysql_client"], invert=True)
+    )
     assert len(ev) == 1
 
 
@@ -837,7 +849,9 @@ def test_requires_interface_invert_does_not_fire_when_some_match(tmp_path: Path)
         tmp_path,
         "name: t\nrequires:\n  db:\n    interface: mysql_client\n",
     )
-    ev = detect_feature(tmp_path, _requires_feature(["postgresql_client", "mysql_client"], invert=True))
+    ev = detect_feature(
+        tmp_path, _requires_feature(["postgresql_client", "mysql_client"], invert=True)
+    )
     assert ev == []
 
 
@@ -849,7 +863,9 @@ def test_requires_interface_invert_does_not_fire_without_metadata(tmp_path: Path
 # ── relation-count (requires-N / provides-N buckets) ─────────────────────────
 
 
-def _count_feature(role: str, min_: int, max_: int | None = None, optional: bool = False) -> Feature:
+def _count_feature(
+    role: str, min_: int, max_: int | None = None, optional: bool = False
+) -> Feature:
     cfg: dict = {"role": role, "min": min_}
     if max_ is not None:
         cfg["max"] = max_
@@ -930,7 +946,10 @@ def _write_yaml_charm(tmp_path: Path, files: dict[str, str]) -> Path:
 
 def test_yaml_key_fires_on_top_level_key(tmp_path: Path) -> None:
     _write_yaml_charm(
-        tmp_path, {"src/layer.yaml": "services:\n  web:\n    command: run\nchecks:\n  up:\n    level: alive\n"}
+        tmp_path,
+        {
+            "src/layer.yaml": "services:\n  web:\n    command: run\nchecks:\n  up:\n    level: alive\n"
+        },
     )
     ev = detect_feature(tmp_path, _feature("yaml-key", files=["**/*.yaml"], key="checks"))
     assert len(ev) == 1
@@ -941,7 +960,10 @@ def test_yaml_key_fires_on_top_level_key(tmp_path: Path) -> None:
 
 def test_yaml_key_fires_on_nested_key(tmp_path: Path) -> None:
     """Pebble layers are often nested under a container name."""
-    _write_yaml_charm(tmp_path, {"layer.yaml": "containers:\n  web:\n    checks:\n      up:\n        level: alive\n"})
+    _write_yaml_charm(
+        tmp_path,
+        {"layer.yaml": "containers:\n  web:\n    checks:\n      up:\n        level: alive\n"},
+    )
     ev = detect_feature(tmp_path, _feature("yaml-key", files=["**/*.yaml"], key="checks"))
     assert len(ev) == 1
 
@@ -959,7 +981,9 @@ def test_yaml_key_ignores_similar_key_names(tmp_path: Path) -> None:
 
 def test_yaml_key_ignores_the_key_inside_a_string(tmp_path: Path) -> None:
     """The regex fallback this replaces matched text anywhere; parsing doesn't."""
-    _write_yaml_charm(tmp_path, {"src/layer.yaml": 'description: "the checks: block is not set here"\n'})
+    _write_yaml_charm(
+        tmp_path, {"src/layer.yaml": 'description: "the checks: block is not set here"\n'}
+    )
     assert detect_feature(tmp_path, _feature("yaml-key", files=["**/*.yaml"], key="checks")) == []
 
 
@@ -977,13 +1001,17 @@ def test_yaml_key_skips_vendored_libs_and_build_trees(tmp_path: Path) -> None:
 
 def test_yaml_key_matches_across_globs_without_duplicates(tmp_path: Path) -> None:
     _write_yaml_charm(tmp_path, {"a.yaml": "checks:\n  up: {}\n", "b.yml": "checks:\n  up: {}\n"})
-    ev = detect_feature(tmp_path, _feature("yaml-key", files=["**/*.yaml", "**/*.yml", "**/*.yaml"], key="checks"))
+    ev = detect_feature(
+        tmp_path, _feature("yaml-key", files=["**/*.yaml", "**/*.yml", "**/*.yaml"], key="checks")
+    )
     assert sorted(e.file for e in ev) == ["a.yaml", "b.yml"]
 
 
 def test_yaml_key_handles_multi_document_yaml(tmp_path: Path) -> None:
     _write_yaml_charm(tmp_path, {"manifests.yaml": "kind: Pod\n---\nchecks:\n  up: {}\n"})
-    assert len(detect_feature(tmp_path, _feature("yaml-key", files=["**/*.yaml"], key="checks"))) == 1
+    assert (
+        len(detect_feature(tmp_path, _feature("yaml-key", files=["**/*.yaml"], key="checks"))) == 1
+    )
 
 
 def test_yaml_key_tolerates_unparsable_yaml(tmp_path: Path) -> None:
@@ -993,7 +1021,9 @@ def test_yaml_key_tolerates_unparsable_yaml(tmp_path: Path) -> None:
 
 def test_yaml_key_accepts_a_keys_list(tmp_path: Path) -> None:
     _write_yaml_charm(tmp_path, {"layer.yaml": "log-targets:\n  loki: {}\n"})
-    ev = detect_feature(tmp_path, _feature("yaml-key", files=["**/*.yaml"], keys=["checks", "log-targets"]))
+    ev = detect_feature(
+        tmp_path, _feature("yaml-key", files=["**/*.yaml"], keys=["checks", "log-targets"])
+    )
     assert len(ev) == 1
 
 
@@ -1049,7 +1079,9 @@ def test_import_fires_when_name_matches_but_lib_is_absent(tmp_path: Path) -> Non
     (tmp_path / "charmcraft.yaml").write_text("type: charm\nname: rolling-ops\n")
     src = tmp_path / "src"
     src.mkdir()
-    (src / "charm.py").write_text("from charms.rolling_ops.v0.rollingops import RollingOpsManager\n")
+    (src / "charm.py").write_text(
+        "from charms.rolling_ops.v0.rollingops import RollingOpsManager\n"
+    )
     assert len(detect_feature(tmp_path, _feature("import", module="charms.rolling_ops"))) == 1
 
 
@@ -1099,7 +1131,9 @@ def add_targets(self, layer):
 def test_log_forwarding_fires_on_a_standalone_yaml_layer(tmp_path: Path) -> None:
     _write_yaml_charm(
         tmp_path,
-        {"src/layer.yaml": "services:\n  web:\n    command: run\nlog-targets:\n  loki:\n    type: loki\n"},
+        {
+            "src/layer.yaml": "services:\n  web:\n    command: run\nlog-targets:\n  loki:\n    type: loki\n"
+        },
     )
     ev = detect_feature(tmp_path, _catalogue_feature("pebble.log-forwarding"))
     assert [e.detector_kind for e in ev] == ["yaml-key"]
@@ -1113,7 +1147,9 @@ def test_log_forwarding_fires_on_the_log_forwarder_lib(tmp_path: Path) -> None:
 
 
 def test_log_forwarding_absent_from_a_plain_layer(tmp_path: Path) -> None:
-    _write_charm(tmp_path, 'LAYER = {"services": {"web": {"command": "run", "override": "replace"}}}\n')
+    _write_charm(
+        tmp_path, 'LAYER = {"services": {"web": {"command": "run", "override": "replace"}}}\n'
+    )
     assert detect_feature(tmp_path, _catalogue_feature("pebble.log-forwarding")) == []
 
 
@@ -1134,7 +1170,9 @@ def test_restart_delay_fires_on_backoff_limit_in_yaml(tmp_path: Path) -> None:
 
 
 def test_restart_delay_absent_from_an_untuned_layer(tmp_path: Path) -> None:
-    _write_charm(tmp_path, 'LAYER = {"services": {"web": {"command": "run", "startup": "enabled"}}}\n')
+    _write_charm(
+        tmp_path, 'LAYER = {"services": {"web": {"command": "run", "startup": "enabled"}}}\n'
+    )
     assert detect_feature(tmp_path, _catalogue_feature("pebble.restart-delay")) == []
 
 
@@ -1188,7 +1226,9 @@ def test_charm_source_parses_each_file_once(tmp_path: Path, monkeypatch) -> None
 
     parsed: list[str] = []
     real = detectors._parse_text
-    monkeypatch.setattr(detectors, "_parse_text", lambda text, path: parsed.append(str(path)) or real(text, path))
+    monkeypatch.setattr(
+        detectors, "_parse_text", lambda text, path: parsed.append(str(path)) or real(text, path)
+    )
 
     source = detectors.CharmSource(tmp_path)
     for _ in range(10):
@@ -1205,7 +1245,9 @@ def test_charm_source_shares_files_across_scopes(tmp_path: Path, monkeypatch) ->
 
     parsed: list[str] = []
     real = detectors._parse_text
-    monkeypatch.setattr(detectors, "_parse_text", lambda text, path: parsed.append(str(path)) or real(text, path))
+    monkeypatch.setattr(
+        detectors, "_parse_text", lambda text, path: parsed.append(str(path)) or real(text, path)
+    )
 
     source = detectors.CharmSource(tmp_path)
     assert source.files("src")

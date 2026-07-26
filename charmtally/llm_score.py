@@ -30,8 +30,10 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 # The five features eligible for LLM refinement in v1 (AI-SCORING-PRIORITISATION §3.1).
 LLM_ELIGIBLE_FEATURES: frozenset[str] = frozenset({
@@ -150,24 +152,30 @@ RESPONSE:
 # (AI-SCORING-PRIORITISATION §5.1–§5.5).
 _FEATURE_SUMMARIES: dict[str, str] = {
     "ops.relation-app-data": (
-        "Charm reads or writes relation data at app scope (relation.data[self.app] or relation.data[event.app]),"
+        "Charm reads or writes relation data at app scope (relation.data[self.app] or "
+        "relation.data[event.app]),"
         " allowing the remote application to receive data shared across units."
     ),
     "jubilant.integration-tests": (
-        "Charm's integration tests use jubilant (the current Canonical standard for ops integration testing)"
+        "Charm's integration tests use jubilant (the current Canonical standard for ops "
+        "integration testing)"
         " rather than pytest-operator."
     ),
     "ops.secrets": (
         "Charm uses the Juju Secrets API (model.get_secret / unit.add_secret / Secret.get_content)"
-        " to handle credentials rather than storing them in plain-text config options or relation databags."
+        "to handle credentials rather than storing them in plain-text config options or relation "
+        "databags."
     ),
     "pebble.checks": (
-        "Charm defines pebble health checks in its workload layer (pebble.CheckDict or a checks: section"
+        "Charm defines pebble health checks in its workload layer (pebble.CheckDict or a checks: "
+        "section"
         " in a layer YAML), allowing Juju to detect when the workload is unhealthy."
     ),
     "ops.pebble-custom-notice": (
-        "Charm observes pebble custom notice events (PebbleCustomNoticeEvent) to react to asynchronous"
-        " signals from its workload process (e.g., certificate rotation, config reload, health transitions)."
+        "Charm observes pebble custom notice events (PebbleCustomNoticeEvent) to react to "
+        "asynchronous"
+        "signals from its workload process (e.g., certificate rotation, config reload, health "
+        "transitions)."
     ),
 }
 
@@ -177,6 +185,8 @@ _FEATURE_SUMMARIES: dict[str, str] = {
 
 @dataclass(frozen=True)
 class LLMVerdict:
+    """An LLM's judgement on whether one charm should adopt one feature."""
+
     charm_slug: str
     feature_id: str
     verdict: str  # "worth-considering" | "clear-gap"
@@ -186,6 +196,8 @@ class LLMVerdict:
 
 
 class LLMClient(Protocol):
+    """The interface charmtally needs from an LLM backend."""
+
     def complete(self, prompt: str, system: str, max_tokens: int) -> str: ...
     def budget_exhausted(self) -> bool: ...
 
@@ -230,7 +242,7 @@ class OpenRouterClient:
             method="POST",
         )
         try:
-            with urllib.request.urlopen(req, timeout=30) as resp:
+            with urllib.request.urlopen(req, timeout=30) as resp:  # ruff: ignore[suspicious-url-open-usage]
                 data = json.loads(resp.read().decode())
         except urllib.error.HTTPError as exc:
             raise RuntimeError(f"OpenRouter HTTP error {exc.code}: {exc.reason}") from exc
@@ -240,7 +252,9 @@ class OpenRouterClient:
         usage = data.get("usage", {})
         input_tokens = int(usage.get("prompt_tokens", 950))
         output_tokens = int(usage.get("completion_tokens", 80))
-        self._spend += (input_tokens * _INPUT_COST_PER_TOKEN) + (output_tokens * _OUTPUT_COST_PER_TOKEN)
+        self._spend += (input_tokens * _INPUT_COST_PER_TOKEN) + (
+            output_tokens * _OUTPUT_COST_PER_TOKEN
+        )
 
         choices = data.get("choices", [])
         if not choices:
@@ -347,7 +361,9 @@ def _validate_output(raw: str, allowed_paths: set[str]) -> dict | None:
     if not isinstance(rationale, str) or not rationale or len(rationale) > 200:
         return None
     evidence_path = data.get("evidence_path")
-    if evidence_path is not None and (not isinstance(evidence_path, str) or evidence_path not in allowed_paths):
+    if evidence_path is not None and (
+        not isinstance(evidence_path, str) or evidence_path not in allowed_paths
+    ):
         return None
     return data
 
@@ -548,7 +564,9 @@ def score_worth_considering(
                 continue
 
             # Build input and call LLM.
-            source_excerpts = _get_source_excerpts(slug, subpath, feature_id, features_dict, workdir)
+            source_excerpts = _get_source_excerpts(
+                slug, subpath, feature_id, features_dict, workdir
+            )
             rule_rationale = rec.get("rationale", "")
             input_record = _build_input_record(
                 slug,

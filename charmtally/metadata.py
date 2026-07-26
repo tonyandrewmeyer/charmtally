@@ -52,9 +52,12 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import yaml
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 _SECRETY = re.compile(r"(password|token|secret|api[-_]?key)$", re.IGNORECASE)
 # Matches "juju >= 3.4", "juju>=3.4", "juju 3.4", etc. Captures the version.
@@ -66,6 +69,8 @@ _PEBBLE_LAYER_CALL = re.compile(r"\bpebble\.Layer(Dict)?\s*\(")
 
 @dataclass(frozen=True)
 class Relation:
+    """A relation declared in a charm's metadata."""
+
     name: str
     role: str  # provides | requires | peers
     interface: str
@@ -73,6 +78,8 @@ class Relation:
 
 @dataclass(frozen=True)
 class CharmMeta:
+    """Facts read from a charm's metadata and source, used for scoring."""
+
     has_containers: bool
     relations: tuple[Relation, ...]
     config_keys: tuple[str, ...]
@@ -108,7 +115,9 @@ class CharmMeta:
         """
         return {
             "has_containers": self.has_containers,
-            "relations": [{"name": r.name, "role": r.role, "interface": r.interface} for r in self.relations],
+            "relations": [
+                {"name": r.name, "role": r.role, "interface": r.interface} for r in self.relations
+            ],
             "config_keys": list(self.config_keys),
             "secret_like_config": list(self.secret_like_config),
             "secret_typed_config": list(self.secret_typed_config),
@@ -137,24 +146,27 @@ class CharmMeta:
         load — every field falls back to the dataclass default.
         """
         return cls(
-            has_containers=bool(raw.get("has_containers", False)),
-            relations=tuple(Relation(r["name"], r["role"], r.get("interface", "")) for r in raw.get("relations") or []),
+            has_containers=bool(raw.get("has_containers")),
+            relations=tuple(
+                Relation(r["name"], r["role"], r.get("interface", ""))
+                for r in raw.get("relations") or []
+            ),
             config_keys=tuple(raw.get("config_keys") or []),
             secret_like_config=tuple(raw.get("secret_like_config") or []),
             secret_typed_config=tuple(raw.get("secret_typed_config") or []),
-            has_integration_tests=bool(raw.get("has_integration_tests", False)),
-            is_reactive=bool(raw.get("is_reactive", False)),
-            is_legacy_classic=bool(raw.get("is_legacy_classic", False)),
-            is_subordinate=bool(raw.get("is_subordinate", False)),
-            is_workload_less=bool(raw.get("is_workload_less", False)),
+            has_integration_tests=bool(raw.get("has_integration_tests")),
+            is_reactive=bool(raw.get("is_reactive")),
+            is_legacy_classic=bool(raw.get("is_legacy_classic")),
+            is_subordinate=bool(raw.get("is_subordinate")),
+            is_workload_less=bool(raw.get("is_workload_less")),
             charm_name=raw.get("charm_name"),
             charmcraft_plugins=tuple(raw.get("charmcraft_plugins") or []),
             bases=tuple(raw.get("bases") or []),
             min_juju_version=raw.get("min_juju_version"),
             library_count=int(raw.get("library_count", 0)),
             library_names=tuple(raw.get("library_names") or []),
-            provides_own_library=bool(raw.get("provides_own_library", False)),
-            has_terraform_module=bool(raw.get("has_terraform_module", False)),
+            provides_own_library=bool(raw.get("provides_own_library")),
+            has_terraform_module=bool(raw.get("has_terraform_module")),
             tooling=tuple(raw.get("tooling") or []),
             repo_sha=raw.get("repo_sha"),
         )
@@ -186,7 +198,7 @@ def _find_metadata_files(charm_root: Path) -> list[Path]:
 
 
 def declared_name(charm_root: Path) -> str | None:
-    """The charm's declared `name:`, or None if no metadata declares one.
+    """Return the charm's declared `name:`, or None if no metadata declares one.
 
     Same first-non-empty-wins rule as :func:`read`, minus the rest of the
     metadata scan — `detectors` needs only the name, to tell the charm that
@@ -273,7 +285,7 @@ def _extract_min_juju_version(data: dict) -> str | None:
 
 
 def _has_pebble_layer_evidence(charm_root: Path) -> bool:
-    """True if the charm constructs a pebble layer in src/ or ships a layer YAML.
+    """Return true if the charm constructs a pebble layer in src/ or ships a layer YAML.
 
     Two signals (either is sufficient):
       * `pebble.Layer(` / `pebble.LayerDict(` call in any `src/**/*.py` file.
@@ -312,6 +324,7 @@ def _extract_relations(data: dict) -> list[Relation]:
 
 
 def read(charm_root: Path) -> CharmMeta:
+    """Read the metadata facts for the charm rooted at charm_root."""
     has_containers = False
     is_subordinate = False
     relations: list[Relation] = []
@@ -382,7 +395,9 @@ def read(charm_root: Path) -> CharmMeta:
     #
     # Either layout: rule out ops.* / pebble.* / charmlibs.* features; the
     # scoring layer short-circuits to not-applicable.
-    has_reactive_indicator = (charm_root / "layer.yaml").is_file() or (charm_root / "osci.yaml").is_file()
+    has_reactive_indicator = (charm_root / "layer.yaml").is_file() or (
+        charm_root / "osci.yaml"
+    ).is_file()
     reactive_dirs = (
         charm_root / "reactive",
         charm_root / "src" / "reactive",
@@ -396,7 +411,9 @@ def read(charm_root: Path) -> CharmMeta:
     # `charm-helpers` charms (charm-ceilometer, charm-cinder, etc.) and a
     # handful of IS team charms (container-log-archive, ubuntu-mirror) share
     # this shape. None of the ops.* / pebble.* / charmlibs.* features apply.
-    has_legacy_hooks_dir = (charm_root / "hooks").is_dir() and any((charm_root / "hooks").iterdir())
+    has_legacy_hooks_dir = (charm_root / "hooks").is_dir() and any(
+        (charm_root / "hooks").iterdir()
+    )
     has_modern_entry = (charm_root / "src" / "charm.py").is_file()
     is_legacy_classic = has_legacy_hooks_dir and not has_modern_entry and not is_reactive
 
@@ -404,9 +421,7 @@ def read(charm_root: Path) -> CharmMeta:
     lib_root = charm_root / "lib" / "charms"
     library_names: list[str] = []
     if lib_root.is_dir():
-        for entry in lib_root.iterdir():
-            if entry.is_dir():
-                library_names.append(entry.name)
+        library_names.extend(entry.name for entry in lib_root.iterdir() if entry.is_dir())
     library_count = len(library_names)
     provides_own_library = bool(charm_name and (lib_root / charm_name.replace("-", "_")).is_dir())
 
@@ -417,8 +432,14 @@ def read(charm_root: Path) -> CharmMeta:
     #   3. No juju-info requires binding
     # Known miss: machine charms managing processes via systemd / apt /
     # subprocess — left as a future refinement, not chased in v1.
-    has_juju_info_requires = any(r.role == "requires" and r.interface == "juju-info" for r in deduped_rel)
-    is_workload_less = not has_containers and not _has_pebble_layer_evidence(charm_root) and not has_juju_info_requires
+    has_juju_info_requires = any(
+        r.role == "requires" and r.interface == "juju-info" for r in deduped_rel
+    )
+    is_workload_less = (
+        not has_containers
+        and not _has_pebble_layer_evidence(charm_root)
+        and not has_juju_info_requires
+    )
 
     # Terraform module convention: a `terraform/` directory at root holding
     # the charm's published TF module. Some charms put .tf at root instead.

@@ -5,7 +5,9 @@ from __future__ import annotations
 from ..pairs import Pair, find_pairs
 
 
-def _record(name: str, *, has_containers: bool, repo_url: str = "", libs: list[str] | None = None) -> dict:
+def _record(
+    name: str, *, has_containers: bool, repo_url: str = "", libs: list[str] | None = None
+) -> dict:
     return {
         "name": name,
         "repo_url": repo_url or f"https://github.com/x/{name}",

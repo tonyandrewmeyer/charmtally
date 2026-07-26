@@ -20,15 +20,22 @@ from __future__ import annotations
 import csv
 import urllib.request
 from dataclasses import dataclass, field
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import yaml
 
-HYRUM_CHARMS_CSV_URL = "https://raw.githubusercontent.com/canonical/hyrum/main/charm-list/charms.csv"
+if TYPE_CHECKING:
+    from pathlib import Path
+
+HYRUM_CHARMS_CSV_URL = (
+    "https://raw.githubusercontent.com/canonical/hyrum/main/charm-list/charms.csv"
+)
 
 
 @dataclass(frozen=True)
 class CharmRef:
+    """A charm in the survey corpus, as listed in the corpus CSV."""
+
     team: str
     name: str
     repo_url: str
@@ -101,6 +108,7 @@ class CorpusOverrides:
 
 
 def load(path: Path) -> list[CharmRef]:
+    """Load the charm corpus from a CSV file."""
     out: list[CharmRef] = []
     with path.open(newline="") as f:
         for row in csv.DictReader(f):
@@ -130,7 +138,7 @@ def fetch_to(url: str, dest: Path) -> Path:
     the hyrum CSV under a workdir before calling :func:`load`.
     """
     dest.parent.mkdir(parents=True, exist_ok=True)
-    with urllib.request.urlopen(url, timeout=30) as resp:  # noqa: S310
+    with urllib.request.urlopen(url, timeout=30) as resp:  # ruff: ignore[suspicious-url-open-usage]
         body = resp.read()
     dest.write_bytes(body)
     return dest

@@ -6,7 +6,7 @@ import os
 import re
 import threading
 import time
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from ..tools.audit import (
     CloneCache,
@@ -16,6 +16,9 @@ from ..tools.audit import (
     _render_summary,
     _sample,
 )
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -244,8 +247,20 @@ class TestCloneCacheHit:
         cache = CloneCache(root=tmp_path / "cache")
         url = "https://github.com/example/repo"
 
-        cache.checkout(url, "main", cloner=clone_fn, sha_resolver=lambda u, r: None, head_sha_reader=lambda p: None)
-        cache.checkout(url, "main", cloner=clone_fn, sha_resolver=lambda u, r: None, head_sha_reader=lambda p: None)
+        cache.checkout(
+            url,
+            "main",
+            cloner=clone_fn,
+            sha_resolver=lambda u, r: None,
+            head_sha_reader=lambda p: None,
+        )
+        cache.checkout(
+            url,
+            "main",
+            cloner=clone_fn,
+            sha_resolver=lambda u, r: None,
+            head_sha_reader=lambda p: None,
+        )
         # When remote SHA can't be resolved, we trust the cache
         assert len(calls) == 1
 
@@ -255,8 +270,20 @@ class TestCloneCacheHit:
         cache = CloneCache(root=tmp_path / "cache", force=True)
         url = "https://github.com/example/repo"
 
-        cache.checkout(url, "main", cloner=clone_fn, sha_resolver=lambda u, r: "abc", head_sha_reader=lambda p: "abc")
-        cache.checkout(url, "main", cloner=clone_fn, sha_resolver=lambda u, r: "abc", head_sha_reader=lambda p: "abc")
+        cache.checkout(
+            url,
+            "main",
+            cloner=clone_fn,
+            sha_resolver=lambda u, r: "abc",
+            head_sha_reader=lambda p: "abc",
+        )
+        cache.checkout(
+            url,
+            "main",
+            cloner=clone_fn,
+            sha_resolver=lambda u, r: "abc",
+            head_sha_reader=lambda p: "abc",
+        )
         assert len(calls) == 2
 
     def test_branch_override_aware_separate_entries(self, tmp_path: Path) -> None:
@@ -267,10 +294,18 @@ class TestCloneCacheHit:
         url = "https://github.com/canonical/mysql-k8s-operator"
 
         path_readme = cache.checkout(
-            url, "readme", cloner=clone_fn, sha_resolver=lambda u, r: None, head_sha_reader=lambda p: None
+            url,
+            "readme",
+            cloner=clone_fn,
+            sha_resolver=lambda u, r: None,
+            head_sha_reader=lambda p: None,
         )
         path_main = cache.checkout(
-            url, "main", cloner=clone_fn, sha_resolver=lambda u, r: None, head_sha_reader=lambda p: None
+            url,
+            "main",
+            cloner=clone_fn,
+            sha_resolver=lambda u, r: None,
+            head_sha_reader=lambda p: None,
         )
         assert len(calls) == 2
         assert path_readme != path_main
@@ -351,7 +386,7 @@ class TestLockfileSafety:
                     sha_resolver=lambda u, r: None,
                     head_sha_reader=lambda p: None,
                 )
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 errors.append(exc)
 
         t1 = threading.Thread(target=run)
@@ -374,7 +409,9 @@ class TestLockfileSafety:
 
 
 class TestMarkdownEmitter:
-    def _minimal_rec(self, slug: str, score: str = "clear-gap", evidence: list | None = None) -> dict:
+    def _minimal_rec(
+        self, slug: str, score: str = "clear-gap", evidence: list | None = None
+    ) -> dict:
         return {
             "name": slug,
             "team": "Data",
@@ -390,64 +427,103 @@ class TestMarkdownEmitter:
         }
 
     def test_record_has_h2_slug_anchor(self) -> None:
-        block = _render_record("my-charm", self._minimal_rec("my-charm"), "ops.collect-status", "main", None)
+        block = _render_record(
+            "my-charm", self._minimal_rec("my-charm"), "ops.collect-status", "main", None
+        )
         assert re.search(r"^## my-charm$", block, re.MULTILINE)
 
     def test_record_contains_score(self) -> None:
-        block = _render_record("my-charm", self._minimal_rec("my-charm"), "ops.collect-status", None, None)
+        block = _render_record(
+            "my-charm", self._minimal_rec("my-charm"), "ops.collect-status", None, None
+        )
         assert "clear-gap" in block
 
     def test_record_contains_rationale(self) -> None:
-        block = _render_record("my-charm", self._minimal_rec("my-charm"), "ops.collect-status", None, None)
+        block = _render_record(
+            "my-charm", self._minimal_rec("my-charm"), "ops.collect-status", None, None
+        )
         assert "sets status directly" in block
 
     def test_record_has_checkbox_tray(self) -> None:
-        block = _render_record("my-charm", self._minimal_rec("my-charm"), "ops.collect-status", None, None)
+        block = _render_record(
+            "my-charm", self._minimal_rec("my-charm"), "ops.collect-status", None, None
+        )
         assert "[ ] verified" in block
         assert "[ ] FP" in block
         assert "[ ] FN-candidate" in block
 
     def test_record_shows_evidence_file_and_line(self) -> None:
-        evidence = [{"file": "src/charm.py", "line": 42, "snippet": ".unit.status =", "detector_kind": "regex"}]
+        evidence = [
+            {
+                "file": "src/charm.py",
+                "line": 42,
+                "snippet": ".unit.status =",
+                "detector_kind": "regex",
+            }
+        ]
         block = _render_record(
-            "my-charm", self._minimal_rec("my-charm", evidence=evidence), "ops.collect-status", None, None
+            "my-charm",
+            self._minimal_rec("my-charm", evidence=evidence),
+            "ops.collect-status",
+            None,
+            None,
         )
         assert "src/charm.py:42" in block
         assert ".unit.status =" in block
 
     def test_record_shows_ref(self) -> None:
-        block = _render_record("my-charm", self._minimal_rec("my-charm"), "ops.collect-status", "main", None)
+        block = _render_record(
+            "my-charm", self._minimal_rec("my-charm"), "ops.collect-status", "main", None
+        )
         assert "main" in block
 
     def test_summary_has_h1_anchor(self) -> None:
         records = [("charm-a", self._minimal_rec("charm-a"))]
         blocks = [_render_record(s, r, "ops.collect-status", None, None) for s, r in records]
-        summary = _render_summary("ops.collect-status", "clear-gap", None, 30, 1, records, blocks, "20260615T120000Z")
+        summary = _render_summary(
+            "ops.collect-status", "clear-gap", None, 30, 1, records, blocks, "20260615T120000Z"
+        )
         assert re.search(r"^# Audit: ops\.collect-status / clear-gap$", summary, re.MULTILINE)
 
     def test_summary_contains_timestamp(self) -> None:
         records = [("charm-a", self._minimal_rec("charm-a"))]
         blocks = [_render_record(s, r, "ops.collect-status", None, None) for s, r in records]
-        summary = _render_summary("ops.collect-status", "clear-gap", None, 30, 1, records, blocks, "20260615T120000Z")
+        summary = _render_summary(
+            "ops.collect-status", "clear-gap", None, 30, 1, records, blocks, "20260615T120000Z"
+        )
         assert "20260615T120000Z" in summary
 
     def test_summary_contains_record_sections(self) -> None:
-        records = [("charm-a", self._minimal_rec("charm-a")), ("charm-b", self._minimal_rec("charm-b"))]
+        records = [
+            ("charm-a", self._minimal_rec("charm-a")),
+            ("charm-b", self._minimal_rec("charm-b")),
+        ]
         blocks = [_render_record(s, r, "ops.collect-status", None, None) for s, r in records]
-        summary = _render_summary("ops.collect-status", "clear-gap", None, 30, 2, records, blocks, "20260615T120000Z")
+        summary = _render_summary(
+            "ops.collect-status", "clear-gap", None, 30, 2, records, blocks, "20260615T120000Z"
+        )
         assert "## charm-a" in summary
         assert "## charm-b" in summary
 
     def test_summary_shows_team_filter(self) -> None:
         records: list = []
         summary = _render_summary(
-            "ops.collect-status", "clear-gap", "observability", 30, 0, records, [], "20260615T120000Z"
+            "ops.collect-status",
+            "clear-gap",
+            "observability",
+            30,
+            0,
+            records,
+            [],
+            "20260615T120000Z",
         )
         assert "observability" in summary
 
     def test_summary_shows_all_when_no_team_filter(self) -> None:
         records: list = []
-        summary = _render_summary("ops.collect-status", "clear-gap", None, 30, 0, records, [], "20260615T120000Z")
+        summary = _render_summary(
+            "ops.collect-status", "clear-gap", None, 30, 0, records, [], "20260615T120000Z"
+        )
         assert "all" in summary
 
     def test_evidence_context_from_repo_dir(self, tmp_path: Path) -> None:
@@ -455,9 +531,15 @@ class TestMarkdownEmitter:
         src.mkdir()
         charm_py = src / "charm.py"
         charm_py.write_text("\n".join(f"line {i}" for i in range(1, 20)))
-        evidence = [{"file": "src/charm.py", "line": 5, "snippet": "line 5", "detector_kind": "regex"}]
+        evidence = [
+            {"file": "src/charm.py", "line": 5, "snippet": "line 5", "detector_kind": "regex"}
+        ]
         block = _render_record(
-            "my-charm", self._minimal_rec("my-charm", evidence=evidence), "ops.collect-status", None, tmp_path
+            "my-charm",
+            self._minimal_rec("my-charm", evidence=evidence),
+            "ops.collect-status",
+            None,
+            tmp_path,
         )
         assert "line 5" in block
         # Context window (±3 lines) should appear

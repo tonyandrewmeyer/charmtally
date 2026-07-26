@@ -62,12 +62,18 @@ class FakeLLMClient:
         return self._exhausted
 
 
-def _clear_gap_response(rationale: str = "Clear gap; feature absent.", path: str | None = None) -> str:
+def _clear_gap_response(
+    rationale: str = "Clear gap; feature absent.", path: str | None = None
+) -> str:
     return json.dumps({"verdict": "clear-gap", "rationale": rationale, "evidence_path": path})
 
 
 def _wc_response(rationale: str = "Uncertain; keeping as worth-considering.") -> str:
-    return json.dumps({"verdict": "worth-considering", "rationale": rationale, "evidence_path": None})
+    return json.dumps({
+        "verdict": "worth-considering",
+        "rationale": rationale,
+        "evidence_path": None,
+    })
 
 
 def _make_scored(
@@ -118,7 +124,7 @@ def test_validate_accepts_valid_with_path():
         "verdict": "clear-gap",
         "rationale": "Config key read from self.config.",
         "evidence_path": "src/charm.py",
-    })  # noqa: E501
+    })
     result = _validate_output(raw, {"src/charm.py"})
     assert result is not None
     assert result["verdict"] == "clear-gap"
@@ -126,7 +132,11 @@ def test_validate_accepts_valid_with_path():
 
 
 def test_validate_accepts_valid_null_path():
-    raw = json.dumps({"verdict": "worth-considering", "rationale": "Not enough signal.", "evidence_path": None})
+    raw = json.dumps({
+        "verdict": "worth-considering",
+        "rationale": "Not enough signal.",
+        "evidence_path": None,
+    })
     result = _validate_output(raw, set())
     assert result is not None
     assert result["verdict"] == "worth-considering"
@@ -134,7 +144,11 @@ def test_validate_accepts_valid_null_path():
 
 
 def test_validate_rejects_invalid_verdict():
-    raw = json.dumps({"verdict": "not-applicable", "rationale": "Some rationale.", "evidence_path": None})
+    raw = json.dumps({
+        "verdict": "not-applicable",
+        "rationale": "Some rationale.",
+        "evidence_path": None,
+    })
     assert _validate_output(raw, set()) is None
 
 
@@ -150,7 +164,11 @@ def test_validate_rejects_empty_rationale():
 
 
 def test_validate_rejects_evidence_path_not_in_allowed():
-    raw = json.dumps({"verdict": "clear-gap", "rationale": "Found it.", "evidence_path": "invented/path.py"})
+    raw = json.dumps({
+        "verdict": "clear-gap",
+        "rationale": "Found it.",
+        "evidence_path": "invented/path.py",
+    })
     assert _validate_output(raw, {"src/charm.py"}) is None
 
 
@@ -164,12 +182,20 @@ def test_validate_rejects_non_dict_json():
 
 def test_validate_accepts_exact_boundary_rationale():
     rationale = "x" * 200
-    raw = json.dumps({"verdict": "worth-considering", "rationale": rationale, "evidence_path": None})
+    raw = json.dumps({
+        "verdict": "worth-considering",
+        "rationale": rationale,
+        "evidence_path": None,
+    })
     assert _validate_output(raw, set()) is not None
 
 
 def test_validate_rejects_path_not_in_empty_allowed():
-    raw = json.dumps({"verdict": "clear-gap", "rationale": "Found gap.", "evidence_path": "some/file.py"})
+    raw = json.dumps({
+        "verdict": "clear-gap",
+        "rationale": "Found gap.",
+        "evidence_path": "some/file.py",
+    })
     assert _validate_output(raw, set()) is None
 
 
@@ -263,7 +289,9 @@ def test_cache_key_folds_in_the_prompt_version(monkeypatch):
     monkeypatch.setattr(llm_score, "_OPENROUTER_MODEL", "anthropic/some-other-model")
     assert _cache_key("https://github.com/org/repo", "sha1", "ops.secrets", "1.0") != before
 
-    monkeypatch.setattr(llm_score, "_SYSTEM_PROMPT", llm_score._SYSTEM_PROMPT + "\nExtra guidance.")
+    monkeypatch.setattr(
+        llm_score, "_SYSTEM_PROMPT", llm_score._SYSTEM_PROMPT + "\nExtra guidance."
+    )
     assert _cache_key("https://github.com/org/repo", "sha1", "ops.secrets", "1.0") != before
 
 
@@ -363,7 +391,9 @@ def test_score_wc_skips_meta_keys(tmp_path):
 
 
 def test_score_wc_shim_charm_skipped_for_secrets(tmp_path):
-    scored = _make_scored("canonical/test", "ops.secrets", "worth-considering", architecture=["shim"])
+    scored = _make_scored(
+        "canonical/test", "ops.secrets", "worth-considering", architecture=["shim"]
+    )
     client = FakeLLMClient([_clear_gap_response("Would be clear gap.")])
     result = score_worth_considering(scored, client, tmp_path)
     # LLM must NOT be called for shim + ops.secrets.
@@ -372,7 +402,9 @@ def test_score_wc_shim_charm_skipped_for_secrets(tmp_path):
 
 
 def test_score_wc_shim_charm_still_processed_for_other_features(tmp_path):
-    scored = _make_scored("canonical/test", "pebble.checks", "worth-considering", architecture=["shim"])
+    scored = _make_scored(
+        "canonical/test", "pebble.checks", "worth-considering", architecture=["shim"]
+    )
     client = FakeLLMClient([_clear_gap_response("No checks found.")])
     result = score_worth_considering(scored, client, tmp_path)
     assert len(client.calls) == 1
@@ -467,7 +499,11 @@ def test_disagreement_log_parse_error_entry(tmp_path):
 
 
 def test_disagreement_log_invalid_path_entry(tmp_path):
-    raw = json.dumps({"verdict": "clear-gap", "rationale": "Found it.", "evidence_path": "invented/file.py"})
+    raw = json.dumps({
+        "verdict": "clear-gap",
+        "rationale": "Found it.",
+        "evidence_path": "invented/file.py",
+    })
     scored = _make_scored("canonical/test", "jubilant.integration-tests", "worth-considering")
     client = FakeLLMClient([raw])
     score_worth_considering(scored, client, tmp_path)
@@ -516,9 +552,19 @@ def test_calibration_passes_at_90_percent(tmp_path):
 
     # LLM always returns worth-considering; 9 human labels agree, 1 disagrees.
     ground_truth = [
-        {"charm_slug": f"canonical/charm-{i}", "feature_id": "ops.secrets", "human_verdict": "worth-considering"}
+        {
+            "charm_slug": f"canonical/charm-{i}",
+            "feature_id": "ops.secrets",
+            "human_verdict": "worth-considering",
+        }
         for i in range(9)
-    ] + [{"charm_slug": "canonical/charm-9", "feature_id": "ops.secrets", "human_verdict": "worth-considering"}]
+    ] + [
+        {
+            "charm_slug": "canonical/charm-9",
+            "feature_id": "ops.secrets",
+            "human_verdict": "worth-considering",
+        }
+    ]
 
     client = FakeLLMClient()  # default always returns worth-considering
     result = run_preflight_calibration(scored, client, tmp_path, ground_truth)
@@ -533,17 +579,25 @@ def test_calibration_fails_below_90_percent(tmp_path):
 
     # LLM returns WC but human says clear-gap for 5 of them → 50% agreement.
     ground_truth = [
-        {"charm_slug": f"canonical/charm-{i}", "feature_id": "ops.secrets", "human_verdict": "clear-gap"}
+        {
+            "charm_slug": f"canonical/charm-{i}",
+            "feature_id": "ops.secrets",
+            "human_verdict": "clear-gap",
+        }
         for i in range(5)
     ] + [
-        {"charm_slug": f"canonical/charm-{i}", "feature_id": "ops.secrets", "human_verdict": "worth-considering"}
+        {
+            "charm_slug": f"canonical/charm-{i}",
+            "feature_id": "ops.secrets",
+            "human_verdict": "worth-considering",
+        }
         for i in range(5, 10)
     ]
 
     client = FakeLLMClient()  # default always returns worth-considering
     result = run_preflight_calibration(scored, client, tmp_path, ground_truth)
     assert result["passed"] is False
-    assert result["agreement"] == 0.5
+    assert result["agreement"] == pytest.approx(0.5)
 
 
 def test_calibration_empty_ground_truth(tmp_path):
@@ -555,7 +609,13 @@ def test_calibration_empty_ground_truth(tmp_path):
 
 def test_calibration_returns_correct_fields(tmp_path):
     scored = _make_scored("canonical/test", "ops.secrets", "worth-considering")
-    gt = [{"charm_slug": "canonical/test", "feature_id": "ops.secrets", "human_verdict": "worth-considering"}]
+    gt = [
+        {
+            "charm_slug": "canonical/test",
+            "feature_id": "ops.secrets",
+            "human_verdict": "worth-considering",
+        }
+    ]
     client = FakeLLMClient()  # returns worth-considering by default
     result = run_preflight_calibration(scored, client, tmp_path, gt)
     assert set(result.keys()) == {"agreement", "total", "agreed", "passed"}
@@ -639,7 +699,14 @@ def test_get_source_excerpts_reads_lines(tmp_path):
     features_dict = {
         "ops.secrets": {
             "present": False,
-            "evidence": [{"file": "src/charm.py", "line": 10, "detector_kind": "regex", "snippet": "secret-like"}],
+            "evidence": [
+                {
+                    "file": "src/charm.py",
+                    "line": 10,
+                    "detector_kind": "regex",
+                    "snippet": "secret-like",
+                }
+            ],
         }
     }
     excerpts = _get_source_excerpts(slug, "", "ops.secrets", features_dict, tmp_path)

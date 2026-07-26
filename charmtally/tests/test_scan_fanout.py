@@ -60,7 +60,9 @@ class TestFindCharmRoots:
 
     def test_skips_tests_directory(self, tmp_path: Path) -> None:
         _make_charm(tmp_path / "charms" / "real")
-        _make_charm(tmp_path / "tests" / "fixtures" / "fake-charm", charmcraft=False, metadata=True)
+        _make_charm(
+            tmp_path / "tests" / "fixtures" / "fake-charm", charmcraft=False, metadata=True
+        )
         roots = find_charm_roots(tmp_path)
         assert roots == [tmp_path / "charms" / "real"]
 
@@ -177,7 +179,10 @@ class TestCorpusOverrides:
                 }
             },
         )
-        assert ov.sub_charm_skip_reason("https://example.com/repo/", "fixtures/dummy") == "test fixture"
+        assert (
+            ov.sub_charm_skip_reason("https://example.com/repo/", "fixtures/dummy")
+            == "test fixture"
+        )
         assert ov.sub_charm_skip_reason("https://example.com/repo/", "charms/real") is None
         assert ov.sub_charm_skip_reason("https://example.com/other/", "fixtures/dummy") is None
 
@@ -266,13 +271,20 @@ class TestFeatureExcludes:
             },
         )
         assert (
-            ov.feature_skip_reason("https://example.com/monorepo", "kubernetes", "ops.pebble-ready")
+            ov.feature_skip_reason(
+                "https://example.com/monorepo", "kubernetes", "ops.pebble-ready"
+            )
             == "reconcile-all in sibling package"
         )
         # different sub_path: no match
-        assert ov.feature_skip_reason("https://example.com/monorepo", "machines", "ops.pebble-ready") is None
+        assert (
+            ov.feature_skip_reason("https://example.com/monorepo", "machines", "ops.pebble-ready")
+            is None
+        )
         # root-level lookup: no match
-        assert ov.feature_skip_reason("https://example.com/monorepo", "", "ops.pebble-ready") is None
+        assert (
+            ov.feature_skip_reason("https://example.com/monorepo", "", "ops.pebble-ready") is None
+        )
 
     def test_load_overrides_parses_feature_excludes(self, tmp_path: Path) -> None:
         p = tmp_path / "ov.yaml"
@@ -302,7 +314,9 @@ class TestFeatureExcludes:
         ov = load_overrides(root / "corpus-overrides.yaml")
         # mongodb-k8s and mysql-router-operators/kubernetes are the two known
         # shim FPs per CALIBRATION #9 follow-up.
-        assert ov.feature_skip_reason("https://github.com/canonical/mongodb-k8s-operator", "", "ops.pebble-ready")
+        assert ov.feature_skip_reason(
+            "https://github.com/canonical/mongodb-k8s-operator", "", "ops.pebble-ready"
+        )
         assert ov.feature_skip_reason(
             "https://github.com/canonical/mysql-router-operators", "kubernetes", "ops.pebble-ready"
         )

@@ -68,7 +68,11 @@ def test_low_count_marker_appears_when_present_below_floor() -> None:
     """A feature held by < 5 charms gets the ⚠ marker in the feature view."""
     feats = [_feature("rare-thing")]
     charms = [
-        _charm(f"c{i}", present_features=({"rare-thing"} if i < 2 else set()), all_features=["rare-thing"])
+        _charm(
+            f"c{i}",
+            present_features=({"rare-thing"} if i < 2 else set()),
+            all_features=["rare-thing"],
+        )
         for i in range(10)
     ]
     html = render({c["name"]: c for c in charms}, feats)
@@ -79,7 +83,11 @@ def test_low_count_marker_absent_when_at_or_above_floor() -> None:
     """At the floor (5 hits) the marker should not appear."""
     feats = [_feature("common-thing")]
     charms = [
-        _charm(f"c{i}", present_features=({"common-thing"} if i < 5 else set()), all_features=["common-thing"])
+        _charm(
+            f"c{i}",
+            present_features=({"common-thing"} if i < 5 else set()),
+            all_features=["common-thing"],
+        )
         for i in range(10)
     ]
     html = render({c["name"]: c for c in charms}, feats)
@@ -89,7 +97,9 @@ def test_low_count_marker_absent_when_at_or_above_floor() -> None:
 def test_expected_rare_suppresses_low_count_marker() -> None:
     """A feature with `expected_rare: true` doesn't get the marker even at 0 hits."""
     feats = [_feature("genuinely-rare", expected_rare=True)]
-    charms = [_charm(f"c{i}", present_features=set(), all_features=["genuinely-rare"]) for i in range(10)]
+    charms = [
+        _charm(f"c{i}", present_features=set(), all_features=["genuinely-rare"]) for i in range(10)
+    ]
     html = render({c["name"]: c for c in charms}, feats)
     assert 'class="low-count"' not in html
 
@@ -168,8 +178,16 @@ def test_charm_rows_carry_every_filterable_axis() -> None:
 def test_filter_facets_are_populated_from_the_corpus() -> None:
     feats = [_feature("f1")]
     charms = [
-        _charm("a", present_features={"f1"}, all_features=["f1"], team="Observability", meta={"tooling": ["tox"]}),
-        _charm("b", present_features=set(), all_features=["f1"], team="", meta={"tooling": ["just"]}),
+        _charm(
+            "a",
+            present_features={"f1"},
+            all_features=["f1"],
+            team="Observability",
+            meta={"tooling": ["tox"]},
+        ),
+        _charm(
+            "b", present_features=set(), all_features=["f1"], team="", meta={"tooling": ["just"]}
+        ),
     ]
     html = render({c["name"]: c for c in charms}, feats)
 
@@ -236,7 +254,9 @@ def test_filter_data_attributes_are_escaped() -> None:
     """Team names reach the page as data- attribute values and as <option>
     values in the team picker; both come from the hyrum CSV."""
     feats = [_feature("f1")]
-    charm = _charm("c1", present_features={"f1"}, all_features=["f1"], team='x" onmouseover="alert(1)')
+    charm = _charm(
+        "c1", present_features={"f1"}, all_features=["f1"], team='x" onmouseover="alert(1)'
+    )
     html = render({"c1": charm}, feats)
 
     assert 'onmouseover="alert(1)' not in html

@@ -8,10 +8,13 @@ local repos so the suite stays fast.
 from __future__ import annotations
 
 import subprocess
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from ..corpus import CharmRef
 from ..scan import ensure_clone, head_sha, refresh_clone, scan_charm
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 # Identity supplied per-invocation rather than via `git config` so repo setup
 # stays at three subprocesses — these tests are the slowest in the suite and
@@ -46,7 +49,9 @@ def _init_repo(path: Path) -> str:
 
 
 def _ref(url: Path, branch: str | None = None) -> CharmRef:
-    return CharmRef(team="t", name="n", repo_url=str(url), key_charm=False, branch=branch, notes="")
+    return CharmRef(
+        team="t", name="n", repo_url=str(url), key_charm=False, branch=branch, notes=""
+    )
 
 
 class TestHeadSha:
