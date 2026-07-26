@@ -99,16 +99,76 @@ def _select_files(charm_root: Path, scope: str) -> list[Path]:
 # ── AST helpers ─────────────────────────────────────────────────────────────────
 
 
-def _parse(path: Path) -> ast.Module | None:
+def _parse_text(text: str, path: Path) -> ast.Module | None:
     try:
         with warnings.catch_warnings():
             # Scanned charm code frequently contains regex string literals with
             # invalid escape sequences (e.g. "\d"), which ast.parse reports as
             # SyntaxWarning. Those are noise, not scan failures.
             warnings.simplefilter("ignore", SyntaxWarning)
-            return ast.parse(path.read_text(encoding="utf-8", errors="replace"), filename=str(path))
+            return ast.parse(text, filename=str(path))
     except (SyntaxError, ValueError):
         return None
+
+
+def _parse(path: Path) -> ast.Module | None:
+    return _parse_text(path.read_text(encoding="utf-8", errors="replace"), path)
+
+
+# ── per-charm source cache ──────────────────────────────────────────────────────
+
+
+class SourceFile:
+    """One Python file, read and parsed at most once per charm scan."""
+
+    __slots__ = ("path", "rel", "text", "tree", "_lines")
+
+    def __init__(self, path: Path, charm_root: Path) -> None:
+        self.path = path
+        self.rel = str(path.relative_to(charm_root))
+        self.text = path.read_text(encoding="utf-8", errors="replace")
+        self.tree = _parse_text(self.text, path)
+        self._lines: list[str] | None = None
+
+    def line(self, lineno: int) -> str:
+        """The 1-indexed source line `lineno`, stripped, or "" if out of range."""
+        if self._lines is None:
+            self._lines = self.text.splitlines()
+        if 1 <= lineno <= len(self._lines):
+            return self._lines[lineno - 1].strip()
+        return ""
+
+
+class CharmSource:
+    """Per-charm cache of selected files, their text and their parsed AST.
+
+    A charm is matched against every feature and architecture pattern in the
+    catalogue — around 70 of them. Reading and re-parsing each file once per
+    feature made AST parsing roughly 95% of scan time; parsing once per file
+    and reusing the tree across all features cuts that to a single pass.
+
+    Files are cached by path rather than by scope, so a file selected by both
+    the "src" and "any" scopes is still only parsed once.
+    """
+
+    def __init__(self, charm_root: Path) -> None:
+        self.charm_root = charm_root
+        self._by_scope: dict[str, list[SourceFile]] = {}
+        self._by_path: dict[Path, SourceFile] = {}
+
+    def files(self, scope: str) -> list[SourceFile]:
+        cached = self._by_scope.get(scope)
+        if cached is None:
+            cached = [self._load(p) for p in _select_files(self.charm_root, scope)]
+            self._by_scope[scope] = cached
+        return cached
+
+    def _load(self, path: Path) -> SourceFile:
+        cached = self._by_path.get(path)
+        if cached is None:
+            cached = SourceFile(path, self.charm_root)
+            self._by_path[path] = cached
+        return cached
 
 
 def _attr_chain(node: ast.AST) -> list[str] | None:
@@ -674,8 +734,14 @@ def _detect_relation_count(charm_root: Path, config: dict) -> list[Evidence]:
     return [Evidence(first_rel or "charmcraft.yaml", 0, "relation-count", label)]
 
 
-def detect_feature(charm_root: Path, feature: Feature) -> list[Evidence]:
-    files = _select_files(charm_root, feature.scope)
+def detect_feature(charm_root: Path, feature: Feature, source: CharmSource | None = None) -> list[Evidence]:
+    """Evidence for `feature` in the charm at `charm_root`.
+
+    Pass `source` to share one read-and-parse pass across every feature in
+    the catalogue; omitting it builds a throwaway cache for this call alone.
+    """
+    if source is None:
+        source = CharmSource(charm_root)
     evidence: list[Evidence] = []
 
     # File-independent detectors run once over the charm root rather than per
@@ -707,10 +773,17 @@ def detect_feature(charm_root: Path, feature: Feature) -> list[Evidence]:
             if _charm_provides_lib(charm_root, mod):
                 provided_lib_detectors.add(i)
 
-    for path in files:
-        text = path.read_text(encoding="utf-8", errors="replace")
-        tree = _parse(path)
-        rel = str(path.relative_to(charm_root))
+    # AST-walking detector kinds, keyed by the walker they delegate to. All
+    # report the same way: one Evidence per node, snippet taken from the
+    # node's own source line.
+    ast_walkers = {
+        "ast-init-call": _detect_ast_init_call,
+        "ast-observe-shared-handler": _detect_ast_observe_shared_handler,
+        "ast-shared-method": _detect_ast_shared_method,
+    }
+
+    for src in source.files(feature.scope):
+        text, tree, rel = src.text, src.tree, src.rel
 
         for i, det in enumerate(feature.detectors):
             if det.kind == "import" and tree is not None:
@@ -721,25 +794,15 @@ def detect_feature(charm_root: Path, feature: Feature) -> list[Evidence]:
                     evidence.append(Evidence(rel, node.lineno, det.kind, line.splitlines()[0][:120]))
             elif det.kind == "call" and tree is not None:
                 for node in _detect_call(tree, det.config):
-                    line = text.splitlines()[node.lineno - 1] if node.lineno <= len(text.splitlines()) else ""
-                    evidence.append(Evidence(rel, node.lineno, det.kind, line.strip()[:120]))
+                    evidence.append(Evidence(rel, node.lineno, det.kind, src.line(node.lineno)[:120]))
             elif det.kind == "observe-event":
                 for pat in observe_pats[i]:
                     for m in pat.finditer(text):
                         lineno = text.count("\n", 0, m.start()) + 1
                         evidence.append(Evidence(rel, lineno, det.kind, m.group(0)[:120]))
-            elif det.kind == "ast-init-call" and tree is not None:
-                for node in _detect_ast_init_call(tree, det.config):
-                    line = text.splitlines()[node.lineno - 1] if node.lineno <= len(text.splitlines()) else ""
-                    evidence.append(Evidence(rel, node.lineno, det.kind, line.strip()[:120]))
-            elif det.kind == "ast-observe-shared-handler" and tree is not None:
-                for node in _detect_ast_observe_shared_handler(tree, det.config):
-                    line = text.splitlines()[node.lineno - 1] if node.lineno <= len(text.splitlines()) else ""
-                    evidence.append(Evidence(rel, node.lineno, det.kind, line.strip()[:120]))
-            elif det.kind == "ast-shared-method" and tree is not None:
-                for node in _detect_ast_shared_method(tree, det.config):
-                    line = text.splitlines()[node.lineno - 1] if node.lineno <= len(text.splitlines()) else ""
-                    evidence.append(Evidence(rel, node.lineno, det.kind, line.strip()[:120]))
+            elif det.kind in ast_walkers and tree is not None:
+                for node in ast_walkers[det.kind](tree, det.config):
+                    evidence.append(Evidence(rel, node.lineno, det.kind, src.line(node.lineno)[:120]))
             elif det.kind == "regex":
                 for m in _detect_regex(text, det.config["pattern"]):
                     lineno = text.count("\n", 0, m.start()) + 1

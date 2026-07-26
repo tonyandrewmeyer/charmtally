@@ -12,7 +12,7 @@ import yaml
 from . import metadata, scoring
 from .catalogue import Feature, Pattern
 from .corpus import CharmRef
-from .detectors import detect_feature
+from .detectors import CharmSource, detect_feature
 
 # Directory names a fan-out walk should never descend into when looking for
 # sub-charms. Vendored charm libs ship `charmcraft.yaml` files for the lib
@@ -45,12 +45,15 @@ def scan_charm(
     The scoring layer uses these as inputs to per-feature gap rules.
     """
     meta = dataclasses.replace(metadata.read(charm_root), repo_sha=head_sha(charm_root))
-    architecture = _detect_architecture(charm_root, patterns or [])
+    # One read-and-parse pass over the charm's Python files, shared by every
+    # feature and pattern below.
+    source = CharmSource(charm_root)
+    architecture = _detect_architecture(charm_root, patterns or [], source)
     out: dict[str, dict] = {}
     # First pass: detection. Scoring needs the full features dict (rules can
     # reference cross-feature state), so we score in a second pass.
     for feat in features:
-        ev = detect_feature(charm_root, feat)
+        ev = detect_feature(charm_root, feat, source)
         out[feat.name] = {
             "present": bool(ev),
             "evidence": [asdict(e) for e in ev],
@@ -72,7 +75,7 @@ def scan_charm(
     return out
 
 
-def _detect_architecture(charm_root: Path, patterns: list[Pattern]) -> list[str]:
+def _detect_architecture(charm_root: Path, patterns: list[Pattern], source: CharmSource) -> list[str]:
     """Return the names of architecture patterns that match this charm.
 
     Pattern detection re-uses the per-feature detector machinery. A pattern
@@ -81,7 +84,7 @@ def _detect_architecture(charm_root: Path, patterns: list[Pattern]) -> list[str]
     """
     matched: list[str] = []
     for pat in patterns:
-        ev = detect_feature(charm_root, pat)  # duck-typed: needs scope + detectors
+        ev = detect_feature(charm_root, pat, source)  # duck-typed: needs scope + detectors
         if ev:
             matched.append(pat.name)
     return matched

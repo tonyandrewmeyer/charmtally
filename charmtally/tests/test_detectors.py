@@ -999,3 +999,62 @@ def test_yaml_key_accepts_a_keys_list(tmp_path: Path) -> None:
 def test_yaml_key_without_a_key_is_a_no_op(tmp_path: Path) -> None:
     _write_yaml_charm(tmp_path, {"layer.yaml": "checks:\n  up: {}\n"})
     assert detect_feature(tmp_path, _feature("yaml-key", files=["**/*.yaml"])) == []
+
+
+# ── CharmSource (shared parse cache) ─────────────────────────────────────────
+
+
+def test_charm_source_parses_each_file_once(tmp_path: Path, monkeypatch) -> None:
+    """A charm is matched against ~70 features and patterns; each file must be
+    read and parsed once for the charm, not once per feature."""
+    from .. import detectors
+
+    _write_charm(tmp_path, "import ops\n")
+    (tmp_path / "src" / "other.py").write_text("import ops\n")
+
+    parsed: list[str] = []
+    real = detectors._parse_text
+    monkeypatch.setattr(detectors, "_parse_text", lambda text, path: parsed.append(str(path)) or real(text, path))
+
+    source = detectors.CharmSource(tmp_path)
+    for _ in range(10):
+        detect_feature(tmp_path, _feature("import", module="ops"), source)
+
+    assert sorted(Path(p).name for p in parsed) == ["charm.py", "other.py"]
+
+
+def test_charm_source_shares_files_across_scopes(tmp_path: Path, monkeypatch) -> None:
+    """The "src" and "any" scopes overlap; an overlapping file is parsed once."""
+    from .. import detectors
+
+    _write_charm(tmp_path, "import ops\n")
+
+    parsed: list[str] = []
+    real = detectors._parse_text
+    monkeypatch.setattr(detectors, "_parse_text", lambda text, path: parsed.append(str(path)) or real(text, path))
+
+    source = detectors.CharmSource(tmp_path)
+    assert source.files("src")
+    assert source.files("any")
+    assert len(parsed) == 1
+
+
+def test_shared_source_yields_the_same_evidence(tmp_path: Path) -> None:
+    from .. import detectors
+
+    _write_charm(tmp_path, "import ops\nops.main(x)\n")
+    feature = _feature("import", module="ops")
+    standalone = detect_feature(tmp_path, feature)
+    shared = detect_feature(tmp_path, feature, detectors.CharmSource(tmp_path))
+    assert standalone == shared
+
+
+def test_source_file_line_is_bounds_safe(tmp_path: Path) -> None:
+    from ..detectors import SourceFile
+
+    (tmp_path / "f.py").write_text("a = 1\nb = 2\n")
+    src = SourceFile(tmp_path / "f.py", tmp_path)
+    assert src.line(1) == "a = 1"
+    assert src.line(2) == "b = 2"
+    assert src.line(0) == ""
+    assert src.line(99) == ""
