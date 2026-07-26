@@ -9,3 +9,11 @@ dist/
 .mypy_cache/
 .coverage
 htmlcov/
+
+# Derived scan artefacts. results.json is the committed scan output; `score`
+# regenerates scored.json from it on demand and the two are identical by
+# construction (scan already applies scoring and the same overrides), so
+# committing both only made a checkout larger and gave one artefact two names.
+scored.json
+llm-scored.json
+pairs.json

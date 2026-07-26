@@ -62,4 +62,4 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.codespell]
 ignore-words-list = "ths,re-uses"
-skip = "dashboard.html,results.json,scored.json,uv.lock,snapshots"
+skip = "dashboard.html,trend.html,results.json,uv.lock,snapshots"

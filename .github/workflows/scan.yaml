@@ -10,8 +10,13 @@
 #     locally-controlled axis).
 #   - Runs the full pipeline: scan -> score -> dashboard.
 #   - Writes a dated snapshot to snapshots/scored-YYYY-MM-DD.json for
-#     the trend code.
+#     the trend code. Snapshots stay uncompressed on purpose: consecutive
+#     scans are near-identical text, which git deltas down to tens of KiB,
+#     whereas gzipped snapshots would each be an opaque blob that cannot
+#     delta at all.
 #   - Commits the refreshed artefacts back to main if any changed.
+#     scored.json / llm-scored.json / pairs.json are build intermediates
+#     and deliberately not committed -- see .gitignore.
 
 name: scan
 
@@ -121,8 +126,7 @@ jobs:
         run: |
           git config user.name  "charmtally-bot"
           git config user.email "charmtally-bot@aotearoa.dev"
-          git add results.json scored.json dashboard.html trend.html snapshots/
-          if [ -f llm-scored.json ]; then git add llm-scored.json; fi
+          git add results.json dashboard.html trend.html snapshots/
           if git diff --cached --quiet; then
             echo "no changes to commit"
             exit 0
