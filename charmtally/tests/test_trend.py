@@ -412,6 +412,19 @@ def test_render_trend_produces_history_page() -> None:
     assert "2026-06-11" in html and "2026-06-22" in html
 
 
+def test_trend_page_pins_the_plotly_cdn_script() -> None:
+    """The History page is published to GitHub Pages, so its one external
+    script must carry an integrity hash rather than trusting the CDN."""
+    html = render_trend({"base_date": "", "latest_date": "", "flips": [], "possible_renames": []}, {}, [])
+
+    script_lines = [line for line in html.splitlines() if "cdn.plot.ly" in line]
+    assert script_lines, "expected the plotly CDN script tag"
+    tag_start = html.index(script_lines[0])
+    tag = html[tag_start : html.index("</script>", tag_start)]
+    assert 'integrity="sha384-' in tag
+    assert 'crossorigin="anonymous"' in tag
+
+
 # --- CLI smoke ---------------------------------------------------------------
 
 
