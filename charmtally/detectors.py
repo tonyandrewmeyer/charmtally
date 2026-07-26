@@ -1,13 +1,23 @@
 """Run a single feature's detectors against a charm tree.
 
-Implements four detector kinds for the v1 spike:
+Four kinds run per Python file in scope:
     import         — AST: matches `import X` and `from X import Y` (with optional names filter)
     call           — AST: matches `*.<attr>(...)` where <attr> is the trailing dotted suffix
     observe-event  — regex: matches `observe(... on.<snake_name>(...)|on['<snake_name>'] ...)`
                      for each given event class (translated CamelCase→snake_case, dropping trailing 'Event')
     regex          — raw multiline regex over file contents
 
-The `yaml-key` kind is deferred — pebble.checks has a regex fallback that covers v1.
+Three more run per Python file and back the architecture axis:
+    ast-init-call               — a `self.X(...)` call inside `__init__`
+    ast-observe-shared-handler  — one handler bound to N distinct events
+    ast-shared-method           — N `_on_*` handlers delegating to one method
+
+Four are file-independent: they read the charm root directly rather than the
+Python files `_select_files` returns.
+    yaml-key           — a mapping key present in YAML matching a glob
+    pytest-config-key  — a pytest setting in pyproject/pytest.ini/setup.cfg/tox.ini
+    requires-interface — an interface named in the metadata `requires:` block
+    relation-count     — bucket the charm by its requires/provides/peers count
 """
 
 from __future__ import annotations
@@ -19,6 +29,8 @@ import warnings
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
+
+import yaml
 
 try:
     import tomllib  # Python 3.11+ stdlib
@@ -482,6 +494,101 @@ def _detect_pytest_config_key(charm_root: Path, config: dict) -> list[Evidence]:
     return results
 
 
+# Directories a YAML sweep must not descend into: vendored charm libs ship
+# their own metadata, and virtualenvs / build trees carry vendored manifests
+# that say nothing about this charm.
+_YAML_SKIP_DIRS = {".git", ".tox", ".venv", "venv", "node_modules", "build", "dist", "vendor"}
+
+
+def _yaml_files(charm_root: Path, globs: list[str]) -> list[Path]:
+    """Files matching `globs` under `charm_root`, minus vendored/build trees.
+
+    Sorted and de-duplicated so overlapping globs (``**/*.yaml`` plus
+    ``**/*.yml``) yield each file once, in a stable order.
+    """
+    out: set[Path] = set()
+    for pattern in globs:
+        for path in charm_root.glob(pattern):
+            if not path.is_file():
+                continue
+            parts = path.relative_to(charm_root).parts
+            if any(p in _YAML_SKIP_DIRS or p.startswith(".") for p in parts[:-1]):
+                continue
+            if _is_vendored_lib(parts):
+                continue
+            out.add(path)
+    return sorted(out)
+
+
+def _yaml_documents(path: Path) -> list[object]:
+    """Parsed documents in `path`, or [] if it isn't loadable.
+
+    Uses ``safe_load_all`` because charm repos carry multi-document YAML
+    (k8s manifests, kustomize output) alongside charm metadata.
+    """
+    try:
+        return [doc for doc in yaml.safe_load_all(path.read_text(encoding="utf-8", errors="replace")) if doc]
+    except (yaml.YAMLError, OSError, RecursionError):
+        return []
+
+
+def _find_mapping_key(node: object, keys: set[str]) -> str | None:
+    """Return the first of `keys` present as a mapping key anywhere in `node`."""
+    if isinstance(node, dict):
+        for key in node:
+            if isinstance(key, str) and key in keys:
+                return key
+        for value in node.values():
+            found = _find_mapping_key(value, keys)
+            if found:
+                return found
+    elif isinstance(node, list):
+        for item in node:
+            found = _find_mapping_key(item, keys)
+            if found:
+                return found
+    return None
+
+
+def _detect_yaml_key(charm_root: Path, config: dict) -> list[Evidence]:
+    """Match YAML files declaring one of `keys` as a mapping key.
+
+    config:
+      files: list of globs relative to the charm root
+             (default: ``["**/*.yaml", "**/*.yml"]``).
+      key:   a single key name, or
+      keys:  a list of key names. At least one of the two is required.
+
+    Matching is structural rather than textual — the file is parsed and
+    searched at any nesting depth — so a `checks:` appearing inside a string
+    or a comment doesn't count. The reported line is found by scanning for
+    the key afterwards, purely so the dashboard can deep-link; a structural
+    match with no locatable line still reports line 0.
+    """
+    globs = list(config.get("files") or ["**/*.yaml", "**/*.yml"])
+    keys = set(config.get("keys") or [])
+    if "key" in config:
+        keys.add(config["key"])
+    if not keys:
+        return []
+
+    results: list[Evidence] = []
+    for path in _yaml_files(charm_root, globs):
+        documents = _yaml_documents(path)
+        if not documents:
+            continue
+        found = next((k for k in (_find_mapping_key(doc, keys) for doc in documents) if k), None)
+        if not found:
+            continue
+        rel = str(path.relative_to(charm_root))
+        text = path.read_text(encoding="utf-8", errors="replace")
+        key_re = re.compile(rf"^\s*[\"']?{re.escape(found)}[\"']?\s*:", re.MULTILINE)
+        match = key_re.search(text)
+        line = text.count("\n", 0, match.start()) + 1 if match else 0
+        results.append(Evidence(rel, line, "yaml-key", f"{found}:"))
+    return results
+
+
 def _detect_requires_interface(charm_root: Path, config: dict) -> list[Evidence]:
     """Match `requires:` block interfaces in charmcraft.yaml / metadata.yaml.
 
@@ -571,8 +678,9 @@ def detect_feature(charm_root: Path, feature: Feature) -> list[Evidence]:
     files = _select_files(charm_root, feature.scope)
     evidence: list[Evidence] = []
 
-    # File-independent detectors run once over the charm root, not per
-    # Python file in scope. Today: pytest-config-key, requires-interface.
+    # File-independent detectors run once over the charm root rather than per
+    # Python file in scope — they read YAML/INI/TOML, which `_select_files`
+    # (Python-only) would never hand them.
     for det in feature.detectors:
         if det.kind == "pytest-config-key":
             evidence.extend(_detect_pytest_config_key(charm_root, det.config))
@@ -580,6 +688,8 @@ def detect_feature(charm_root: Path, feature: Feature) -> list[Evidence]:
             evidence.extend(_detect_requires_interface(charm_root, det.config))
         elif det.kind == "relation-count":
             evidence.extend(_detect_relation_count(charm_root, det.config))
+        elif det.kind == "yaml-key":
+            evidence.extend(_detect_yaml_key(charm_root, det.config))
 
     # Pre-compile observe-event regexes per detector.
     observe_pats: dict[int, list[re.Pattern[str]]] = {}
@@ -634,6 +744,5 @@ def detect_feature(charm_root: Path, feature: Feature) -> list[Evidence]:
                 for m in _detect_regex(text, det.config["pattern"]):
                     lineno = text.count("\n", 0, m.start()) + 1
                     evidence.append(Evidence(rel, lineno, det.kind, m.group(0).strip()[:120]))
-            # yaml-key intentionally not implemented for v1 spike.
 
     return evidence
