@@ -115,7 +115,31 @@
     cursor: pointer; padding: 0 4px; font-size: 13px; line-height: 1;
   }
   .feature-chip button:hover { color: #f88; }
+  .feature-chip .mode { opacity: .65; font-variant: small-caps; }
+  .feature-chip-lacks { background: #7a2030; }
+  .feature-chip-gap { background: #7a5600; }
   tr.hidden { display: none; }
+
+  .filters select {
+    border: 1px solid #ccc; border-radius: 9px;
+    padding: 3px 6px; font: inherit; background: #fff; color: #333;
+  }
+  .filters select.set { background: #224; color: #fff; border-color: #224; }
+  .filters button.clear-all {
+    border-color: #ddd; color: #777;
+  }
+  .filters .help {
+    color: #999; cursor: help; border-bottom: 1px dotted #bbb;
+  }
+  .filters .visible-count.filtered { color: #224; font-weight: 600; }
+  /* Cross-links that pre-set the charm view's filters. */
+  a.xlink { color: inherit; text-decoration: none;
+            border-bottom: 1px dotted #bbb; }
+  a.xlink:hover { border-bottom-style: solid; }
+  .empty-state {
+    color: #777; font-style: italic; margin: 0 0 3em 0;
+  }
+  table.all-hidden { display: none; }
 
   /* Per-architecture adoption pill in the feature view. */
   .arch-pct {
@@ -165,7 +189,8 @@
     <h3>Architecture</h3>
     <dl>
       {% for name, n in summary.architecture %}
-        <dt><span class="chip chip-arch-{{ name }}">{{ name }}</span></dt>
+        <dt><a class="xlink" href="?charm.arch={{ name|urlencode }}#charm-view"
+               title="Show these charms in the charm view"><span class="chip chip-arch-{{ name }}">{{ name }}</span></a></dt>
         <dd>{{ n }}<span class="pct">{{ (100 * n / summary.total)|round(0, 'floor')|int }}%</span></dd>
       {% endfor %}
     </dl>
@@ -173,12 +198,12 @@
   <section>
     <h3>Shape</h3>
     <dl>
-      <dt>k8s</dt><dd>{{ summary.k8s }}<span class="pct">{{ (100 * summary.k8s / summary.total)|round(0, 'floor')|int }}%</span></dd>
-      <dt>machine</dt><dd>{{ summary.machine }}<span class="pct">{{ (100 * summary.machine / summary.total)|round(0, 'floor')|int }}%</span></dd>
-      <dt>reactive</dt><dd>{{ summary.reactive }}<span class="pct">{{ (100 * summary.reactive / summary.total)|round(0, 'floor')|int }}%</span></dd>
-      <dt>legacy-classic</dt><dd>{{ summary.legacy_classic }}<span class="pct">{{ (100 * summary.legacy_classic / summary.total)|round(0, 'floor')|int }}%</span></dd>
-      <dt>lib provider</dt><dd>{{ summary.own_library }}<span class="pct">{{ (100 * summary.own_library / summary.total)|round(0, 'floor')|int }}%</span></dd>
-      <dt>terraform mod</dt><dd>{{ summary.terraform }}<span class="pct">{{ (100 * summary.terraform / summary.total)|round(0, 'floor')|int }}%</span></dd>
+      <dt><a class="xlink" href="?charm.shape=k8s#charm-view">k8s</a></dt><dd>{{ summary.k8s }}<span class="pct">{{ (100 * summary.k8s / summary.total)|round(0, 'floor')|int }}%</span></dd>
+      <dt><a class="xlink" href="?charm.shape=machine#charm-view">machine</a></dt><dd>{{ summary.machine }}<span class="pct">{{ (100 * summary.machine / summary.total)|round(0, 'floor')|int }}%</span></dd>
+      <dt><a class="xlink" href="?charm.arch=reactive#charm-view">reactive</a></dt><dd>{{ summary.reactive }}<span class="pct">{{ (100 * summary.reactive / summary.total)|round(0, 'floor')|int }}%</span></dd>
+      <dt><a class="xlink" href="?charm.arch=legacy-classic#charm-view">legacy-classic</a></dt><dd>{{ summary.legacy_classic }}<span class="pct">{{ (100 * summary.legacy_classic / summary.total)|round(0, 'floor')|int }}%</span></dd>
+      <dt><a class="xlink" href="?charm.flags=lib-provider#charm-view">lib provider</a></dt><dd>{{ summary.own_library }}<span class="pct">{{ (100 * summary.own_library / summary.total)|round(0, 'floor')|int }}%</span></dd>
+      <dt><a class="xlink" href="?charm.flags=terraform#charm-view">terraform mod</a></dt><dd>{{ summary.terraform }}<span class="pct">{{ (100 * summary.terraform / summary.total)|round(0, 'floor')|int }}%</span></dd>
     </dl>
   </section>
   <section>
@@ -201,7 +226,7 @@
     <h3>Tooling</h3>
     <dl>
       {% for name, n in summary.tooling %}
-        <dt>{{ name }}</dt><dd>{{ n }}</dd>
+        <dt><a class="xlink" href="?charm.tooling={{ name|urlencode }}#charm-view">{{ name }}</a></dt><dd>{{ n }}</dd>
       {% endfor %}
     </dl>
   </section>
@@ -209,6 +234,26 @@
 {% endif %}
 
 <h2 id="feature-view">By feature</h2>
+
+<div class="filters" data-filter-bar="feature-table">
+  <span class="label">Library:</span>
+  <div class="group" data-multi="lib">
+    <button class="active" data-value="">all</button>
+    {% for lib in facets.libraries %}<button data-value="{{ lib }}">{{ lib }}</button>{% endfor %}
+  </div>
+  <span class="label">Only:</span>
+  <div class="group" data-multi="only" data-match="all">
+    <button data-value="gaps" title="Features with at least one clear-gap charm">with clear gaps</button>
+    <button data-value="unused" title="Features no charm in the corpus uses">unused</button>
+    <button data-value="low-count" title="Features flagged ⚠ low-count">low-count</button>
+  </div>
+  <input type="search" data-search-input placeholder="search feature / library…"
+         title="Terms are ANDed. Prefix with - to exclude, use feature: or library: to target a field, and quote phrases."
+         autocomplete="off">
+  <button type="button" class="clear-all" data-clear>clear</button>
+  <span class="visible-count" data-count></span>
+</div>
+
 <table id="feature-table">
   <thead>
     <tr>
@@ -224,15 +269,25 @@
   </thead>
   <tbody>
   {% for f in feature_rows %}
-    <tr>
+    <tr
+      data-lib="{{ f.library }}"
+      data-only="{{ 'gaps ' if f.clear_gap }}{{ 'unused ' if not f.present }}{{ 'low-count' if f.low_count }}"
+      data-name="{{ f.name|lower }}"
+      data-library="{{ f.library|lower }}"
+      data-search="{{ (f.name + ' ' + f.library)|lower }}"
+    >
       <td>
         {{ f.name }}
         {% if f.low_count %}<span class="low-count" title="Fewer than 5 charms detected with this feature across the whole corpus — the detector may be too strict. Add `expected_rare: true` in features.yaml to suppress.">⚠ low-count</span>{% endif %}
       </td>
       <td class="lib-{{ f.library }}">{{ f.library }}</td>
-      <td class="num ok">{{ f.present }}</td>
+      <td class="num ok">
+        <a class="xlink" href="?charm.feat=has:{{ f.name|urlencode }}#charm-view"
+           title="List the charms that have this feature">{{ f.present }}</a>
+      </td>
       <td class="num{% if f.clear_gap %} gap{% endif %}">
-        {{ f.clear_gap }}
+        <a class="xlink" href="?charm.feat=gap:{{ f.name|urlencode }}#charm-view"
+           title="List the charms with a clear gap on this feature">{{ f.clear_gap }}</a>
         {% if f.clear_gap_ai %}<span class="ai-badge" title="{{ f.clear_gap_ai }} of these were escalated from worth-considering by the LLM scoring pass">AI&nbsp;{{ f.clear_gap_ai }}</span>{% endif %}
       </td>
       <td class="num{% if f.worth %} worth{% endif %}">{{ f.worth }}</td>
@@ -258,43 +313,60 @@
   {% endfor %}
   </tbody>
 </table>
+<p class="empty-state" data-empty-for="feature-table" hidden>No features match these filters.</p>
 
 <h2 id="charm-view">By charm</h2>
 
-<div class="filters" id="charm-filters">
+<div class="filters" data-filter-bar="charm-table">
   <span class="label">Arch:</span>
-  <div class="group" data-filter-group="arch">
-    <button class="active" data-arch="">all</button>
-    <button data-arch="delta">delta</button>
-    <button data-arch="part-reconcile">part-reconcile</button>
-    <button data-arch="unconditional-init">unconditional-init</button>
-    <button data-arch="reconcile">reconcile</button>
-    <button data-arch="reconcile-all">reconcile-all</button>
-    <button data-arch="component-graph">component-graph</button>
-    <button data-arch="reactive">reactive</button>
-    <button data-arch="legacy-classic">legacy-classic</button>
+  <div class="group" data-multi="arch">
+    <button class="active" data-value="">all</button>
+    {% for a, n in facets.architectures %}<button data-value="{{ a }}" title="{{ n }} charm{{ '' if n == 1 else 's' }}">{{ a }}</button>{% endfor %}
   </div>
   <span class="label">Shape:</span>
-  <div class="group" data-filter-group="shape">
-    <button class="active" data-shape="">any</button>
-    <button data-shape="k8s">k8s</button>
-    <button data-shape="machine">machine</button>
+  <div class="group" data-single="shape">
+    <button class="active" data-value="">any</button>
+    <button data-value="k8s">k8s</button>
+    <button data-value="machine">machine</button>
   </div>
   <span class="label">Status:</span>
-  <div class="group" data-filter-group="status">
-    <button class="active" data-status="">any</button>
-    <button data-status="has-gaps">has clear-gap</button>
-    <button data-status="clean">no clear-gap</button>
+  <div class="group" data-single="status">
+    <button class="active" data-value="">any</button>
+    <button data-value="has-gaps">has clear-gap</button>
+    <button data-value="clean">no clear-gap</button>
   </div>
-  <input type="search" id="charm-search" placeholder="search charm / team / repo…" autocomplete="off">
-  <span class="label">Has feature:</span>
-  <input list="charm-feature-list" id="charm-feature-input"
+  <span class="label">Flags:</span>
+  <div class="group" data-multi="flags" data-match="all">
+    <button data-value="lib-provider">lib provider</button>
+    <button data-value="subordinate">subordinate</button>
+    <button data-value="workload-less">workload-less</button>
+    <button data-value="terraform">terraform</button>
+  </div>
+  <select data-select="team" data-exact title="Filter by owning team">
+    <option value="">every team</option>
+    {% for t in facets.teams %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+  </select>
+  <select data-select="tooling" title="Filter by test / lint tooling detected in the repo">
+    <option value="">any tooling</option>
+    {% for t in facets.tooling %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+  </select>
+  <input type="search" data-search-input
+         placeholder="search charm / team / repo / stack…"
+         title="Terms are ANDed. Prefix with - to exclude, quote phrases, and target a field with charm: team: repo: stack: arch: flag: feature: gap:"
+         autocomplete="off">
+  <select data-feature-mode title="How the feature chips below are matched">
+    <option value="has">has feature</option>
+    <option value="lacks">lacks feature</option>
+    <option value="gap">clear-gap on</option>
+  </select>
+  <input list="charm-feature-list" data-feature-input
          placeholder="add feature…" autocomplete="off">
   <datalist id="charm-feature-list">
     {% for f in features %}<option value="{{ f.name }}">{% endfor %}
   </datalist>
-  <div class="feature-chips" id="charm-feature-chips"></div>
-  <span class="visible-count" id="charm-visible-count"></span>
+  <div class="feature-chips" data-feature-chips></div>
+  <button type="button" class="clear-all" data-clear>clear all</button>
+  <span class="visible-count" data-count></span>
 </div>
 
 <table id="charm-table">
@@ -316,8 +388,15 @@
       data-arch="{{ c.architecture|join(' ') }}"
       data-shape="{{ 'k8s' if c.k8s else 'machine' }}"
       data-status="{{ 'has-gaps' if c.clear_gap else 'clean' }}"
+      data-flags="{{ c.flags|join(' ') }}"
+      data-team="{{ c.team or '(no team)' }}"
+      data-tooling="{{ c.tooling|join(' ') }}"
       data-features="{{ c.present_features|join(' ') }}"
-      data-search="{{ (c.name + ' ' + c.team + ' ' + c.repo_url)|lower }}"
+      data-gaps="{{ c.gap_features|join(' ') }}"
+      data-name="{{ c.name|lower }}"
+      data-repo="{{ c.repo_url|lower }}"
+      data-stack="{{ c.stack_text|lower }}"
+      data-search="{{ (c.name + ' ' + c.team + ' ' + c.repo_url + ' ' + c.stack_text + ' ' + c.architecture|join(' ') + ' ' + c.flags|join(' '))|lower }}"
     >
       <td><a href="{{ c.repo_url }}">{{ c.name }}</a></td>
       <td>{{ c.team }}</td>
@@ -350,6 +429,7 @@
   {% endfor %}
   </tbody>
 </table>
+<p class="empty-state" data-empty-for="charm-table" hidden>No charms match these filters.</p>
 
 <h2 id="team-view">By team</h2>
 <p class="meta" style="margin-top:-1em">
@@ -357,6 +437,19 @@
   Avg gap = clear-gap labels per charm, a rough "how much migration work
   is in this team's queue" signal that controls for team size.
 </p>
+
+<div class="filters" data-filter-bar="team-table">
+  <span class="label">Only:</span>
+  <div class="group" data-multi="only" data-match="all">
+    <button data-value="gaps" title="Teams with at least one clear-gap finding">with clear gaps</button>
+  </div>
+  <input type="search" data-search-input placeholder="search team…"
+         title="Terms are ANDed. Prefix with - to exclude, use team: or gap: to target a field."
+         autocomplete="off">
+  <button type="button" class="clear-all" data-clear>clear</button>
+  <span class="visible-count" data-count></span>
+</div>
+
 <table id="team-table">
   <thead>
     <tr>
@@ -372,8 +465,16 @@
   </thead>
   <tbody>
   {% for t in team_rows %}
-    <tr>
-      <td><strong>{{ t.team }}</strong></td>
+    <tr
+      data-only="{{ 'gaps' if t.clear_gap }}"
+      data-team="{{ t.team|lower }}"
+      data-gaps="{{ t.top_gaps|map(attribute='0')|join(' ')|lower }}"
+      data-search="{{ (t.team + ' ' + t.top_gaps|map(attribute='0')|join(' '))|lower }}"
+    >
+      <td>
+        <strong><a class="xlink" href="?charm.team={{ t.team|urlencode }}#charm-view"
+                   title="List this team's charms">{{ t.team }}</a></strong>
+      </td>
       <td class="num">{{ t.charms }}</td>
       <td class="num ok">{{ t.present }}</td>
       <td class="num{% if t.clear_gap %} gap{% endif %}">{{ t.clear_gap }}</td>
@@ -393,6 +494,7 @@
   {% endfor %}
   </tbody>
 </table>
+<p class="empty-state" data-empty-for="team-table" hidden>No teams match these filters.</p>
 
 {% if pairs %}
 <h2 id="pairs-view">k8s/machine pairs</h2>
@@ -457,129 +559,401 @@
 </details>
 
 <script>
-// Charm-view filter bar. Three independent radio-style filter groups
-// (arch / shape / status). A row is visible iff it matches the active
-// pick in every group; the empty pick means "no filter for this group".
+// Filter + sort machinery for the dashboard's tables.
+//
+// Filter bars are declared in markup: `data-filter-bar="<table id>"` on the
+// bar, and controls inside it carrying `data-multi` / `data-single` (button
+// groups), `data-select`, `data-search-input` or `data-feature-input`. A row
+// is visible iff it satisfies every control.
+//
+// The whole state — filters and sort, for all tables — round-trips through
+// the query string (`charm.arch=reconcile&charm.q=team:observability`), so a
+// filtered view can be linked and the Back button steps through it. Query
+// string rather than the hash, because the hash is already the nav anchors.
 (function () {
-  const bar = document.getElementById('charm-filters');
-  if (!bar) return;
-  const table = document.getElementById('charm-table');
-  const rows  = Array.from(table.tBodies[0].rows);
-  const countEl = document.getElementById('charm-visible-count');
-  const searchEl = document.getElementById('charm-search');
-  const featureInput = document.getElementById('charm-feature-input');
-  const featureChipsEl = document.getElementById('charm-feature-chips');
-  const featureList = document.getElementById('charm-feature-list');
-  const featureNames = new Set(
-    Array.from(featureList ? featureList.options : []).map(o => o.value)
-  );
-  const state = { arch: '', shape: '', status: '', search: '', features: [] };
+  'use strict';
 
-  function apply() {
-    let visible = 0;
-    const q = state.search;
-    rows.forEach(r => {
-      const archMatch   = !state.arch   || (r.dataset.arch || '').split(' ').includes(state.arch);
-      const shapeMatch  = !state.shape  || r.dataset.shape === state.shape;
-      const statusMatch = !state.status || r.dataset.status === state.status;
-      const searchMatch = !q || (r.dataset.search || '').includes(q);
-      let featureMatch = true;
-      if (state.features.length) {
-        const present = new Set((r.dataset.features || '').split(' ').filter(Boolean));
-        featureMatch = state.features.every(f => present.has(f));
+  // Fields the search box can target with `field:value`, per table, mapped
+  // to the data- attribute holding that field. Unknown prefixes are treated
+  // as literal text so `ops.pebble:foo` doesn't silently match everything.
+  const SEARCH_FIELDS = {
+    charm: {
+      charm: 'name', name: 'name', team: 'team', repo: 'repo', stack: 'stack',
+      arch: 'arch', flag: 'flags', feature: 'features', gap: 'gaps',
+    },
+    feature: {feature: 'name', name: 'name', lib: 'library', library: 'library'},
+    team: {team: 'team', gap: 'gaps'},
+  };
+  const FEATURE_MODES = ['has', 'lacks', 'gap'];
+
+  // ── URL state ──────────────────────────────────────────────────────────
+  const syncers = [];
+
+  function urlGet(key) {
+    return new URLSearchParams(location.search).get(key) || '';
+  }
+
+  function urlSet(updates, push) {
+    const p = new URLSearchParams(location.search);
+    Object.keys(updates).forEach(function (k) {
+      if (updates[k]) p.set(k, updates[k]);
+      else p.delete(k);
+    });
+    const qs = p.toString();
+    const url = location.pathname + (qs ? '?' + qs : '') + location.hash;
+    // Discrete clicks push, so Back steps through them; typing replaces,
+    // otherwise every keystroke would land its own history entry.
+    history[push ? 'pushState' : 'replaceState'](null, '', url);
+  }
+
+  window.addEventListener('popstate', function () {
+    syncers.forEach(function (fn) { fn(); });
+  });
+
+  // ── search query parsing ───────────────────────────────────────────────
+  // `foo -bar team:"data platform"` → three ANDed terms, one negated, one
+  // restricted to a single field.
+  function tokenize(text) {
+    const out = [];
+    let tok = '';
+    let quoted = false;
+    for (const ch of text) {
+      if (ch === '"') { quoted = !quoted; continue; }
+      if (!quoted && /\s/.test(ch)) {
+        if (tok) out.push(tok);
+        tok = '';
+        continue;
       }
-      const show = archMatch && shapeMatch && statusMatch && searchMatch && featureMatch;
-      r.classList.toggle('hidden', !show);
-      if (show) visible++;
-    });
-    countEl.textContent = `${visible} / ${rows.length} shown`;
+      tok += ch;
+    }
+    if (tok) out.push(tok);
+    return out;
   }
 
-  function renderFeatureChips() {
-    if (!featureChipsEl) return;
-    featureChipsEl.innerHTML = '';
-    state.features.forEach(name => {
-      const chip = document.createElement('span');
-      chip.className = 'feature-chip';
-      chip.textContent = name;
-      const x = document.createElement('button');
-      x.type = 'button';
-      x.textContent = '×';
-      x.title = `remove ${name}`;
-      x.addEventListener('click', () => {
-        state.features = state.features.filter(f => f !== name);
-        renderFeatureChips();
-        apply();
+  function parseQuery(text, fields) {
+    return tokenize(text.toLowerCase()).map(function (raw) {
+      let tok = raw;
+      let negate = false;
+      if (tok.length > 1 && tok[0] === '-') { negate = true; tok = tok.slice(1); }
+      let key = null;
+      const colon = tok.indexOf(':');
+      if (colon > 0 && fields[tok.slice(0, colon)]) {
+        key = fields[tok.slice(0, colon)];
+        tok = tok.slice(colon + 1);
+      }
+      return {key: key, needle: tok, negate: negate};
+    }).filter(function (t) { return t.needle; });
+  }
+
+  function queryMatches(terms, row) {
+    return terms.every(function (t) {
+      const hay = (row.dataset[t.key || 'search'] || '').toLowerCase();
+      return hay.includes(t.needle) !== t.negate;
+    });
+  }
+
+  function tokens(row, key) {
+    return (row.dataset[key] || '').split(' ').filter(Boolean);
+  }
+
+  // ── filter bars ────────────────────────────────────────────────────────
+  function setupBar(bar) {
+    const table = document.getElementById(bar.dataset.filterBar);
+    if (!table || !table.tBodies.length) return;
+    const rows = Array.from(table.tBodies[0].rows);
+    const prefix = table.id.replace(/-table$/, '');
+    const fields = SEARCH_FIELDS[prefix] || {};
+    const countEl = bar.querySelector('[data-count]');
+    const emptyEl = document.querySelector('[data-empty-for="' + table.id + '"]');
+    const searchEl = bar.querySelector('[data-search-input]');
+    const clearEl = bar.querySelector('[data-clear]');
+    const featureInput = bar.querySelector('[data-feature-input]');
+    const featureMode = bar.querySelector('[data-feature-mode]');
+    const chipsEl = bar.querySelector('[data-feature-chips]');
+    const datalist = featureInput && document.getElementById(featureInput.getAttribute('list'));
+    const featureNames = new Set(datalist ? Array.from(datalist.options).map(function (o) { return o.value; }) : []);
+
+    // `data-multi` groups OR their picks together (any arch), unless
+    // `data-match="all"` makes them AND (every flag). `data-single` groups
+    // are radio-style; the empty-valued button in each group means "no
+    // filter for this group".
+    const groups = Array.from(bar.querySelectorAll('.group')).map(function (el) {
+      return {
+        el: el,
+        key: el.dataset.multi || el.dataset.single,
+        multi: Boolean(el.dataset.multi),
+        all: el.dataset.match === 'all',
+        values: [],
+      };
+    });
+    const selects = Array.from(bar.querySelectorAll('[data-select]'));
+    const state = {search: '', terms: [], features: []};
+
+    function param(key) { return prefix + '.' + key; }
+
+    function matches(row) {
+      for (const g of groups) {
+        if (!g.values.length) continue;
+        const have = tokens(row, g.key);
+        const ok = g.multi && !g.all
+          ? g.values.some(function (v) { return have.includes(v); })
+          : g.values.every(function (v) { return have.includes(v); });
+        if (!ok) return false;
+      }
+      for (const sel of selects) {
+        if (!sel.value) continue;
+        const raw = row.dataset[sel.dataset.select] || '';
+        const ok = sel.hasAttribute('data-exact') ? raw === sel.value : tokens(row, sel.dataset.select).includes(sel.value);
+        if (!ok) return false;
+      }
+      for (const f of state.features) {
+        const present = tokens(row, 'features').includes(f.name);
+        if (f.mode === 'has' && !present) return false;
+        if (f.mode === 'lacks' && present) return false;
+        if (f.mode === 'gap' && !tokens(row, 'gaps').includes(f.name)) return false;
+      }
+      return queryMatches(state.terms, row);
+    }
+
+    function apply() {
+      let visible = 0;
+      rows.forEach(function (r) {
+        const show = matches(r);
+        r.classList.toggle('hidden', !show);
+        if (show) visible++;
       });
-      chip.appendChild(x);
-      featureChipsEl.appendChild(chip);
-    });
-  }
+      const filtered = visible !== rows.length;
+      if (countEl) {
+        countEl.textContent = filtered
+          ? visible + ' / ' + rows.length + ' shown'
+          : rows.length + ' rows';
+        countEl.classList.toggle('filtered', filtered);
+      }
+      if (emptyEl) emptyEl.hidden = visible !== 0;
+      table.classList.toggle('all-hidden', visible === 0);
+    }
 
-  function addFeature(name) {
-    name = (name || '').trim();
-    if (!name || !featureNames.has(name)) return false;
-    if (state.features.includes(name)) return false;
-    state.features.push(name);
-    renderFeatureChips();
-    apply();
-    return true;
-  }
+    function paintGroup(g) {
+      g.el.querySelectorAll('button').forEach(function (btn) {
+        const v = btn.dataset.value || '';
+        btn.classList.toggle('active', v ? g.values.includes(v) : !g.values.length);
+      });
+    }
 
-  if (featureInput) {
-    featureInput.addEventListener('change', () => {
-      if (addFeature(featureInput.value)) featureInput.value = '';
+    function paintSelect(sel) {
+      sel.classList.toggle('set', Boolean(sel.value));
+    }
+
+    function renderChips() {
+      if (!chipsEl) return;
+      chipsEl.textContent = '';
+      state.features.forEach(function (f) {
+        const chip = document.createElement('span');
+        chip.className = 'feature-chip feature-chip-' + f.mode;
+        if (f.mode !== 'has') {
+          const mode = document.createElement('span');
+          mode.className = 'mode';
+          mode.textContent = f.mode === 'lacks' ? 'lacks ' : 'gap ';
+          chip.appendChild(mode);
+        }
+        chip.appendChild(document.createTextNode(f.name));
+        const x = document.createElement('button');
+        x.type = 'button';
+        x.textContent = '×';
+        x.title = 'remove ' + f.name;
+        x.addEventListener('click', function () {
+          state.features = state.features.filter(function (o) {
+            return !(o.name === f.name && o.mode === f.mode);
+          });
+          renderChips();
+          apply();
+          writeUrl(true);
+        });
+        chip.appendChild(x);
+        chipsEl.appendChild(chip);
+      });
+    }
+
+    function addFeature(name) {
+      name = (name || '').trim();
+      const mode = featureMode ? featureMode.value : 'has';
+      if (!name || !featureNames.has(name)) return false;
+      const dupe = state.features.some(function (f) {
+        return f.name === name && f.mode === mode;
+      });
+      if (dupe) return false;
+      state.features.push({name: name, mode: mode});
+      renderChips();
+      apply();
+      writeUrl(true);
+      return true;
+    }
+
+    function writeUrl(push) {
+      const updates = {};
+      groups.forEach(function (g) { updates[param(g.key)] = g.values.join(','); });
+      selects.forEach(function (s) { updates[param(s.dataset.select)] = s.value; });
+      updates[param('q')] = state.search;
+      updates[param('feat')] = state.features.map(function (f) {
+        return f.mode + ':' + f.name;
+      }).join(',');
+      urlSet(updates, push);
+    }
+
+    function readUrl() {
+      groups.forEach(function (g) {
+        const raw = urlGet(param(g.key));
+        g.values = raw ? raw.split(',').filter(Boolean) : [];
+        if (!g.multi) g.values = g.values.slice(0, 1);
+        paintGroup(g);
+      });
+      selects.forEach(function (s) {
+        const want = urlGet(param(s.dataset.select));
+        s.value = want;
+        if (s.selectedIndex < 0) s.value = '';
+        paintSelect(s);
+      });
+      state.search = urlGet(param('q'));
+      state.terms = parseQuery(state.search, fields);
+      if (searchEl) searchEl.value = state.search;
+      state.features = urlGet(param('feat')).split(',').filter(Boolean).map(function (spec) {
+        const colon = spec.indexOf(':');
+        const mode = colon > 0 ? spec.slice(0, colon) : 'has';
+        return {
+          name: colon > 0 ? spec.slice(colon + 1) : spec,
+          mode: FEATURE_MODES.includes(mode) ? mode : 'has',
+        };
+      }).filter(function (f) { return featureNames.has(f.name); });
+      renderChips();
+      apply();
+    }
+
+    groups.forEach(function (g) {
+      g.el.querySelectorAll('button').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          const v = btn.dataset.value || '';
+          if (!v) g.values = [];
+          else if (!g.multi) g.values = [v];
+          else if (g.values.includes(v)) g.values = g.values.filter(function (x) { return x !== v; });
+          else g.values = g.values.concat([v]);
+          paintGroup(g);
+          apply();
+          writeUrl(true);
+        });
+      });
     });
-    featureInput.addEventListener('keydown', e => {
-      if (e.key === 'Enter') {
+
+    selects.forEach(function (sel) {
+      sel.addEventListener('change', function () {
+        paintSelect(sel);
+        apply();
+        writeUrl(true);
+      });
+    });
+
+    if (searchEl) {
+      searchEl.addEventListener('input', function () {
+        state.search = searchEl.value.trim();
+        state.terms = parseQuery(state.search, fields);
+        apply();
+        writeUrl(false);
+      });
+      // Enter / blur closes off an edit: give it its own history entry.
+      searchEl.addEventListener('change', function () { writeUrl(true); });
+    }
+
+    if (featureInput) {
+      featureInput.addEventListener('change', function () {
+        if (addFeature(featureInput.value)) featureInput.value = '';
+      });
+      featureInput.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter') return;
         e.preventDefault();
         if (addFeature(featureInput.value)) featureInput.value = '';
-      }
-    });
-  }
-
-  bar.querySelectorAll('.group').forEach(group => {
-    const key = group.dataset.filterGroup;
-    group.querySelectorAll('button').forEach(btn => {
-      btn.addEventListener('click', () => {
-        state[key] = btn.dataset[key] || '';
-        group.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        apply();
       });
-    });
-  });
-  if (searchEl) {
-    searchEl.addEventListener('input', () => {
-      state.search = searchEl.value.trim().toLowerCase();
-      apply();
-    });
-  }
-  apply();
-})();
+    }
 
-// Tiny column sorter. Click a th to sort by that column, click again to reverse.
-document.querySelectorAll('table').forEach(table => {
-  const ths = table.querySelectorAll('th[data-sort]');
-  ths.forEach((th, idx) => {
-    th.addEventListener('click', () => {
-      const tbody = table.tBodies[0];
-      const rows = Array.from(tbody.querySelectorAll('tr'));
+    if (clearEl) {
+      clearEl.addEventListener('click', function () {
+        groups.forEach(function (g) { g.values = []; paintGroup(g); });
+        selects.forEach(function (s) { s.value = ''; paintSelect(s); });
+        state.search = '';
+        state.terms = [];
+        state.features = [];
+        if (searchEl) searchEl.value = '';
+        if (featureInput) featureInput.value = '';
+        renderChips();
+        apply();
+        writeUrl(true);
+      });
+    }
+
+    syncers.push(readUrl);
+    readUrl();
+  }
+
+  document.querySelectorAll('[data-filter-bar]').forEach(setupBar);
+
+  // ── column sorting ─────────────────────────────────────────────────────
+  // Click a th to sort by that column, click again to reverse. The pick is
+  // kept in the URL alongside the filters (`charm.sort=5:desc`).
+  document.querySelectorAll('table').forEach(function (table) {
+    const ths = Array.from(table.querySelectorAll('th[data-sort]'));
+    if (!ths.length || !table.tBodies.length) return;
+    const tbody = table.tBodies[0];
+    const original = Array.from(tbody.rows);
+    const key = (table.id || '').replace(/-table$/, '') + '.sort';
+
+    function paint(th, asc) {
+      ths.forEach(function (t) { t.classList.remove('sorted-asc', 'sorted-desc'); });
+      if (th) th.classList.add(asc ? 'sorted-asc' : 'sorted-desc');
+    }
+
+    function sortBy(th, asc) {
+      const idx = th.cellIndex;
       const type = th.dataset.sort;
-      const asc = !th.classList.contains('sorted-asc');
-      ths.forEach(t => t.classList.remove('sorted-asc', 'sorted-desc'));
-      th.classList.add(asc ? 'sorted-asc' : 'sorted-desc');
-      rows.sort((a, b) => {
+      const rows = Array.from(tbody.rows);
+      rows.sort(function (a, b) {
         const av = a.cells[idx].textContent.trim();
         const bv = b.cells[idx].textContent.trim();
         if (type === 'num') return (parseFloat(av) || 0) - (parseFloat(bv) || 0);
         return av.localeCompare(bv);
       });
       if (!asc) rows.reverse();
-      rows.forEach(r => tbody.appendChild(r));
+      rows.forEach(function (r) { tbody.appendChild(r); });
+      paint(th, asc);
+    }
+
+    function readUrl() {
+      const raw = table.id ? urlGet(key) : '';
+      const parts = raw.split(':');
+      const th = ths.filter(function (t) { return String(t.cellIndex) === parts[0]; })[0];
+      if (!th) {
+        original.forEach(function (r) { tbody.appendChild(r); });
+        paint(null, true);
+        return;
+      }
+      sortBy(th, parts[1] !== 'desc');
+    }
+
+    ths.forEach(function (th) {
+      th.addEventListener('click', function () {
+        const asc = !th.classList.contains('sorted-asc');
+        sortBy(th, asc);
+        if (table.id) {
+          const updates = {};
+          updates[key] = th.cellIndex + ':' + (asc ? 'asc' : 'desc');
+          urlSet(updates, true);
+        }
+      });
     });
+
+    if (table.id) {
+      syncers.push(readUrl);
+      readUrl();
+    }
   });
-});
+})();
 </script>
 
 </body>

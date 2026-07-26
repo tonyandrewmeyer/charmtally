@@ -26,17 +26,31 @@ def _empty_meta() -> dict:
     }
 
 
-def _charm(name: str, *, present_features: set[str], all_features: list[str]) -> dict:
+def _charm(
+    name: str,
+    *,
+    present_features: set[str],
+    all_features: list[str],
+    team: str = "team-a",
+    gaps: set[str] = frozenset(),  # type: ignore[assignment]
+    meta: dict | None = None,
+) -> dict:
     feats: dict[str, dict] = {}
     for fname in all_features:
+        if fname in present_features:
+            score = "present"
+        elif fname in gaps:
+            score = "clear-gap"
+        else:
+            score = "not-applicable"
         feats[fname] = {
             "present": fname in present_features,
             "evidence": [],
-            "score": "present" if fname in present_features else "not-applicable",
+            "score": score,
             "rationale": "",
         }
-    feats["__meta__"] = _empty_meta()
-    return {"name": name, "team": "team-a", "repo_url": f"https://x/{name}", "features": feats}
+    feats["__meta__"] = {**_empty_meta(), **(meta or {})}
+    return {"name": name, "team": team, "repo_url": f"https://x/{name}", "features": feats}
 
 
 def _feature(name: str, *, expected_rare: bool = False) -> Feature:
@@ -113,6 +127,87 @@ def test_pairs_view_renders_when_pairs_passed() -> None:
     assert "shared lib" in html
 
 
+# ── filter bars ──────────────────────────────────────────────────────────────
+#
+# The bars are driven entirely by markup the JS reads back — `data-filter-bar`
+# on the bar, facet-derived buttons/options, and one data- attribute per
+# filterable axis on each row. These assert the contract between the two
+# halves; the behaviour on top of it is plain DOM code.
+
+
+def test_charm_rows_carry_every_filterable_axis() -> None:
+    feats = [_feature("f1"), _feature("f2")]
+    charm = _charm(
+        "sub-charm",
+        present_features={"f1"},
+        gaps={"f2"},
+        all_features=["f1", "f2"],
+        team="Data Platform",
+        meta={
+            "is_subordinate": True,
+            "provides_own_library": True,
+            "has_containers": True,
+            "charmcraft_plugins": ["charm"],
+            "bases": ["24.04"],
+            "tooling": ["tox"],
+        },
+    )
+    html = render({"sub-charm": charm}, feats)
+
+    assert 'data-flags="lib-provider subordinate"' in html
+    assert 'data-team="Data Platform"' in html
+    assert 'data-tooling="tox"' in html
+    assert 'data-features="f1"' in html
+    assert 'data-gaps="f2"' in html
+    assert 'data-shape="k8s"' in html
+    assert 'data-status="has-gaps"' in html
+    # `stack:` search matches plugin / base / tooling text, not just the name.
+    assert 'data-stack="k8s charm 24.04 tox"' in html
+
+
+def test_filter_facets_are_populated_from_the_corpus() -> None:
+    feats = [_feature("f1")]
+    charms = [
+        _charm("a", present_features={"f1"}, all_features=["f1"], team="Observability", meta={"tooling": ["tox"]}),
+        _charm("b", present_features=set(), all_features=["f1"], team="", meta={"tooling": ["just"]}),
+    ]
+    html = render({c["name"]: c for c in charms}, feats)
+
+    assert '<option value="Observability">' in html
+    assert '<option value="(no team)">' in html  # charms with no owner stay filterable
+    assert '<option value="tox">' in html
+    assert '<option value="just">' in html
+    # The architecture taxonomy is fixed, not corpus-derived: a bucket with no
+    # charms this week still gets a button so the bar doesn't shift about.
+    assert '<button data-value="reconcile-all"' in html
+    assert '<button data-value="component-graph"' in html
+
+
+def test_feature_and_team_rows_carry_filter_attributes() -> None:
+    feats = [_feature("used"), _feature("unused")]
+    charms = [
+        _charm("a", present_features={"used"}, gaps={"unused"}, all_features=["used", "unused"]),
+    ]
+    html = render({c["name"]: c for c in charms}, feats)
+
+    assert 'data-filter-bar="feature-table"' in html
+    assert 'data-filter-bar="charm-table"' in html
+    assert 'data-filter-bar="team-table"' in html
+    # `unused` is held by nobody and is a clear gap for charm a.
+    assert 'data-only="gaps unused' in html
+
+
+def test_summary_and_rollups_link_into_the_filtered_charm_view() -> None:
+    feats = [_feature("f1")]
+    charms = [_charm("a", present_features={"f1"}, all_features=["f1"], team="Data Platform")]
+    html = render({c["name"]: c for c in charms}, feats)
+
+    assert 'href="?charm.shape=k8s#charm-view"' in html
+    assert 'href="?charm.feat=has:f1#charm-view"' in html
+    assert 'href="?charm.feat=gap:f1#charm-view"' in html
+    assert 'href="?charm.team=Data%20Platform#charm-view"' in html
+
+
 # ── autoescaping ─────────────────────────────────────────────────────────────
 
 
@@ -135,3 +230,14 @@ def test_charm_supplied_strings_are_escaped() -> None:
     assert "&lt;script&gt;alert(1)&lt;/script&gt;" in html
     assert "<img src=x onerror=alert(1)>" not in html
     assert 'onmouseover="alert(1)' not in html
+
+
+def test_filter_data_attributes_are_escaped() -> None:
+    """Team names reach the page as data- attribute values and as <option>
+    values in the team picker; both come from the hyrum CSV."""
+    feats = [_feature("f1")]
+    charm = _charm("c1", present_features={"f1"}, all_features=["f1"], team='x" onmouseover="alert(1)')
+    html = render({"c1": charm}, feats)
+
+    assert 'onmouseover="alert(1)' not in html
+    assert "&#34; onmouseover=&#34;alert(1)" in html

@@ -4,6 +4,12 @@ Two tables (PLAN.md §D):
   - Feature view: row per feature, with counts + linkable exemplars.
   - Charm view:   row per charm, with totals + the list of clear-gap features.
 
+Each table has a filter bar. The template's JS is generic — it reads the
+axes off `data-` attributes on the rows and builds the controls from the
+`facets` mapping rendered here — so anything that should be filterable has
+to be emitted as a row attribute (see `dashboard.html.j2`), and the filter
+state round-trips through the query string so a view can be linked.
+
 Evidence-to-GitHub links are derived from the corpus `repo_url` plus the
 charm-relative file path captured at scan time, against the `main` ref.
 Scans now record the commit they ran at as `__meta__.repo_sha`, so these
@@ -213,6 +219,18 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
                 worth += 1
         m = c["features"].get("__meta__", {})
         architecture = list(m.get("architecture") or [])
+        # Boolean facts as filter-bar slugs. The dashboard turns these into
+        # AND-able toggle buttons and makes them searchable as `flag:`.
+        flags = [
+            slug
+            for slug, on in (
+                ("lib-provider", m.get("provides_own_library")),
+                ("subordinate", m.get("is_subordinate")),
+                ("workload-less", m.get("is_workload_less")),
+                ("terraform", m.get("has_terraform_module")),
+            )
+            if on
+        ]
         if m.get("is_reactive"):
             arch_labels = ["reactive"]
         elif m.get("is_legacy_classic"):
@@ -221,6 +239,18 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
             arch_labels = architecture
         else:
             arch_labels = ["delta"]  # implicit default
+        plugins = list(m.get("charmcraft_plugins") or [])
+        bases = list(m.get("bases") or [])
+        tooling = list(m.get("tooling") or [])
+        # Free-text blob behind the search box's `stack:` field.
+        stack_text = " ".join([
+            "k8s" if m.get("has_containers") else "machine",
+            *plugins,
+            *bases,
+            *tooling,
+            f"juju {m['min_juju_version']}" if m.get("min_juju_version") else "",
+            "terraform" if m.get("has_terraform_module") else "",
+        ]).strip()
         charm_rows.append({
             "name": c["name"],
             "team": c.get("team", ""),
@@ -231,7 +261,9 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
             "worth": worth,
             "gaps": gaps,
             "present_features": present_features,
+            "gap_features": [g["feature"] for g in gaps],
             "architecture": arch_labels,
+            "flags": flags,
             "k8s": m.get("has_containers", False),
             "is_reactive": m.get("is_reactive", False),
             "is_subordinate": m.get("is_subordinate", False),
@@ -240,10 +272,11 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
             "provides_own_library": m.get("provides_own_library", False),
             "has_terraform_module": m.get("has_terraform_module", False),
             "library_count": m.get("library_count", 0),
-            "plugins": list(m.get("charmcraft_plugins") or []),
-            "bases": list(m.get("bases") or []),
+            "plugins": plugins,
+            "bases": bases,
             "min_juju": m.get("min_juju_version"),
-            "tooling": list(m.get("tooling") or []),
+            "tooling": tooling,
+            "stack_text": stack_text,
         })
 
     # Team rollup: one row per team aggregating per-charm stats. Mirrors the
@@ -340,6 +373,19 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
         "bases": sorted(base_dist.items(), key=lambda kv: -kv[1])[:6],
     }
 
+    # Facet values for the filter bars. Derived here rather than with
+    # map/unique chains in the template so the option lists are sorted and
+    # deduplicated once, in code that can be tested.
+    facets = {
+        "teams": sorted({r["team"] or "(no team)" for r in charm_rows}, key=str.lower),
+        "libraries": sorted({r["library"] for r in feature_rows}),
+        "tooling": sorted({t for r in charm_rows for t in r["tooling"]}),
+        # The full taxonomy, not just the buckets that are currently
+        # populated — the filter bar should stay stable week to week, and a
+        # bucket with 0 charms is itself worth being able to check for.
+        "architectures": [(a, arch_dist.get(a, 0)) for a in _ARCH_PRIORITY],
+    }
+
     # Evidence log (all clear-gap findings, flattened).
     evidence_log: list[dict[str, Any]] = []
     for c in charms:
@@ -363,6 +409,7 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
         team_rows=team_rows,
         evidence_log=evidence_log,
         summary=summary,
+        facets=facets,
         pairs=pairs or [],
         generated_at=dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
     )
