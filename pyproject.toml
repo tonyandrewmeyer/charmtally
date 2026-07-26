@@ -37,6 +37,7 @@ charmtally = "charmtally.cli:main"
 [dependency-groups]
 dev = [
   "codespell>=2.4.3",
+  "ty>=0.0.15",
   "pre-commit>=4",
   "pytest>=9.1.1",
   "ruff>=0.15.22",
@@ -59,6 +60,14 @@ preview = true
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ty.src]
+# The package ships py.typed, so the annotations are a published interface
+# and need checking. Tests are excluded: they build partial fixtures and
+# pass deliberately-wrong values into protocols, and the noise from that
+# would drown the signal from the package itself.
+include = ["charmtally"]
+exclude = ["charmtally/tests"]
 
 [tool.codespell]
 ignore-words-list = "ths,re-uses"

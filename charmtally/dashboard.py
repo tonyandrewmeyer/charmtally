@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import datetime as dt
 from pathlib import Path
+from typing import Any
 
 import jinja2
 
@@ -101,7 +102,7 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
     arch_of_charm = {c["name"]: _primary_arch(c["features"].get("__meta__", {})) for c in charms}
 
     # Feature view rows.
-    feature_rows = []
+    feature_rows: list[dict[str, Any]] = []
     for fname in feat_names:
         present = 0
         clear_gap = 0
@@ -187,7 +188,7 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
     # row carries its architecture label, stack (plugin/base/juju/libs/tooling),
     # and k8s/reactive/lib-provider/terraform flags — surfaced as chips +
     # a compact stack cell in the rendered HTML.
-    charm_rows = []
+    charm_rows: list[dict[str, Any]] = []
     for c in charms:
         present = clear_gap = clear_gap_ai = worth = 0
         gaps = []
@@ -247,7 +248,7 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
     # questions "which team has the most gaps to migrate?" and "what's team
     # X's architectural footprint?" Counts are at the (charm × feature) level
     # for present/clear-gap/worth, and at the charm level for architecture.
-    team_acc: dict[str, dict] = {}
+    team_acc: dict[str, dict[str, Any]] = {}
     for r in charm_rows:
         team = r["team"] or "(no team)"
         bucket = team_acc.setdefault(
@@ -279,7 +280,7 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
         for g in r["gaps"]:
             bucket["gap_features"][g["feature"]] = bucket["gap_features"].get(g["feature"], 0) + 1
 
-    team_rows = []
+    team_rows: list[dict[str, Any]] = []
     for bucket in team_acc.values():
         team_rows.append({
             "team": bucket["team"],
@@ -338,7 +339,7 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
     }
 
     # Evidence log (all clear-gap findings, flattened).
-    evidence_log = []
+    evidence_log: list[dict[str, Any]] = []
     for c in charms:
         for fname in feat_names:
             rec = c["features"].get(fname, {})

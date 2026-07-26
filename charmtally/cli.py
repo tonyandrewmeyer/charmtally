@@ -161,7 +161,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
         adjusted, exclude_reason = overrides.apply(ref)
         if adjusted is None:
             print(f"… {ref.name} ({ref.repo_url}) — excluded: {exclude_reason}", file=sys.stderr)
-            skipped[ref.slug] = exclude_reason
+            skipped[ref.slug] = exclude_reason or "excluded by corpus-overrides.yaml"
             continue
         ref = adjusted
 

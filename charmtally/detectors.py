@@ -32,13 +32,16 @@ from pathlib import Path
 
 import yaml
 
+# Cross-version shim: tomllib is stdlib from 3.11, tomli is a conditional
+# dependency below that. Exactly one of these resolves on any given
+# interpreter, so a type checker pinned to either version flags the other.
 try:
-    import tomllib  # Python 3.11+ stdlib
+    import tomllib  # ty: ignore[unresolved-import]
 except ModuleNotFoundError:  # pragma: no cover — exercised only on 3.10
-    import tomli as tomllib
+    import tomli as tomllib  # ty: ignore[unresolved-import]
 
 from . import metadata as _metadata
-from .catalogue import Feature
+from .catalogue import Detectable
 
 
 @dataclass(frozen=True)
@@ -186,7 +189,7 @@ def _attr_chain(node: ast.AST) -> list[str] | None:
 # ── detector kinds ──────────────────────────────────────────────────────────────
 
 
-def _detect_import(tree: ast.Module, cfg: dict) -> Iterator[ast.AST]:
+def _detect_import(tree: ast.Module, cfg: dict) -> Iterator[ast.Import | ast.ImportFrom]:
     module = cfg["module"]
     wanted_names = set(cfg.get("names") or [])
     for node in ast.walk(tree):
@@ -212,7 +215,7 @@ def _detect_import(tree: ast.Module, cfg: dict) -> Iterator[ast.AST]:
                             break
 
 
-def _detect_call(tree: ast.Module, cfg: dict) -> Iterator[ast.AST]:
+def _detect_call(tree: ast.Module, cfg: dict) -> Iterator[ast.Call]:
     """Match calls whose attribute chain ends with the configured dotted suffix.
 
     e.g. attr = "unit.open_port" matches `self.unit.open_port(80)` and
@@ -275,7 +278,7 @@ def _self_attr_calls(method_body: list[ast.stmt], attrs: set[str]) -> Iterator[a
             yield node
 
 
-def _detect_ast_init_call(tree: ast.Module, cfg: dict) -> Iterator[ast.AST]:
+def _detect_ast_init_call(tree: ast.Module, cfg: dict) -> Iterator[ast.Call]:
     """Match charms whose __init__ body contains a `self.X(...)` call where
     X is one of `cfg["attrs"]`. Signal for the `unconditional-init` pattern:
     reconcile runs on every charm invocation by virtue of being in __init__.
@@ -402,7 +405,7 @@ def _is_baseline_lifecycle_only(events: set[str]) -> bool:
     return bool(events) and events <= _BASELINE_LIFECYCLE_EVENTS
 
 
-def _detect_ast_observe_shared_handler(tree: ast.Module, cfg: dict) -> Iterator[ast.AST]:
+def _detect_ast_observe_shared_handler(tree: ast.Module, cfg: dict) -> Iterator[ast.Call]:
     """Match the holistic `reconcile` pattern: a single handler method is
     bound to >= `min_events` distinct events via `framework.observe(...)`.
 
@@ -459,7 +462,7 @@ def _detect_ast_observe_shared_handler(tree: ast.Module, cfg: dict) -> Iterator[
         yield from per_handler_calls[handler]
 
 
-def _detect_ast_shared_method(tree: ast.Module, cfg: dict) -> Iterator[ast.AST]:
+def _detect_ast_shared_method(tree: ast.Module, cfg: dict) -> Iterator[ast.Call]:
     """Match charms with the `part-reconcile` pattern: per-event `_on_*`
     handler methods that each delegate into a shared reconcile method.
 
@@ -734,7 +737,7 @@ def _detect_relation_count(charm_root: Path, config: dict) -> list[Evidence]:
     return [Evidence(first_rel or "charmcraft.yaml", 0, "relation-count", label)]
 
 
-def detect_feature(charm_root: Path, feature: Feature, source: CharmSource | None = None) -> list[Evidence]:
+def detect_feature(charm_root: Path, feature: Detectable, source: CharmSource | None = None) -> list[Evidence]:
     """Evidence for `feature` in the charm at `charm_root`.
 
     Pass `source` to share one read-and-parse pass across every feature in
@@ -789,12 +792,12 @@ def detect_feature(charm_root: Path, feature: Feature, source: CharmSource | Non
             if det.kind == "import" and tree is not None:
                 if i in provided_lib_detectors:
                     continue
-                for node in _detect_import(tree, det.config):
-                    line = ast.get_source_segment(text, node) or ""
-                    evidence.append(Evidence(rel, node.lineno, det.kind, line.splitlines()[0][:120]))
+                for imp in _detect_import(tree, det.config):
+                    line = ast.get_source_segment(text, imp) or ""
+                    evidence.append(Evidence(rel, imp.lineno, det.kind, line.splitlines()[0][:120]))
             elif det.kind == "call" and tree is not None:
-                for node in _detect_call(tree, det.config):
-                    evidence.append(Evidence(rel, node.lineno, det.kind, src.line(node.lineno)[:120]))
+                for call in _detect_call(tree, det.config):
+                    evidence.append(Evidence(rel, call.lineno, det.kind, src.line(call.lineno)[:120]))
             elif det.kind == "observe-event":
                 for pat in observe_pats[i]:
                     for m in pat.finditer(text):

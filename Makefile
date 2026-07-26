@@ -7,9 +7,10 @@ help:  ## Show this help
 
 # Repo-wide, not just charmtally/: .github/ carries Python too, and CI now
 # runs this exact target, so anything scoped narrower would go unchecked.
-lint:  ## Lint with ruff and codespell
+lint:  ## Lint with ruff, ty and codespell
 	uv run --group dev ruff check
 	uv run --group dev ruff format --check
+	uv run --group dev ty check
 	uv run --group dev codespell .
 
 format:  ## Format and auto-fix with ruff

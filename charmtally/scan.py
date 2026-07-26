@@ -78,13 +78,14 @@ def scan_charm(
 def _detect_architecture(charm_root: Path, patterns: list[Pattern], source: CharmSource) -> list[str]:
     """Return the names of architecture patterns that match this charm.
 
-    Pattern detection re-uses the per-feature detector machinery. A pattern
-    matches if any of its detectors yields evidence — same `any` semantics
-    as features.
+    Pattern detection re-uses the per-feature detector machinery — Pattern
+    satisfies the same `catalogue.Detectable` protocol Feature does. A
+    pattern matches if any of its detectors yields evidence, the same `any`
+    semantics as features.
     """
     matched: list[str] = []
     for pat in patterns:
-        ev = detect_feature(charm_root, pat, source)  # duck-typed: needs scope + detectors
+        ev = detect_feature(charm_root, pat, source)
         if ev:
             matched.append(pat.name)
     return matched
