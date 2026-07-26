@@ -6,6 +6,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..catalogue import Detector, Feature
+from ..catalogue import load as catalogue_load
 from ..detectors import detect_feature
 
 
@@ -999,6 +1000,179 @@ def test_yaml_key_accepts_a_keys_list(tmp_path: Path) -> None:
 def test_yaml_key_without_a_key_is_a_no_op(tmp_path: Path) -> None:
     _write_yaml_charm(tmp_path, {"layer.yaml": "checks:\n  up: {}\n"})
     assert detect_feature(tmp_path, _feature("yaml-key", files=["**/*.yaml"])) == []
+
+
+# ── charm-library provider suppression ───────────────────────────────────────
+
+
+def _write_lib_charm(tmp_path: Path, *, charm_name: str, vendored: str, code: str) -> Path:
+    """A charm named `charm_name` with `lib/charms/<vendored>/` on disk."""
+    (tmp_path / "charmcraft.yaml").write_text(f"type: charm\nname: {charm_name}\n")
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "charm.py").write_text(code)
+    lib = tmp_path / "lib" / "charms" / vendored / "v0"
+    lib.mkdir(parents=True)
+    (lib / "thelib.py").write_text("LIBAPI = 0\n")
+    return tmp_path
+
+
+def test_import_fires_when_the_charm_merely_vendors_the_lib(tmp_path: Path) -> None:
+    """`charmcraft fetch-lib` vendors a CONSUMED lib into lib/charms/<pkg>/, so
+    the directory existing must not suppress the import detector."""
+    _write_lib_charm(
+        tmp_path,
+        charm_name="postgresql",
+        vendored="data_platform_libs",
+        code="from charms.data_platform_libs.v0.data_interfaces import DataPeerData\n",
+    )
+    ev = detect_feature(tmp_path, _feature("import", module="charms.data_platform_libs"))
+    assert len(ev) == 1
+    assert "data_interfaces" in ev[0].snippet
+
+
+def test_import_suppressed_when_the_charm_provides_the_lib(tmp_path: Path) -> None:
+    """grafana-agent importing charms.grafana_agent is self-referential, not a
+    consumer signal — the charm's own name identifies it as the provider."""
+    _write_lib_charm(
+        tmp_path,
+        charm_name="grafana-agent",
+        vendored="grafana_agent",
+        code="from charms.grafana_agent.v0.cos_agent import COSAgentRequirer\n",
+    )
+    assert detect_feature(tmp_path, _feature("import", module="charms.grafana_agent")) == []
+
+
+def test_import_fires_when_name_matches_but_lib_is_absent(tmp_path: Path) -> None:
+    """No lib/charms/<pkg>/ tree means the charm isn't shipping the lib, whatever
+    it happens to be called."""
+    (tmp_path / "charmcraft.yaml").write_text("type: charm\nname: rolling-ops\n")
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "charm.py").write_text("from charms.rolling_ops.v0.rollingops import RollingOpsManager\n")
+    assert len(detect_feature(tmp_path, _feature("import", module="charms.rolling_ops"))) == 1
+
+
+def test_import_suppression_ignores_non_charmlib_modules(tmp_path: Path) -> None:
+    """The provider rule only applies to charms.* modules; a charm called `ops`
+    would otherwise stop reporting its ops imports."""
+    _write_lib_charm(tmp_path, charm_name="ops", vendored="ops", code="import ops\n")
+    assert len(detect_feature(tmp_path, _feature("import", module="ops"))) == 1
+
+
+# ── committed features.yaml patterns ─────────────────────────────────────────
+#
+# These features were found detecting nothing across the whole corpus because
+# their patterns didn't match the shapes charms actually write. The bug was in
+# the catalogue, not the engine, so the tests run the committed patterns.
+
+
+def _catalogue_feature(name: str) -> Feature:
+    path = Path(__file__).resolve().parent.parent.parent / "features.yaml"
+    return next(f for f in catalogue_load(path) if f.name == name)
+
+
+def test_log_forwarding_fires_on_a_quoted_dict_key(tmp_path: Path) -> None:
+    _write_charm(
+        tmp_path,
+        """
+def layer(self):
+    return {"services": {}, "log-targets": self.pebble_log_targets}
+""",
+    )
+    ev = detect_feature(tmp_path, _catalogue_feature("pebble.log-forwarding"))
+    assert len(ev) == 1
+
+
+def test_log_forwarding_fires_on_a_dict_subscript(tmp_path: Path) -> None:
+    """Charms that build the layer up by assignment never write `log-targets:`."""
+    _write_charm(
+        tmp_path,
+        """
+def add_targets(self, layer):
+    layer["log-targets"] = {}
+""",
+    )
+    assert len(detect_feature(tmp_path, _catalogue_feature("pebble.log-forwarding"))) == 1
+
+
+def test_log_forwarding_fires_on_a_standalone_yaml_layer(tmp_path: Path) -> None:
+    _write_yaml_charm(
+        tmp_path,
+        {"src/layer.yaml": "services:\n  web:\n    command: run\nlog-targets:\n  loki:\n    type: loki\n"},
+    )
+    ev = detect_feature(tmp_path, _catalogue_feature("pebble.log-forwarding"))
+    assert [e.detector_kind for e in ev] == ["yaml-key"]
+
+
+def test_log_forwarding_fires_on_the_log_forwarder_lib(tmp_path: Path) -> None:
+    """The idiomatic route: loki_push_api's LogForwarder injects the log
+    targets into the layer, so the charm never names the key itself."""
+    _write_charm(tmp_path, "from charms.loki_k8s.v1.loki_push_api import LogForwarder\n")
+    assert len(detect_feature(tmp_path, _catalogue_feature("pebble.log-forwarding"))) == 1
+
+
+def test_log_forwarding_absent_from_a_plain_layer(tmp_path: Path) -> None:
+    _write_charm(tmp_path, 'LAYER = {"services": {"web": {"command": "run", "override": "replace"}}}\n')
+    assert detect_feature(tmp_path, _catalogue_feature("pebble.log-forwarding")) == []
+
+
+def test_restart_delay_fires_on_a_quoted_backoff_key(tmp_path: Path) -> None:
+    _write_charm(
+        tmp_path,
+        """
+LAYER = {"services": {"pgbouncer": {"backoff-delay": "24h", "backoff-factor": 1}}}
+""",
+    )
+    ev = detect_feature(tmp_path, _catalogue_feature("pebble.restart-delay"))
+    assert len(ev) == 2
+
+
+def test_restart_delay_fires_on_backoff_limit_in_yaml(tmp_path: Path) -> None:
+    _write_yaml_charm(tmp_path, {"src/layer.yaml": "services:\n  web:\n    backoff-limit: 30s\n"})
+    assert detect_feature(tmp_path, _catalogue_feature("pebble.restart-delay")) != []
+
+
+def test_restart_delay_absent_from_an_untuned_layer(tmp_path: Path) -> None:
+    _write_charm(tmp_path, 'LAYER = {"services": {"web": {"command": "run", "startup": "enabled"}}}\n')
+    assert detect_feature(tmp_path, _catalogue_feature("pebble.restart-delay")) == []
+
+
+def test_typed_relation_fires_on_load_with_the_class_first(tmp_path: Path) -> None:
+    """The API is `Relation.load(cls, src)` — data class first, then the app."""
+    _write_charm(
+        tmp_path,
+        """
+def _observer(self, event):
+    data = event.relation.load(DatabaseModel, event.app)
+""",
+    )
+    assert len(detect_feature(tmp_path, _catalogue_feature("ops.typed-relation"))) == 1
+
+
+def test_typed_relation_fires_on_save(tmp_path: Path) -> None:
+    _write_charm(
+        tmp_path,
+        """
+def publish(self):
+    relation = self.model.get_relation("tracing")
+    relation.save(TracingRequirerData(receivers=["otlp_http"]), self.app)
+""",
+    )
+    assert len(detect_feature(tmp_path, _catalogue_feature("ops.typed-relation"))) == 1
+
+
+def test_typed_relation_ignores_a_lib_data_class_helper(tmp_path: Path) -> None:
+    """The corpus's only hit for the old pattern: a charm-lib helper whose
+    receiver is a data class, not a relation."""
+    _write_charm(
+        tmp_path,
+        """
+def _kratos_info(self):
+    return KratosInfoData.load(self.model, KRATOS_INFO_INTEGRATION_NAME)
+""",
+    )
+    assert detect_feature(tmp_path, _catalogue_feature("ops.typed-relation")) == []
 
 
 # ── CharmSource (shared parse cache) ─────────────────────────────────────────

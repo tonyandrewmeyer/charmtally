@@ -70,18 +70,25 @@ def _is_vendored_lib(parts: tuple[str, ...]) -> bool:
     return any(parts[i] == "lib" and parts[i + 1] == "charms" for i in range(len(parts) - 1))
 
 
-def _charm_provides_lib(charm_root: Path, module: str) -> bool:
-    """True if this charm's own lib/charms/<pkg>/ tree provides the given module.
+def _charm_provides_lib(charm_root: Path, module: str, charm_name: str | None) -> bool:
+    """True if this charm is the *provider* of the given charms.<pkg> library.
 
     Prevents flagging the lib-provider charm when it imports its own library
     from src/ — e.g. grafana-agent importing charms.grafana_agent because it
     IS grafana-agent, not because it consumes the COS agent lib.
+
+    The provider is identified by name, not by the presence of
+    `lib/charms/<pkg>/`: `charmcraft fetch-lib` vendors a *consumed* library
+    into exactly that path, so the directory existing is the normal shape of
+    a consumer. Only the charm whose own declared name matches the package
+    owns it — charms.grafana_agent belongs to the charm named grafana-agent.
     """
     if not module.startswith("charms."):
         return False
     pkg = module.split(".")[1]
-    lib_dir = charm_root / "lib" / "charms" / pkg
-    return lib_dir.is_dir()
+    if not charm_name or charm_name.replace("-", "_") != pkg:
+        return False
+    return (charm_root / "lib" / "charms" / pkg).is_dir()
 
 
 def _select_files(charm_root: Path, scope: str) -> list[Path]:
@@ -164,6 +171,16 @@ class CharmSource:
         self.charm_root = charm_root
         self._by_scope: dict[str, list[SourceFile]] = {}
         self._by_path: dict[Path, SourceFile] = {}
+        self._charm_name: str | None = None
+        self._charm_name_read = False
+
+    @property
+    def charm_name(self) -> str | None:
+        """The charm's declared name, globbed for at most once per charm."""
+        if not self._charm_name_read:
+            self._charm_name = _metadata.declared_name(self.charm_root)
+            self._charm_name_read = True
+        return self._charm_name
 
     def files(self, scope: str) -> list[SourceFile]:
         cached = self._by_scope.get(scope)
@@ -772,14 +789,14 @@ def detect_feature(charm_root: Path, feature: Detectable, source: CharmSource | 
         if det.kind == "observe-event":
             observe_pats[i] = _observe_patterns(det.config["events"])
 
-    # Skip import detectors that target a lib the charm itself provides.
-    # lib/charms/X/ existing means this charm IS the lib provider; importing
-    # charms.X from src/ is self-referential, not a consumer signal.
+    # Skip import detectors that target a lib the charm itself provides —
+    # importing charms.X from src/ when you ARE charm X is self-referential,
+    # not a consumer signal.
     provided_lib_detectors: set[int] = set()
     for i, det in enumerate(feature.detectors):
         if det.kind == "import":
             mod = det.config.get("module", "")
-            if _charm_provides_lib(charm_root, mod):
+            if _charm_provides_lib(charm_root, mod, source.charm_name):
                 provided_lib_detectors.add(i)
 
     # AST-walking detector kinds, keyed by the walker they delegate to. All

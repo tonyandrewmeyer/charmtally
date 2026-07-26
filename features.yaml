@@ -286,14 +286,34 @@ features:
 
   - name: pebble.log-forwarding
     library: pebble
-    summary: Charm configures pebble log targets.
+    summary: Charm forwards workload logs via pebble log targets.
     scope: src
     detect:
       - kind: import
         module: ops.pebble
-        names: [LogTarget]
+        names: [LogTarget, LogTargetDict]
+      - kind: import
+        module: charms.loki_k8s
+        names: [LogForwarder]
       - kind: regex
-        pattern: '\blog[-_]targets\s*:'
+        pattern: '\blog[-_]targets["'']?\s*[:\]]'
+      - kind: yaml-key
+        key: log-targets
+    notes: |
+      Log targets live under a mapping key inside a pebble layer, and charms
+      write that layer as a Python dict — so the key carries its own closing
+      quote (`"log-targets": {...}`), or is reached by subscript
+      (`layer["log-targets"] = {}`). The original `\blog[-_]targets\s*:`
+      pattern matched neither, only the bare YAML form. Hence the optional
+      quote and the `[:\]]` tail. The `yaml-key` arm covers layers kept in
+      standalone *.yaml files, which `_select_files` (Python-only) never
+      hands the regex.
+
+      `LogForwarder` (loki_push_api) is the idiomatic route: the lib injects
+      log-targets into the layer on the charm's behalf, so a charm using it
+      is forwarding logs without ever naming the key itself. Charms importing
+      `ops.pebble.LogTarget`/`LogTargetDict` for typing count too, though
+      most build the layer from plain dicts.
     verified: []
     negative: []
 
@@ -303,7 +323,15 @@ features:
     scope: src
     detect:
       - kind: regex
-        pattern: '\b(restart[-_]delay|backoff[-_]delay|backoff[-_]factor)\s*:'
+        pattern: '\b(restart[-_]delay|backoff[-_](delay|factor|limit))["'']?\s*[:\]]'
+      - kind: yaml-key
+        keys: [backoff-delay, backoff-factor, backoff-limit]
+    notes: |
+      Same quoting problem as pebble.log-forwarding: the keys appear as
+      Python dict keys in a layer literal (`"backoff-delay": "24h"`), so the
+      closing quote has to be optional. `backoff-limit` completes the trio of
+      pebble's backoff keys; `restart-delay` isn't a pebble key but is kept
+      for charms that spell their own config option that way.
     verified: []
     negative: []
 
@@ -495,13 +523,24 @@ features:
     scope: src
     detect:
       - kind: regex
-        pattern: '\b\w+\.(load|save)\s*\(\s*[^,)]+,\s*[A-Z]\w+'
+        pattern: '\b\w*[Rr]elation\w*\.load\s*\(\s*[A-Z]\w+'
+      - kind: regex
+        pattern: '\b\w*[Rr]elation\w*\.save\s*\('
     notes: |
-      Matches the `.load(relation, ModelClass)` / `.save(relation, ModelClass)`
-      shape used by ops typed-relation API. Could over-match on unrelated
-      methods (e.g. `json.load(fp, SomeClass)` isn't a thing in stdlib but
-      framework-style `.load(x, Cls)` calls in tests might trip). Strong
-      enough for v1; tighten if calibration shows FPs.
+      The API is `Relation.load(cls, src)` / `Relation.save(obj, dst)` — the
+      data class comes FIRST on load, and on save the first argument is an
+      instance. The original `\.(load|save)\(relation, ModelClass\)` pattern
+      had the argument order backwards, so it could never match a real call;
+      its only corpus hit was a charm-lib helper
+      (`KratosInfoData.load(self.model, ...)`).
+
+      Both arms require the receiver to be relation-ish (`relation.load(...)`,
+      `event.relation.save(...)`, `self._peer_relation.load(...)`), which is
+      what rules out `SomeDataClass.load(...)` helpers on other libraries.
+      The save arm can't also check its arguments the way load does: the
+      object being saved is written both as a variable and as a constructor
+      call (`relation.save(TracingRequirerData(...), self.app)`), so the
+      receiver carries the precision on its own.
     verified: []
     negative: []
 
