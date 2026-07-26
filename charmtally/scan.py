@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import subprocess
 from dataclasses import asdict
 from pathlib import Path
@@ -43,7 +44,7 @@ def scan_charm(
     in the per-charm ``__meta__`` block as ``architecture: [name, ...]``.
     The scoring layer uses these as inputs to per-feature gap rules.
     """
-    meta = metadata.read(charm_root)
+    meta = dataclasses.replace(metadata.read(charm_root), repo_sha=head_sha(charm_root))
     architecture = _detect_architecture(charm_root, patterns or [])
     out: dict[str, dict] = {}
     # First pass: detection. Scoring needs the full features dict (rules can
@@ -156,21 +157,79 @@ def find_charm_roots(repo_root: Path) -> list[Path]:
     return sub_roots
 
 
+def _git(args: list[str], cwd: Path | None = None, timeout: int = 120) -> bool:
+    """Run a git command, returning True on success. Never raises."""
+    try:
+        subprocess.run(
+            ["git", *args],
+            cwd=None if cwd is None else str(cwd),
+            check=True,
+            capture_output=True,
+            timeout=timeout,
+        )
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):
+        return False
+    return True
+
+
+def head_sha(charm_root: Path) -> str | None:
+    """Return the commit SHA of the checkout containing `charm_root`.
+
+    Returns None when `charm_root` isn't inside a git checkout (a plain
+    directory passed to `charmtally local`, say). Git searches upwards, so
+    this resolves correctly for a monorepo sub-charm directory too.
+    """
+    try:
+        proc = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=str(charm_root),
+            check=True,
+            capture_output=True,
+            timeout=30,
+            text=True,
+        )
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):
+        return None
+    return proc.stdout.strip() or None
+
+
+def refresh_clone(dest: Path, ref: CharmRef) -> bool:
+    """Fast-forward an existing shallow clone onto the current remote tip.
+
+    Returns True if the clone now reflects the remote, False if the refresh
+    failed (network down, branch renamed away, repo gone private). The caller
+    keeps using the stale checkout on failure — a week-old scan of a charm
+    beats dropping it from the corpus entirely.
+
+    Fetches the override branch when one is pinned, otherwise the remote's
+    default HEAD, so a newly-added `branch_overrides` entry takes effect on
+    an already-cloned repo instead of being ignored forever.
+    """
+    target = ref.branch or "HEAD"
+    if not _git(["fetch", "--depth", "1", "origin", target], cwd=dest):
+        return False
+    return _git(["reset", "--hard", "FETCH_HEAD"], cwd=dest)
+
+
 def ensure_clone(ref: CharmRef, workdir: Path) -> Path | None:
     """Shallow-clone `ref.repo_url` into workdir/<slug>, returning the path.
+
+    An existing clone is refreshed rather than reused as-is: the scan workdir
+    is cached between CI runs, so returning early here froze every charm at
+    whatever commit it was first cloned at, and the trend page could never
+    show a charm adopting a feature.
 
     Returns None on clone failure. Uses HTTPS (no SSH key needed).
     """
     dest = workdir / ref.slug
     if dest.exists():
+        refresh_clone(dest, ref)
         return dest
     workdir.mkdir(parents=True, exist_ok=True)
-    cmd = ["git", "clone", "--depth", "1"]
+    cmd = ["clone", "--depth", "1"]
     if ref.branch:
         cmd += ["--branch", ref.branch]
     cmd += [ref.repo_url, str(dest)]
-    try:
-        subprocess.run(cmd, check=True, capture_output=True, timeout=120)
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+    if not _git(cmd):
         return None
     return dest
