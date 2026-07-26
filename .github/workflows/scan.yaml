@@ -73,14 +73,14 @@ jobs:
 
       - name: Scan corpus
         run: |
-          uv run --with pyyaml charmtally scan \
+          uv run charmtally scan \
             --workdir /tmp/charm-workdir \
             --overrides corpus-overrides.yaml \
             --out results.json
 
       - name: Score
         run: |
-          uv run --with pyyaml charmtally score \
+          uv run charmtally score \
             results.json \
             --overrides corpus-overrides.yaml \
             --out scored.json
@@ -90,7 +90,7 @@ jobs:
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
-          uv run --with pyyaml charmtally llm-score \
+          uv run charmtally llm-score \
             scored.json \
             --workdir /tmp/charm-workdir \
             --cache-dir /tmp/charm-workdir/.llm-verdicts \
@@ -100,7 +100,7 @@ jobs:
         run: |
           SCORED=scored.json
           if [ -f llm-scored.json ]; then SCORED=llm-scored.json; fi
-          uv run --with pyyaml charmtally dashboard \
+          uv run charmtally dashboard \
             "$SCORED" --out dashboard.html
 
       - name: Write dated snapshot
@@ -114,7 +114,7 @@ jobs:
         run: |
           SCORED=scored.json
           if [ -f llm-scored.json ]; then SCORED=llm-scored.json; fi
-          uv run --with pyyaml charmtally trend \
+          uv run charmtally trend \
             --snapshots-dir snapshots \
             --live "$SCORED" \
             --out trend.html
