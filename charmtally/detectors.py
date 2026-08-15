@@ -449,6 +449,101 @@ def _is_baseline_lifecycle_only(events: set[str]) -> bool:
     return bool(events) and events <= _BASELINE_LIFECYCLE_EVENTS
 
 
+def _build_parent_map(tree: ast.Module) -> dict[ast.AST, ast.AST]:
+    parent_map: dict[ast.AST, ast.AST] = {}
+    for parent in ast.walk(tree):
+        for child in ast.iter_child_nodes(parent):
+            parent_map[child] = parent
+    return parent_map
+
+
+def _enclosing_function(
+    node: ast.AST, parent_map: dict[ast.AST, ast.AST]
+) -> ast.FunctionDef | ast.AsyncFunctionDef | None:
+    cur = node
+    while cur in parent_map:
+        cur = parent_map[cur]
+        if isinstance(cur, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            return cur
+    return None
+
+
+def _enclosing_for_with_target(
+    node: ast.AST, parent_map: dict[ast.AST, ast.AST], var_name: str
+) -> ast.For | None:
+    """Walk up from `node` to the nearest enclosing `for <var_name> in ...`.
+
+    loop, stopping at the first function boundary (a same-named loop
+    variable in an *outer* method is not this call's loop).
+    """
+    cur = node
+    while cur in parent_map:
+        cur = parent_map[cur]
+        if (
+            isinstance(cur, ast.For)
+            and isinstance(cur.target, ast.Name)
+            and cur.target.id == var_name
+        ):
+            return cur
+        if isinstance(cur, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            return None
+    return None
+
+
+def _resolve_observe_aliases(
+    tree: ast.Module, parent_map: dict[ast.AST, ast.AST]
+) -> dict[tuple[int, str], None]:
+    """Return `(enclosing_function_id, name)` keys for local variables bound.
+
+    to `<x>.framework.observe` (any `x` — `self`, a constructor parameter,
+    etc.). CALIBRATION #34 follow-up #14 shape 1: `observe =
+    self.framework.observe; observe(event, handler)` presents as a bare
+    `ast.Name` call, invisible to the `.observe` attribute-access check a
+    direct `self.framework.observe(...)` call satisfies. Scoped per
+    enclosing function so an unrelated same-named local elsewhere in the
+    file can't accidentally alias into this.
+    """
+    aliases: dict[tuple[int, str], None] = {}
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.Assign) and len(node.targets) == 1):
+            continue
+        target = node.targets[0]
+        value = node.value
+        if not isinstance(target, ast.Name):
+            continue
+        if (
+            isinstance(value, ast.Attribute)
+            and value.attr == "observe"
+            and isinstance(value.value, ast.Attribute)
+            and value.value.attr == "framework"
+        ):
+            func = _enclosing_function(node, parent_map)
+            aliases[id(func), target.id] = None
+    return aliases
+
+
+def _event_name(node: ast.expr) -> str | None:
+    """Trailing attribute name of an event expression.
+
+    Handles `self.on.<x>`, `self.on['c'].<x>`, `<lib>.on.<x>`, etc. — any
+    expression ending in a plain attribute access. Bare names (the
+    `reconcile-all` loop variable over `.values()`) return None.
+    """
+    return node.attr if isinstance(node, ast.Attribute) else None
+
+
+# Action events (`self.on.<x>_action`) are Juju user-triggered commands, not
+# state-convergence triggers — a shared dispatcher fanning out several
+# actions to one handler method is a routing convenience, not a reconcile
+# signal. Only matters for loop-resolved bindings (CALIBRATION #35): a
+# direct, explicit `observe(self.on.foo_action, handler)` call is rare
+# enough in practice that it's never been observed to cross the threshold,
+# but a hand-built loop like `charm-kubernetes-control-plane`'s
+# `action_events = [...]; for action in action_events: observe(action, ...)`
+# is a real, verified-negative shape this exclusion is required to catch.
+_LOOP_ACTION_SUFFIX = "_action"
+
+
 def _detect_ast_observe_shared_handler(tree: ast.Module, cfg: dict) -> Iterator[ast.Call]:
     """Match the holistic `reconcile` pattern: a single handler method is.
 
@@ -464,37 +559,100 @@ def _detect_ast_observe_shared_handler(tree: ast.Module, cfg: dict) -> Iterator[
     #22 follow-up #6 / #24.
 
     Event identifier: the trailing attribute name of `args[0]` (works for
-    `self.on.<x>`, `self.on['c'].<x>`, etc.; skips bare names like the
-    `reconcile-all` loop variable). Handler identifier: trailing attribute
-    name of `args[1]`. Events matching any suffix in `exclude_suffixes`
-    (default: `_error`) are filtered out before counting.
+    `self.on.<x>`, `self.on['c'].<x>`, etc.). Handler identifier: trailing
+    attribute name of `args[1]`. Events matching any suffix in
+    `exclude_suffixes` (default: `_error`) are filtered out before
+    counting.
 
     Two further exclusions (CALIBRATION #21 follow-ups #1/#2) declassify
     otherwise-qualifying bindings that are relation-scoped plumbing or
     symmetric-resource fan-out rather than charm-wide convergence — see
     `_is_relation_scoped_binding` / `_is_symmetric_resource_fanout`.
+
+    CALIBRATION #35 (follow-up #14): the call site's callee may also be a
+    local alias of `self.framework.observe` (see `_resolve_observe_aliases`),
+    and the event argument may be a loop variable bound over a *literal*
+    `List`/`Tuple` of events — either written inline in the `for` statement,
+    or assigned to a same-function variable first (the
+    `mediawiki-k8s-operator` shape: `reconciliation_events = [...]; for
+    event in reconciliation_events: observe(event, handler)`). The
+    already-excluded `reconcile-all` idiom (`self.on.events().values()`) is
+    a `Call`, not a literal, and stays unresolved — it still doesn't
+    qualify.
     """
     min_events = int(cfg.get("min_events", 3))
     exclude_suffixes = tuple(cfg.get("exclude_suffixes", ["_error"]))
 
+    parent_map = _build_parent_map(tree)
+    aliases = _resolve_observe_aliases(tree, parent_map)
+
+    # Same-function `NAME = [literal, ...]` assignments, for resolving a
+    # for-loop whose `.iter` is a bare Name rather than an inline literal.
+    list_assigns: dict[tuple[int, str], ast.List | ast.Tuple] = {}
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.Assign)
+            and len(node.targets) == 1
+            and isinstance(node.targets[0], ast.Name)
+            and isinstance(node.value, (ast.List, ast.Tuple))
+        ):
+            func = _enclosing_function(node, parent_map)
+            list_assigns[id(func), node.targets[0].id] = node.value
+
+    # Per for-loop (keyed by node id, not variable name, so two loops using
+    # the same variable name in different scopes don't collide) — the
+    # resolved literal element list, inline or one hop through a variable.
+    loop_elements: dict[int, list[ast.expr]] = {}
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.For) and isinstance(node.target, ast.Name)):
+            continue
+        iter_node = node.iter
+        if isinstance(iter_node, ast.Name):
+            func = _enclosing_function(node, parent_map)
+            iter_node = list_assigns.get((id(func), iter_node.id))
+        if isinstance(iter_node, (ast.List, ast.Tuple)):
+            loop_elements[id(node)] = list(iter_node.elts)
+
     per_handler_events: dict[str, set[str]] = {}
     per_handler_calls: dict[str, list[ast.Call]] = {}
+
+    def _record(event: str | None, handler: str | None, call_node: ast.Call) -> None:
+        if event is None or handler is None:
+            return
+        if event.endswith(exclude_suffixes):
+            return
+        per_handler_events.setdefault(handler, set()).add(event)
+        per_handler_calls.setdefault(handler, []).append(call_node)
+
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
             continue
         func = node.func
-        if not (isinstance(func, ast.Attribute) and func.attr == "observe"):
+        is_observe = (isinstance(func, ast.Attribute) and func.attr == "observe") or (
+            isinstance(func, ast.Name)
+            and (id(_enclosing_function(node, parent_map)), func.id) in aliases
+        )
+        if not is_observe:
             continue
         if len(node.args) < 2:
             continue
-        event = node.args[0].attr if isinstance(node.args[0], ast.Attribute) else None
         handler = node.args[1].attr if isinstance(node.args[1], ast.Attribute) else None
-        if event is None or handler is None:
+        first_arg = node.args[0]
+        direct_event = _event_name(first_arg)
+        if direct_event is not None:
+            _record(direct_event, handler, node)
             continue
-        if event.endswith(exclude_suffixes):
+        if not isinstance(first_arg, ast.Name):
             continue
-        per_handler_events.setdefault(handler, set()).add(event)
-        per_handler_calls.setdefault(handler, []).append(node)
+        enclosing_for = _enclosing_for_with_target(node, parent_map, first_arg.id)
+        if enclosing_for is None:
+            continue
+        for element in loop_elements.get(id(enclosing_for), []):
+            ev = _event_name(element)
+            if ev is None or ev.endswith(_LOOP_ACTION_SUFFIX):
+                continue
+            _record(ev, handler, node)
+
     for handler, events in per_handler_events.items():
         if len(events) < min_events:
             continue

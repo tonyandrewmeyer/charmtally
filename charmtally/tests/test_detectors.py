@@ -791,6 +791,216 @@ class C:
     assert len(ev) == 3
 
 
+# ── CALIBRATION #35 follow-up #14 shape 1: local alias of observe ───────────
+
+
+def test_reconcile_fires_through_local_observe_alias(tmp_path: Path) -> None:
+    """traefik-k8s-operator shape: `observe = self.framework.observe`, then
+    calling the bare-Name alias — invisible to a plain `.observe` attribute
+    check since the call site has no attribute access at all."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework):
+        observe = self.framework.observe
+        observe(self.on.install, self._reconcile)
+        observe(self.on.config_changed, self._reconcile)
+        observe(self.on.leader_elected, self._reconcile)
+    def _reconcile(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert len(ev) == 3
+
+
+def test_reconcile_alias_scoped_to_enclosing_function(tmp_path: Path) -> None:
+    """An unrelated bare-Name call sharing the alias's name in a *different*
+    method must not be treated as an observe call."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework):
+        observe = self.framework.observe
+        observe(self.on.install, self._reconcile)
+        observe(self.on.config_changed, self._reconcile)
+    def _reconcile(self, event): pass
+    def other(self, observe):
+        observe(self.on.upgrade_charm, self._reconcile)
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert ev == []
+
+
+def test_reconcile_does_not_alias_unrelated_bare_call(tmp_path: Path) -> None:
+    """A bare-Name call to something that was never assigned from
+    `<x>.framework.observe` stays unmatched."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework):
+        observe = some_other_function
+        observe(self.on.install, self._reconcile)
+        observe(self.on.config_changed, self._reconcile)
+        observe(self.on.update_status, self._reconcile)
+    def _reconcile(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert ev == []
+
+
+# ── CALIBRATION #35 follow-up #14 shape 2: loop over a literal event list ───
+
+
+def test_reconcile_fires_for_inline_literal_event_list_loop(tmp_path: Path) -> None:
+    """`for event in [self.on.a, self.on.b, self.on.c]: observe(event, h)` —
+    a hand-curated, finite event set on one shared handler, structurally
+    `reconcile` even though it's wired through a loop."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework):
+        for event in [self.on.install, self.on.config_changed, self.on.leader_elected]:
+            self.framework.observe(event, self._reconcile)
+    def _reconcile(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert len(ev) == 3
+
+
+def test_reconcile_fires_for_variable_bound_literal_event_list_loop(tmp_path: Path) -> None:
+    """mediawiki-k8s-operator shape: the literal list is assigned to a named
+    variable first, then looped over — one hop of resolution needed."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework):
+        reconciliation_events = [
+            self.on.install, self.on.config_changed, self.on.leader_elected,
+        ]
+        for event in reconciliation_events:
+            self.framework.observe(event, self._reconciliation)
+    def _reconciliation(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert len(ev) == 3
+
+
+def test_reconcile_still_ignores_reconcile_all_events_call(tmp_path: Path) -> None:
+    """`self.on.events().values()` stays excluded — it's a `Call`, not a
+    literal list, so it must not resolve into a fake event set. This is the
+    existing `reconcile-all` idiom and must not regress."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework):
+        for ev in self.on.events().values():
+            self.framework.observe(ev, self._reconcile)
+    def _reconcile(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert ev == []
+
+
+def test_reconcile_loop_excludes_action_events(tmp_path: Path) -> None:
+    """charm-kubernetes-control-plane shape: a loop fanning several *actions*
+    out to one dispatcher is action routing, not reconcile — action events
+    must not count toward the threshold even inside a resolved loop."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework):
+        action_events = [
+            self.on.restart_action, self.on.upgrade_action, self.on.get_kubeconfig_action,
+        ]
+        for action in action_events:
+            self.framework.observe(action, self.charm_actions)
+    def charm_actions(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert ev == []
+
+
+def test_reconcile_loop_variable_scoped_to_its_own_loop(tmp_path: Path) -> None:
+    """Two different loops in different methods reusing the same loop
+    variable name must not have their element lists cross-contaminate."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework):
+        for event in [self.on.install, self.on.config_changed]:
+            self.framework.observe(event, self._reconcile)
+    def _reconcile(self, event): pass
+    def other(self, framework):
+        for event in [self.on.start, self.on.stop, self.on.update_status]:
+            self.framework.observe(event, self._other_handler)
+    def _other_handler(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    # _reconcile only sees 2 events (below threshold); _other_handler sees 3
+    # baseline-only events (excluded by the baseline-lifecycle cut) — net zero.
+    assert ev == []
+
+
+def test_reconcile_loop_still_respects_relation_scoped_cut(tmp_path: Path) -> None:
+    """A resolved loop binding that would otherwise qualify is still subject
+    to the existing relation-scoped exclusion (CALIBRATION #21 cut #1)."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework):
+        events = [
+            self.on.oauth_relation_created,
+            self.on.oauth_relation_joined,
+            self.on.oauth_relation_changed,
+        ]
+        for event in events:
+            self.framework.observe(event, self._on_oauth_relation_changed)
+    def _on_oauth_relation_changed(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert ev == []
+
+
+def test_reconcile_takahe_operator_alias_shape_stays_delta(tmp_path: Path) -> None:
+    """Must-not-regress case named explicitly in CALIBRATION #34/#35:
+    takahe-operator takes `framework` as a constructor parameter and calls
+    `framework.observe(...)` throughout (already visible via the plain
+    `.observe` attribute check — no handler there crosses the threshold).
+    Confirms the new alias/loop machinery doesn't over-fire on it."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework: object):
+        framework.observe(self.on.install, self._on_container_pebble_ready)
+        framework.observe(self.on.database_created, self._on_database_changed)
+        framework.observe(self.on.ingress_ready, self._on_ingress_ready)
+    def _on_container_pebble_ready(self, event): pass
+    def _on_database_changed(self, event): pass
+    def _on_ingress_ready(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert ev == []
+
+
 # ── requires-interface (db.* features) ───────────────────────────────────────
 
 
