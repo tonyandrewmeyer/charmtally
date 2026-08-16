@@ -426,7 +426,9 @@ class C:
 
 
 def test_reconcile_subscripted_events_use_trailing_attr(tmp_path: Path) -> None:
-    """`self.on['c'].pebble_ready` resolves to event name 'pebble_ready'."""
+    """`self.on['db'].pebble_ready` resolves the literal subscript, giving
+    `'db_pebble_ready'` (CALIBRATION #36) rather than a bare `'pebble_ready'`
+    — either way this binding still crosses the 3-event threshold."""
     _write_charm(
         tmp_path,
         """
@@ -999,6 +1001,182 @@ class C:
     )
     ev = detect_feature(tmp_path, _reconcile_feature())
     assert ev == []
+
+
+# ── CALIBRATION #36: dynamic-relation-name subscript resolution ─────────────
+
+
+def test_reconcile_dynamic_subscript_class_attrs_resolve_distinctly(tmp_path: Path) -> None:
+    """cos-configuration-k8s-operator shape: a shared handler observes 4
+    different relations' `relation_joined` events, each written
+    `self.on[self.<attr>_relation_name].relation_joined` via a loop, where
+    each `<attr>_relation_name` is a class-body literal. Previously all 4
+    collapsed to the single bare event `relation_joined` (1 distinct event,
+    below threshold); resolving the class attribute recovers 4 distinct
+    relation events, correctly crossing the reconcile threshold."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    prometheus_relation_name = "prometheus-config"
+    loki_relation_name = "loki-config"
+    grafana_relation_name = "grafana-dashboards"
+    sloth_relation_name = "sloth"
+
+    def __init__(self, framework):
+        for e in [
+            self.on[self.prometheus_relation_name].relation_joined,
+            self.on[self.loki_relation_name].relation_joined,
+            self.on[self.grafana_relation_name].relation_joined,
+            self.on[self.sloth_relation_name].relation_joined,
+        ]:
+            self.framework.observe(e, self._on_relation_joined)
+    def _on_relation_joined(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert len(ev) == 4
+
+
+def test_reconcile_dynamic_subscript_resolves_on_direct_calls_too(tmp_path: Path) -> None:
+    """The same class-attribute resolution applies to direct `observe()`
+    calls, not only loop-resolved bindings — `_event_name` is shared by
+    both code paths."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    db_relation_name = "db"
+    cache_relation_name = "cache"
+    mq_relation_name = "mq"
+
+    def __init__(self, framework):
+        self.framework.observe(self.on[self.db_relation_name].relation_changed, self._reconcile)
+        self.framework.observe(self.on[self.cache_relation_name].relation_changed, self._reconcile)
+        self.framework.observe(self.on[self.mq_relation_name].relation_changed, self._reconcile)
+    def _reconcile(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert len(ev) == 3
+
+
+def test_reconcile_dynamic_subscript_resolves_self_attr_set_in_init(tmp_path: Path) -> None:
+    """A `self.<attr> = "literal"` assignment inside `__init__` resolves the
+    same way a class-body literal does — not only the class-attribute
+    shape."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    def __init__(self, framework):
+        self.db_relation_name = "db"
+        self.cache_relation_name = "cache"
+        self.mq_relation_name = "mq"
+        self.framework.observe(self.on[self.db_relation_name].relation_changed, self._reconcile)
+        self.framework.observe(self.on[self.cache_relation_name].relation_changed, self._reconcile)
+        self.framework.observe(self.on[self.mq_relation_name].relation_changed, self._reconcile)
+    def _reconcile(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert len(ev) == 3
+
+
+def test_reconcile_dynamic_subscript_two_relations_stays_below_threshold(tmp_path: Path) -> None:
+    """Only 2 resolvable relations: below the 3-event floor either way, and
+    also within cut #1's <= 2 relation-endpoint cap — stays delta."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    db_relation_name = "db"
+    cache_relation_name = "cache"
+
+    def __init__(self, framework):
+        self.framework.observe(self.on[self.db_relation_name].relation_changed, self._reconcile)
+        self.framework.observe(self.on[self.cache_relation_name].relation_changed, self._reconcile)
+    def _reconcile(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert ev == []
+
+
+def test_reconcile_dynamic_subscript_pushes_past_two_named_relations(tmp_path: Path) -> None:
+    """A resolved dynamic-subscript relation counts toward cut #1's
+    relation-endpoint cap the same as a named relation would: 2 named
+    relations plus 1 resolved dynamic one is 3 distinct endpoints, past the
+    cap, so this is charm-wide convergence again."""
+    _write_charm(
+        tmp_path,
+        """
+class C:
+    mq_relation_name = "mq"
+
+    def __init__(self, framework):
+        self.framework.observe(self.on.db_relation_changed, self._reconcile)
+        self.framework.observe(self.on.cache_relation_changed, self._reconcile)
+        self.framework.observe(self.on[self.mq_relation_name].relation_changed, self._reconcile)
+    def _reconcile(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert len(ev) == 3
+
+
+def test_reconcile_dynamic_subscript_constructor_param_stays_unresolved(tmp_path: Path) -> None:
+    """Must-not-regress: a constructor-parameter-supplied relation name
+    (CALIBRATION #22 follow-up #7's `cos-coordinated-workers` shape) is
+    runtime data, not a same-class literal binding, and must stay
+    unresolved — confirmed here with 3 handler instantiations passing 3
+    different literal relation names at 3 different call sites, none of
+    which the detector can see (it only reads `Helper`'s own body, and
+    `relation_name` there is a plain parameter)."""
+    _write_charm(
+        tmp_path,
+        """
+class Helper:
+    def __init__(self, framework, relation_name):
+        self.framework.observe(self.on[relation_name].relation_created, self._on_changed)
+        self.framework.observe(self.on[relation_name].relation_joined, self._on_changed)
+        self.framework.observe(self.on[relation_name].relation_changed, self._on_changed)
+    def _on_changed(self, event): pass
+
+class C:
+    def __init__(self, framework):
+        self.prometheus = Helper(framework, "prometheus-config")
+        self.loki = Helper(framework, "loki-config")
+        self.grafana = Helper(framework, "grafana-dashboards")
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert ev == []
+
+
+def test_reconcile_dynamic_subscript_class_attr_scoped_per_class(tmp_path: Path) -> None:
+    """Resolution is scoped to the enclosing class: a same-named class
+    attribute on an unrelated class doesn't leak in."""
+    _write_charm(
+        tmp_path,
+        """
+class Other:
+    db_relation_name = "wrong-value"
+
+class C:
+    db_relation_name = "db"
+    cache_relation_name = "cache"
+    mq_relation_name = "mq"
+
+    def __init__(self, framework):
+        self.framework.observe(self.on[self.db_relation_name].relation_changed, self._reconcile)
+        self.framework.observe(self.on[self.cache_relation_name].relation_changed, self._reconcile)
+        self.framework.observe(self.on[self.mq_relation_name].relation_changed, self._reconcile)
+    def _reconcile(self, event): pass
+""",
+    )
+    ev = detect_feature(tmp_path, _reconcile_feature())
+    assert len(ev) == 3
 
 
 # ── requires-interface (db.* features) ───────────────────────────────────────

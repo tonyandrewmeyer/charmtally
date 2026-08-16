@@ -522,14 +522,113 @@ def _resolve_observe_aliases(
     return aliases
 
 
-def _event_name(node: ast.expr) -> str | None:
+def _resolve_relation_names(tree: ast.Module) -> dict[int, dict[str, str]]:
+    """Map each `ClassDef`'s id to `{name: literal_value}`, resolved from.
+
+    class-body literal assignments (`prometheus_relation_name = "prometheus-config"`)
+    and `__init__`'s own `self.<attr> = "literal"` assignments. CALIBRATION #36:
+    powers resolving `self.on[self.<attr>]` — the dynamic-relation-name
+    subscript idiom — back to the actual relation name it's bound to, so
+    that a shared handler observing several *different* relations' events
+    through this idiom isn't collapsed to a single bare event string (see
+    `_event_name`). Deliberately narrow: only a same-class, statically
+    literal binding resolves. Three shapes stay unresolved on purpose, per
+    CALIBRATION #36's corpus sweep:
+
+    - A constructor parameter (the relation name supplied by the *caller*,
+      e.g. `cos-coordinated-workers`' reusable `relation_name` argument —
+      CALIBRATION #22 follow-up #7, and `data-integrator`'s
+      `_setup_database_requirer(relation_name)` called once per entry of a
+      `DATABASES` list) is runtime data, not a literal binding.
+    - A bare `Name` key resolved against a *module*-level constant (found
+      twice in the corpus — `kubeflow-tensorboards-operator`'s
+      `tensorboard-controller` and `istio-beacon-k8s-operator`, both
+      already `reconcile` via other bindings) is deliberately not chased:
+      unlike `self.<attr>`, a bare name can be shadowed by a same-named
+      local or parameter in the very scope doing the subscripting, and
+      resolving it without first ruling that out risks merging two
+      genuinely different keys.
+    - A cross-module import (`data-integrator`'s `from literals import
+      CASSANDRA, KAFKA, ...`) is out of this function's reach entirely —
+      it only ever sees one file's tree.
+    """
+    result: dict[int, dict[str, str]] = {}
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ClassDef):
+            continue
+        mapping: dict[str, str] = {}
+        for item in node.body:
+            if (
+                isinstance(item, ast.Assign)
+                and len(item.targets) == 1
+                and isinstance(item.targets[0], ast.Name)
+                and isinstance(item.value, ast.Constant)
+                and isinstance(item.value.value, str)
+            ):
+                mapping[item.targets[0].id] = item.value.value
+        for item in node.body:
+            is_init = isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))
+            if not (is_init and item.name == "__init__"):
+                continue
+            for sub in ast.walk(item):
+                if (
+                    isinstance(sub, ast.Assign)
+                    and len(sub.targets) == 1
+                    and isinstance(sub.targets[0], ast.Attribute)
+                    and isinstance(sub.targets[0].value, ast.Name)
+                    and sub.targets[0].value.id == "self"
+                    and isinstance(sub.value, ast.Constant)
+                    and isinstance(sub.value.value, str)
+                ):
+                    # Class-body literal wins if both exist for the same name.
+                    mapping.setdefault(sub.targets[0].attr, sub.value.value)
+        result[id(node)] = mapping
+    return result
+
+
+def _enclosing_class(node: ast.AST, parent_map: dict[ast.AST, ast.AST]) -> ast.ClassDef | None:
+    cur = node
+    while cur in parent_map:
+        cur = parent_map[cur]
+        if isinstance(cur, ast.ClassDef):
+            return cur
+    return None
+
+
+def _event_name(node: ast.expr, relation_names: dict[str, str] | None = None) -> str | None:
     """Trailing attribute name of an event expression.
 
     Handles `self.on.<x>`, `self.on['c'].<x>`, `<lib>.on.<x>`, etc. — any
     expression ending in a plain attribute access. Bare names (the
     `reconcile-all` loop variable over `.values()`) return None.
+
+    CALIBRATION #36: when the base is a dynamic-relation-name subscript
+    (`self.on[<key>]`), try to resolve `<key>` to the actual relation
+    name — a string literal (`self.on['db']`) or a `self.<attr>` reference
+    resolved via `relation_names` (a same-class literal binding, see
+    `_resolve_relation_names`) — and fold it into the returned name as
+    `<relation>_<attr>`, so `_relation_prefix` can recover it as a normal
+    named-relation event. Unresolvable keys (e.g. a constructor parameter)
+    fall back to the bare trailing attribute name, exactly as before.
     """
-    return node.attr if isinstance(node, ast.Attribute) else None
+    if not isinstance(node, ast.Attribute):
+        return None
+    base = node.value
+    if isinstance(base, ast.Subscript):
+        key = base.slice
+        resolved: str | None = None
+        if isinstance(key, ast.Constant) and isinstance(key.value, str):
+            resolved = key.value
+        elif (
+            relation_names
+            and isinstance(key, ast.Attribute)
+            and isinstance(key.value, ast.Name)
+            and key.value.id == "self"
+        ):
+            resolved = relation_names.get(key.attr)
+        if resolved is not None:
+            return f"{resolved}_{node.attr}"
+    return node.attr
 
 
 # Action events (`self.on.<x>_action`) are Juju user-triggered commands, not
@@ -579,12 +678,22 @@ def _detect_ast_observe_shared_handler(tree: ast.Module, cfg: dict) -> Iterator[
     already-excluded `reconcile-all` idiom (`self.on.events().values()`) is
     a `Call`, not a literal, and stays unresolved — it still doesn't
     qualify.
+
+    CALIBRATION #36: `_event_name` also resolves the dynamic-relation-name
+    subscript idiom (`self.on[<key>].relation_joined`) back to a
+    per-relation event name when `<key>` is statically determinable (a
+    string literal, or a `self.<attr>` reference to a same-class literal
+    binding — see `_resolve_relation_names`), instead of collapsing every
+    such call to the bare trailing attribute name regardless of which
+    relation it's for. A runtime-supplied key (e.g. a constructor
+    parameter) stays unresolved, same as before.
     """
     min_events = int(cfg.get("min_events", 3))
     exclude_suffixes = tuple(cfg.get("exclude_suffixes", ["_error"]))
 
     parent_map = _build_parent_map(tree)
     aliases = _resolve_observe_aliases(tree, parent_map)
+    relation_names_by_class = _resolve_relation_names(tree)
 
     # Same-function `NAME = [literal, ...]` assignments, for resolving a
     # for-loop whose `.iter` is a bare Name rather than an inline literal.
@@ -637,8 +746,9 @@ def _detect_ast_observe_shared_handler(tree: ast.Module, cfg: dict) -> Iterator[
         if len(node.args) < 2:
             continue
         handler = node.args[1].attr if isinstance(node.args[1], ast.Attribute) else None
+        relation_names = relation_names_by_class.get(id(_enclosing_class(node, parent_map)), {})
         first_arg = node.args[0]
-        direct_event = _event_name(first_arg)
+        direct_event = _event_name(first_arg, relation_names)
         if direct_event is not None:
             _record(direct_event, handler, node)
             continue
@@ -648,7 +758,7 @@ def _detect_ast_observe_shared_handler(tree: ast.Module, cfg: dict) -> Iterator[
         if enclosing_for is None:
             continue
         for element in loop_elements.get(id(enclosing_for), []):
-            ev = _event_name(element)
+            ev = _event_name(element, relation_names)
             if ev is None or ev.endswith(_LOOP_ACTION_SUFFIX):
                 continue
             _record(ev, handler, node)
