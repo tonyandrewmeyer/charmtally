@@ -393,11 +393,19 @@ def read(charm_root: Path) -> CharmMeta:
     #     (the opendev.org/openstack/charm-* family doesn't ship layer.yaml
     #     and nests handlers under src/. CALIBRATION #14.)
     #
+    # A third variant nests the indicator file itself under src/ alongside
+    # the handlers (charmed-kubernetes' layer-* family, some openstack-
+    # charmers charms): src/layer.yaml or src/osci.yaml, with no root-level
+    # indicator at all. CALIBRATION #38/#39 follow-up #15.
+    #
     # Either layout: rule out ops.* / pebble.* / charmlibs.* features; the
     # scoring layer short-circuits to not-applicable.
-    has_reactive_indicator = (charm_root / "layer.yaml").is_file() or (
-        charm_root / "osci.yaml"
-    ).is_file()
+    has_reactive_indicator = (
+        (charm_root / "layer.yaml").is_file()
+        or (charm_root / "osci.yaml").is_file()
+        or (charm_root / "src" / "layer.yaml").is_file()
+        or (charm_root / "src" / "osci.yaml").is_file()
+    )
     reactive_dirs = (
         charm_root / "reactive",
         charm_root / "src" / "reactive",

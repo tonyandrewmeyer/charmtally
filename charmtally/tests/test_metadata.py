@@ -67,6 +67,44 @@ def test_indicator_without_handlers_is_not_reactive(tmp_path: Path) -> None:
     assert read(tmp_path).is_reactive is False
 
 
+def test_src_nested_layer_yaml_layout_detected(tmp_path: Path) -> None:
+    """charmed-kubernetes layer-* family: layer.yaml + reactive/ both under
+    src/, no root-level indicator at all. CALIBRATION #38/#39 follow-up #15
+    (e.g. charm-flannel, charm-containerd, charm-easyrsa)."""
+    _ops_charm(tmp_path)
+    src = tmp_path / "src"
+    (src / "layer.yaml").parent.mkdir(parents=True, exist_ok=True)
+    (src / "layer.yaml").write_text("includes: []\n")
+    src_reactive = src / "reactive"
+    src_reactive.mkdir()
+    (src_reactive / "handlers.py").write_text("# reactive handlers\n")
+    assert read(tmp_path).is_reactive is True
+
+
+def test_src_nested_osci_yaml_layout_detected(tmp_path: Path) -> None:
+    """osci.yaml nested under src/ alongside src/reactive/, mirroring the
+    src/layer.yaml case. CALIBRATION #39 follow-up #15."""
+    _ops_charm(tmp_path)
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "osci.yaml").write_text("# OSCI tooling\n")
+    src_reactive = src / "reactive"
+    src_reactive.mkdir()
+    (src_reactive / "handlers.py").write_text("# reactive handlers\n")
+    assert read(tmp_path).is_reactive is True
+
+
+def test_src_nested_indicator_without_handlers_is_not_reactive(tmp_path: Path) -> None:
+    """src/layer.yaml alone (no reactive/ handlers anywhere) shouldn't
+    flip — same must-not-regress shape as the root-level indicator-only
+    case above, extended to the src/-nested indicator."""
+    _ops_charm(tmp_path)
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "layer.yaml").write_text("includes: []\n")
+    assert read(tmp_path).is_reactive is False
+
+
 def test_type_secret_config_extracted(tmp_path: Path) -> None:
     """Config options declared `type: secret` populate secret_typed_config."""
     d = tmp_path
