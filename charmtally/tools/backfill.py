@@ -27,7 +27,12 @@ Two phases, because they have opposite cost profiles:
 
 Dates already present under `--snapshots-dir` are left alone unless `--force`
 is passed, which makes an interrupted run resumable — and makes it hard to
-clobber a snapshot that records a real scan.
+clobber a snapshot that records a real scan. `--end` therefore defaults to
+*today*: the range is a range to consider, not a range to write, and a gap in
+the middle of the series is as much a gap as one before it. The earlier default
+— stop the day before the first existing snapshot — quietly made the prefix the
+only fillable region, which left a ragged join the one time the oldest observed
+snapshots covered a far smaller corpus than the recomputed ones either side.
 
 The corpus does not time-travel; the readings do
 -----------------------------------------------
@@ -509,8 +514,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--end",
         type=_date,
         default=None,
-        help="Last date to consider (ISO). Default: the day before the earliest "
-        "existing snapshot, so a backfill stops where the real series begins.",
+        help="Last date to consider (ISO). Default: today, so every missing "
+        "weekday in the range is filled, not just the ones before the series "
+        "starts. Dates that already have a snapshot are skipped unless --force.",
     )
     p.add_argument(
         "--weekday",
@@ -602,13 +608,8 @@ def main(argv: list[str] | None = None) -> int:
     existing = _existing_snapshot_dates(args.snapshots_dir)
     end = args.end
     if end is None:
-        if not existing:
-            print("no existing snapshots to bound the range; pass --end", file=sys.stderr)
-            return 2
-        end = existing[0] - dt.timedelta(days=1)
-        print(
-            f"end not given; stopping at {end} (earliest snapshot: {existing[0]})", file=sys.stderr
-        )
+        end = dt.date.today()
+        print(f"end not given; considering every date up to {end}", file=sys.stderr)
 
     dates = weekly_dates(args.start, end, args.weekday)
     if not args.force:

@@ -215,3 +215,49 @@ def _ref(name: str, url: str, *, branch: str | None = None):
     return backfill.corpus.CharmRef(
         team="t", name=name, repo_url=url, key_charm=False, branch=branch, notes=""
     )
+
+
+class TestPlannedRange:
+    """`main`'s date planning, via `--dry-run` (no clones, no network)."""
+
+    def _plan(self, tmp_path: Path, capsys, existing: list[str], *extra: str) -> list[str]:
+        snaps = tmp_path / "snapshots"
+        snaps.mkdir()
+        for date in existing:
+            (snaps / f"scored-{date}.json").write_text("{}\n")
+        csv = tmp_path / "corpus.csv"
+        csv.write_text("Team,Charm Name,Repository\nx,foo,https://github.com/canonical/foo\n")
+        rc = backfill.main([
+            "--start",
+            "2026-01-01",
+            "--workdir",
+            str(tmp_path / "work"),
+            "--snapshots-dir",
+            str(snaps),
+            "--corpus",
+            str(csv),
+            "--dry-run",
+            *extra,
+        ])
+        assert rc == 0
+        return [line.strip() for line in capsys.readouterr().err.splitlines()]
+
+    def test_gaps_after_the_series_starts_are_planned(self, tmp_path: Path, capsys):
+        # The old default stopped the day before the earliest snapshot, so a
+        # missing week *inside* the series could never be filled.
+        lines = self._plan(tmp_path, capsys, ["2026-01-05", "2026-01-19"])
+        assert "2026-01-12" in lines
+
+    def test_dates_that_already_have_a_snapshot_are_left_alone(self, tmp_path: Path, capsys):
+        lines = self._plan(tmp_path, capsys, ["2026-01-05", "2026-01-19"])
+        assert "2026-01-05" not in lines
+        assert "2026-01-19" not in lines
+
+    def test_force_replays_dates_that_already_exist(self, tmp_path: Path, capsys):
+        lines = self._plan(tmp_path, capsys, ["2026-01-05", "2026-01-19"], "--force")
+        assert "2026-01-05" in lines
+        assert "2026-01-19" in lines
+
+    def test_an_empty_snapshots_dir_no_longer_needs_an_explicit_end(self, tmp_path: Path, capsys):
+        lines = self._plan(tmp_path, capsys, [])
+        assert "2026-01-05" in lines
