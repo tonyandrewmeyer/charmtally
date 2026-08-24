@@ -102,11 +102,41 @@ rather than re-reading the path.
 When adding a new detector kind, also add at least one positive and one
 negative test in `tests/test_detectors.py`.
 
+## Tools (`charmtally/tools/`)
+
+Not part of the pipeline; each is run with `uv run python -m charmtally.tools.X`.
+
+- `audit.py` — calibration sampling over `scored.json`.
+- `rockfind.py` — builds a rocks corpus CSV from GitHub code search
+  (`filename:rockcraft.yaml`). The REST search endpoint speaks the *legacy*
+  query language: `path:` matches a directory there, so only `filename:`
+  finds the file — `path:rockcraft.yaml` returns zero hits. Queries are capped
+  at 1000 results, hence the `size:` partitioning; the ecosystem is already
+  over that cap. Results are scoped to the caller's token and *do* include
+  private/internal repos (~6% of hits on a Canonical token), so `public_only`
+  drops every non-public repo before the CSV is written — that filter is not
+  optional and must not become a flag.
+
+`rocks.csv` is **source data, not build output**: unlike `results.json` and
+friends it is meant to be hand-edited. The weekly `rocks` workflow refreshes it
+via `--merge`, which preserves the `Team` and `Notes` columns a human curates
+and never deletes a row that fell out of the search index. Edit those columns
+freely; the sweep will not clobber them.
+
 ## Workflows
 
 - `ci.yaml` — pytest matrix (3.10 / 3.12) + `make lint`.
 - `zizmor.yaml` + `actionlint.yaml` — audit workflow files.
 - `dependency-review.yaml` — PR-only gate on new dependency CVEs / licences.
+- `rocks.yaml` — weekly cron + `workflow_dispatch`. Re-runs `rockfind` and
+  opens/updates a PR against `rocks.csv` (a rolling `rocks-refresh` branch,
+  force-pushed). Needs `ROCKS_TOKEN`: a fine-grained PAT scoped to this
+  repo only, stored as an *environment* secret on the `rocks` environment
+  (repo-level secrets are readable by every workflow; this token can write).
+  The default `GITHUB_TOKEN` won't do — it can only code-search the repo it
+  belongs to, and a PR opened with it would not trigger `ci.yaml`. Unlike
+  `scan.yaml` this proposes rather than pushes, because the CSV is source data
+  that wants review.
 - `scan.yaml` — weekly cron + `workflow_dispatch`. Runs
   scan → score → (optional llm-score) → pairs → dashboard → snapshot →
   trend, then pushes refreshed artefacts back to `main` via an explicit

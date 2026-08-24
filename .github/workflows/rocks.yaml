@@ -1,0 +1,141 @@
+# Weekly rock-corpus refresh
+#
+# What it does:
+#   - Cron: 03:00 UTC every Tuesday (a day after `scan`, so the two never
+#     contend for the runner or for a push to main).
+#   - Re-runs `rockfind` against GitHub code search and merges the result
+#     into the committed rocks.csv, preserving the hand-curated Team and
+#     Notes columns.
+#   - Opens (or updates) a pull request rather than pushing to main. The
+#     charm corpus is curated upstream by hyrum; this one is curated here,
+#     and a code-search sweep pulls in test fixtures, abandoned forks and
+#     one-off experiments that a human should look at before they land.
+#     That is the difference from `scan`, which commits straight to main:
+#     those artefacts are derived output, this file is source data.
+#
+# Why a PAT and not GITHUB_TOKEN:
+#   - Code search returns only what the token can see. The Actions
+#     GITHUB_TOKEN is an app installation token scoped to this repository,
+#     so a search run under it would find this repo and nothing else.
+#   - A PR opened with GITHUB_TOKEN does not trigger `ci.yaml`, so the
+#     refreshed CSV would arrive unchecked.
+#
+#   Use a *fine-grained* PAT limited to this repository, with
+#   Contents: read/write and Pull requests: read/write. Repository scoping
+#   is not just least-privilege here: it is what stops code search from
+#   reaching private and internal repos the account can otherwise read.
+#   (`rockfind` drops non-public results regardless — on a Canonical
+#   account that was 17% of all hits — but the token is the first line.)
+#
+# Where the secret lives:
+#   ROCKS_TOKEN is an *environment* secret on the `rocks` environment, not a
+#   repository secret. A repository secret is readable by every workflow in
+#   the repo; an environment secret is readable only by a job that names that
+#   environment, which is this one job. Set the environment's deployment
+#   branch policy to `main` so a job started from any other ref -- a PR
+#   branch, a fork -- cannot reach a token that can write to the repo.
+#
+#   Do NOT add a required-reviewers protection rule: this job runs on a cron
+#   with nobody watching, and it would sit waiting for an approval that never
+#   comes. Branch policy is the rule that matters here.
+
+name: rocks
+
+on:
+  schedule:
+    - cron: "0 3 * * 2"   # Tuesdays 03:00 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: rocks
+  cancel-in-progress: false
+
+permissions:
+  contents: read          # the PAT below carries the write permissions
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    # Scopes ROCKS_TOKEN to this job alone -- see the header.
+    environment: rocks
+    timeout-minutes: 45   # the search alone takes ~15min once rate limits bite
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d  # v10.0.0
+        with:
+          enable-cache: true
+
+      - name: Check the token is configured
+        env:
+          GITHUB_TOKEN: ${{ secrets.ROCKS_TOKEN }}
+        run: |
+          if [ -z "${GITHUB_TOKEN}" ]; then
+            echo "::error::ROCKS_TOKEN is not set; see the comment at the top of this workflow"
+            exit 1
+          fi
+
+      # --min-rows is the guard against a silently-gutted sweep: a scoped
+      # token or a search-syntax change returns few or no hits, which is
+      # indistinguishable from "the ecosystem shrank" unless we assert a
+      # floor. Well under the ~350 repos found in August 2026, so ordinary
+      # churn will not trip it.
+      - name: Refresh the rock corpus
+        env:
+          GITHUB_TOKEN: ${{ secrets.ROCKS_TOKEN }}
+        run: |
+          uv run python -m charmtally.tools.rockfind search \
+            --out rocks.csv \
+            --merge rocks.csv \
+            --names \
+            --min-rows 200
+
+      - name: Open or update the pull request
+        env:
+          GH_TOKEN: ${{ secrets.ROCKS_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          BRANCH: rocks-refresh
+        run: |
+          if git diff --quiet -- rocks.csv; then
+            echo "no corpus changes this week"
+            exit 0
+          fi
+
+          TODAY="$(date -u +%Y-%m-%d)"
+          git config user.name  "charmtally-bot"
+          git config user.email "charmtally-bot@aotearoa.dev"
+          git checkout -b "${BRANCH}"
+          git add rocks.csv
+          git commit -m "rocks: weekly corpus refresh ${TODAY}"
+          # Force-push: the branch is a rolling snapshot of the latest sweep,
+          # not a history. If a PR is already open it picks this up as a new
+          # push; reviewers see one branch, not a pile of stale ones.
+          git push --force \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git" \
+            "HEAD:refs/heads/${BRANCH}"
+
+          if [ -n "$(gh pr list --head "${BRANCH}" --state open --json number --jq '.[].number')" ]; then
+            echo "existing PR updated"
+            exit 0
+          fi
+          gh pr create \
+            --head "${BRANCH}" \
+            --base main \
+            --title "rocks: weekly corpus refresh ${TODAY}" \
+            --body "Automated \`rockfind\` sweep of GitHub code search for \`rockcraft.yaml\`.
+
+          Hand-curated \`Team\` and \`Notes\` columns are preserved by \`--merge\`; rows that
+          dropped out of the search index are kept rather than deleted. Non-public repos are
+          filtered out before the CSV is written.
+
+          Worth a skim before merging: new rows are unreviewed, and a code-search sweep picks
+          up test fixtures, forks-in-name-only and abandoned experiments alongside real rocks."
