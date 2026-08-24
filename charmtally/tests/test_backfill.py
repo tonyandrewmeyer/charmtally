@@ -112,6 +112,12 @@ class TestCommitAsOf:
         assert backfill.commit_asof(repo, "main", dt.date(2026, 1, 1)) is None
 
 
+class TestFirstCommitDate:
+    def test_reports_the_oldest_commit(self, tmp_path: Path):
+        repo = _repo(tmp_path / "origin")
+        assert backfill.first_commit_date(repo, "main") == "2026-02-01"
+
+
 class TestScanRepoAsOf:
     def test_charm_absent_at_the_date_is_skipped_not_scanned(self, tmp_path: Path):
         origin = _repo(tmp_path / "origin")
@@ -122,27 +128,26 @@ class TestScanRepoAsOf:
         feats = backfill.catalogue.load(backfill.catalogue.default_path())
         pats = backfill.catalogue.load_patterns(backfill.catalogue.default_path())
 
-        # February: the repo exists but holds no charm files.
-        records, skipped = backfill.scan_repo_asof(
-            ref, clone, dt.date(2026, 3, 1), feats, pats, overrides
-        )
-        assert not records
-        assert "no charmcraft.yaml" in next(iter(skipped.values()))
+        # March: the repo exists but holds no charm files yet — a repo older
+        # than its charm, which is not the same as a repo that did not exist.
+        outcome = backfill.scan_repo_asof(ref, clone, dt.date(2026, 3, 1), feats, pats, overrides)
+        assert outcome.kind == backfill.NO_CHARM_YET
+        assert not outcome.records
+        assert "no charmcraft.yaml" in next(iter(outcome.skipped.values()))
 
         # May: the charm is there, and scans like any other.
-        records, skipped = backfill.scan_repo_asof(
-            ref, clone, dt.date(2026, 5, 1), feats, pats, overrides
-        )
-        assert not skipped
-        (record,) = records.values()
+        outcome = backfill.scan_repo_asof(ref, clone, dt.date(2026, 5, 1), feats, pats, overrides)
+        assert outcome.kind == backfill.SCANNED
+        assert not outcome.skipped
+        (record,) = outcome.records.values()
         assert record["repo_url"] == str(origin)
         assert "__meta__" in record["features"]
 
-    def test_no_commit_before_the_date_is_reported_as_such(self, tmp_path: Path):
+    def test_a_genuinely_new_repo_is_reported_as_not_yet_created(self, tmp_path: Path):
         origin = _repo(tmp_path / "origin")
         clone = backfill.ensure_full_clone(str(origin), tmp_path / "clone", branch="main")
         assert clone is not None
-        records, skipped = backfill.scan_repo_asof(
+        outcome = backfill.scan_repo_asof(
             _ref("demo", str(origin), branch="main"),
             clone,
             dt.date(2026, 1, 1),
@@ -150,38 +155,60 @@ class TestScanRepoAsOf:
             [],
             backfill.corpus.CorpusOverrides.empty(),
         )
-        assert not records
-        assert "no commit before 2026-01-01" in next(iter(skipped.values()))
+        assert outcome.kind == backfill.NOT_YET_CREATED
+        assert not outcome.records
+        # The reason names the date asked about and how new the repo actually
+        # is, so "listed later" and "created later" can be told apart by eye.
+        reason = next(iter(outcome.skipped.values()))
+        assert "did not exist on 2026-01-01" in reason
+        assert "first commit 2026-02-01" in reason
 
 
 class TestSnapshotShape:
-    def test_provenance_block_is_written_and_ignored_by_consumers(self, tmp_path: Path):
+    def _snapshot(self, tmp_path: Path, date: dt.date) -> dict:
         origin = _repo(tmp_path / "origin")
         workdir = tmp_path / "work"
         assert backfill.ensure_full_clone(
             str(origin), workdir / "charms" / "origin", branch="main"
         )
-        csv_path = tmp_path / "corpus.csv"
-        csv_path.write_text(
-            f"Team,Charm Name,Repository,Branch (if not the default)\ndemo,demo,{origin},main\n"
-        )
         features = backfill.catalogue.default_path()
-        snap = backfill.snapshot_for_date(
-            dt.date(2026, 5, 1),
-            backfill.CorpusAtDate(csv_path, "pinned", None),
+        return backfill.snapshot_for_date(
+            date,
+            [_ref("demo", str(origin), branch="main")],
             workdir,
             backfill.catalogue.load(features),
             backfill.catalogue.load_patterns(features),
             backfill.corpus.CorpusOverrides.empty(),
             features,
+            backfill.CorpusSource(tmp_path / "corpus.csv", "local"),
         )
-        assert "__backfill__" in snap
+
+    def test_provenance_block_is_written_and_ignored_by_consumers(self, tmp_path: Path):
+        snap = self._snapshot(tmp_path, dt.date(2026, 5, 1))
         assert snap["__backfill__"]["cutoff"] == "2026-05-01 02:00:00 +0000"
+        assert snap["__backfill__"]["corpus_fixed_across_dates"] is True
+        assert snap["__backfill__"]["outcomes"][backfill.SCANNED] == 1
+        # Rocks do not time-travel, so the block is absent rather than empty:
+        # `trend` reads that as "not scanned", not as "no rocks are rootless".
         assert trend.ROCKS_KEY not in snap
-        # One real charm record, and it survives a JSON round-trip.
         charms = {k: v for k, v in snap.items() if not k.startswith("__")}
         assert len(charms) == 1
         assert json.loads(json.dumps(snap))
+
+    def test_a_charm_that_did_not_exist_yet_is_in_no_count(self, tmp_path: Path):
+        snap = self._snapshot(tmp_path, dt.date(2026, 1, 1))
+        assert not {k for k in snap if not k.startswith("__")}
+        assert snap["__backfill__"]["outcomes"][backfill.NOT_YET_CREATED] == 1
+        # `trend` counts charms, and this one is only in __skipped__ — so it
+        # cannot land in a denominator as a charm that failed to adopt.
+        snapshot = trend._load_one(_written(tmp_path, snap), "2026-01-01")
+        assert snapshot.charms == {}
+
+
+def _written(tmp_path: Path, snap: dict) -> Path:
+    path = tmp_path / "scored-x.json"
+    path.write_text(json.dumps(snap, indent=2) + "\n")
+    return path
 
 
 def _ref(name: str, url: str, *, branch: str | None = None):

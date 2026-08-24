@@ -136,12 +136,17 @@ Not part of the pipeline; each is run with `uv run python -m charmtally.tools.X`
   were never scanned, by full-cloning each corpus repo and checking it out at
   its last commit before each date's 02:00 UTC cutoff. Separate workdir from
   the weekly scan's on purpose: that one is shallow, and a shallow clone
-  cannot be checked out at a past commit. Snapshots it writes carry a
-  `__backfill__` provenance block and no `__rocks__` block (rocks are fetched
-  raw, not cloned, so they don't time-travel); the corpus list only goes back
-  to hyrum's first `charms.csv` (2026-06-03), before which it falls back to
-  that earliest copy and says so in the block. Existing snapshots are left
-  alone unless `--force`.
+  cannot be checked out at a past commit. **The corpus list is fixed across
+  dates and only the readings move** — hyrum's `charms.csv` records when a
+  charm was *listed*, not when it appeared, so replaying membership would read
+  curation lag as adoption. Absence is therefore split three ways per repo per
+  date (`NOT_YET_CREATED` — history starts after the cutoff; `NO_CHARM_YET` —
+  repo older than its charm; `UNREADABLE`), each landing in `__skipped__` with
+  a reason naming the date, so a charm that did not exist never sits in a
+  denominator. Snapshots carry a `__backfill__` provenance block (cutoff,
+  corpus origin, catalogue digest, outcome tally) and no `__rocks__` block:
+  rocks are fetched raw, not cloned, so they don't time-travel. Existing
+  snapshots are left alone unless `--force`.
 - `rockfind.py` — builds a rocks corpus CSV from GitHub code search
   (`filename:rockcraft.yaml`). The REST search endpoint speaks the *legacy*
   query language: `path:` matches a directory there, so only `filename:`

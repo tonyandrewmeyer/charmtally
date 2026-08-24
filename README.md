@@ -71,8 +71,8 @@ of a charm's checked-out tree, missing weeks can be *recomputed* rather than
 left blank:
 
 ```sh
-# Dry run first: prints the dates, the corpus list used for each, and the
-# repo count, then stops.
+# Dry run first: prints the dates, the corpus list and the repo count, then
+# stops.
 uv run python -m charmtally.tools.backfill \
     --start 2026-01-01 --workdir /tmp/charmtally-backfill \
     --overrides corpus-overrides.yaml --dry-run
@@ -89,23 +89,38 @@ each repo out at its last commit before 02:00 UTC — the cron's hour — and
 scans that tree. Existing snapshots are never overwritten without `--force`,
 so an interrupted run resumes by re-running the same command.
 
-Backfilled points are not identical to points that were scanned at the time,
-and the differences are worth knowing before reading a chart:
+**The corpus does not time-travel; the readings do.** Every date is replayed
+against one list — today's, or whatever `--corpus` pins — as though we had
+known about every charm all along. hyrum's `charms.csv` records when someone
+got round to listing a charm, not when the charm appeared, so replaying
+membership would mistake curation lag for adoption and put a step in every
+metric on the week a batch of rows landed.
 
-- The feature catalogue and scoring rules applied are today's, so the series
-  answers "how much of today's catalogue was in use then".
-- hyrum's `charms.csv` only goes back to 2026-06-03. Earlier dates fall back
-  to the earliest copy of it, so their corpus *membership* is from later than
-  their code; `--corpus-mode pinned --corpus <csv>` pins one list instead.
-- Rocks are not backfilled — `rockcraft.yaml` is fetched raw, not cloned — so
-  the rootless metric stays blank for those dates rather than reading a
-  missing scan as "everything runs as root".
-- A repo with no commit before the cutoff is recorded as skipped, but a repo
-  deleted or made private since is missing from every backfilled date.
+Knowing about a charm all along is not the same as it having existed all
+along, so the two are told apart per repo, per date:
 
-Each backfilled snapshot carries a `__backfill__` block recording its cutoff,
-which corpus list it used and the catalogue digest, so a recomputed point can
-always be told from a scanned one.
+- **Listed later, already there** — commits before the cutoff, so it is
+  scanned like any other charm. This is the case the fixed list exists to
+  catch.
+- **Actually new** — the repo's history starts after the cutoff. Recorded in
+  `__skipped__` as not yet created, with its first-commit date, and counted in
+  nothing: a charm that did not exist cannot have adopted anything, and must
+  not sit in a denominator as though it had declined to.
+- **Repo older than its charm** — history, but no `charmcraft.yaml` /
+  `metadata.yaml` in it yet. Skipped with its own reason, for the same reason.
+
+Each snapshot's `__backfill__` block records the cutoff, the corpus origin, the
+catalogue digest and a tally of those outcomes, so a recomputed point can be
+told from a scanned one and a jump in a metric can be checked against a jump in
+the population underneath it.
+
+Two things stay unfaithful by construction: the feature catalogue, scoring
+rules and `corpus-overrides.yaml` applied are today's (so the series answers
+"how much of today's catalogue was in use then"), and rocks are not backfilled
+— `rockcraft.yaml` is fetched raw, not cloned — so the rootless metric stays
+blank for those dates rather than reading a missing scan as "everything runs as
+root". A charm that has since left the corpus is missing from every backfilled
+date too: a fixed list cures curation lag, not survivorship.
 
 ## Building a rock corpus
 

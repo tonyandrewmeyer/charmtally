@@ -29,12 +29,38 @@ Dates already present under `--snapshots-dir` are left alone unless `--force`
 is passed, which makes an interrupted run resumable — and makes it hard to
 clobber a snapshot that records a real scan.
 
+The corpus does not time-travel; the readings do
+-----------------------------------------------
+Every date is replayed against **one** corpus list — today's, or whatever
+`--corpus` pins — as though we had known about every charm all along. Only the
+readings move in time. That is deliberate: hyrum's `charms.csv` is a record of
+who got round to listing a charm, not of when the charm appeared, so replaying
+membership would mistake curation lag for adoption and put a step in every
+metric on the week a batch of rows landed.
+
+"We knew about it all along" is not the same as "it existed all along", and the
+two are told apart per repo, per date:
+
+* **Listed later, but already there** — the repo has commits before the cutoff,
+  so it is checked out and scanned like any other. This is the case the fixed
+  list exists to catch.
+* **Actually new** — the repo's history starts *after* the cutoff. It is
+  recorded in `__skipped__` as not yet created, with its first-commit date, and
+  contributes to no count for that date. A charm that did not exist cannot have
+  adopted anything, and must not sit in a denominator as though it had
+  declined to.
+* **Repo older than its charm** — the repo existed but held no
+  `charmcraft.yaml` / `metadata.yaml` yet (a charm added to an existing repo, a
+  monorepo's later sub-charms). Skipped too, with its own reason, because the
+  charm did not exist even though the repo did.
+
+The `__backfill__` block tallies those outcomes per date, so a jump in a metric
+can be checked against a jump in the population that produced it.
+
 What is and isn't faithful
 --------------------------
-Faithful: every charm's *code* is the code that was there on the date, and a
-repo with no commit before the cutoff is recorded as skipped rather than
-scanned empty — a charm that did not exist yet does not drag the denominator
-down.
+Faithful: every charm's *code* is the code that was there on the date, and the
+population is every charm that existed then, whenever it was listed.
 
 Not faithful, by construction:
 
@@ -42,13 +68,10 @@ Not faithful, by construction:
   answer "how much of the current catalogue did the ecosystem use back then",
   which is the question the trend page asks. Snapshots taken at the time would
   each carry the catalogue of their week.
-* **The corpus membership list barely time-travels.** hyrum's `charms.csv`
-  starts on 2026-06-03; before that there is nothing to read. See
-  `--corpus-mode`: the default falls back to the earliest CSV that exists,
-  so pre-June dates use a *later* corpus. Charms added to the list after a
-  backfilled date therefore appear in it (if their repo existed), and charms
-  whose repo has since been deleted or gone private are missing from every
-  date. Both are survivorship effects the weekly series does not have.
+* **Charms that have since left the corpus are missing from every date.** The
+  list is today's, so a repo deleted, made private, or dropped from
+  `charms.csv` is absent even from dates when it was alive and listed. Fixing
+  the list cures curation lag, not survivorship.
 * **Rocks are omitted.** The `__rocks__` block needs a `rockcraft.yaml` per
   rock as of the date, which the raw-fetch path cannot express, and `rocks.csv`
   is curated now anyway. Backfilled snapshots carry no rocks block, which
@@ -66,9 +89,9 @@ minutes to tens of minutes and a few GiB), and each replayed date then costs
 about what one weekly scan costs, minus the network.
 
 Each snapshot records its own provenance in a `__backfill__` block (cutoff,
-corpus source and commit, catalogue digest). Consumers skip `__`-prefixed keys,
-so it rides along harmlessly — and a later reader can tell a recomputed point
-from a scanned one.
+corpus origin, catalogue digest, per-outcome counts). Consumers skip
+`__`-prefixed keys, so it rides along harmlessly — and a later reader can tell
+a recomputed point from a scanned one.
 """
 
 from __future__ import annotations
@@ -80,7 +103,7 @@ import json
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -92,12 +115,6 @@ if TYPE_CHECKING:
 
     from ..corpus import CharmRef
 
-#: Where the corpus list lives, as a git remote rather than a raw URL: reading
-#: it at a past commit needs the history, which `raw.githubusercontent.com`
-#: cannot serve.
-HYRUM_REPO_URL = "https://github.com/canonical/hyrum.git"
-HYRUM_CSV_PATH = "charm-list/charms.csv"
-
 #: Time of day the cutoff lands on, mirroring `scan.yaml`'s 02:00 UTC cron so
 #: a backfilled Monday sees what that Monday's run would have seen.
 CUTOFF_TIME = "02:00:00 +0000"
@@ -106,6 +123,15 @@ CUTOFF_TIME = "02:00:00 +0000"
 DEFAULT_WEEKDAY = 0
 
 DEFAULT_JOBS = 8
+
+#: Per-repo outcomes for one date, tallied into the provenance block. The two
+#: middle ones are both "no charm here yet" to a counter and different things
+#: to a reader, which is the distinction the fixed corpus list makes necessary.
+SCANNED = "scanned"
+NOT_YET_CREATED = "not-yet-created"
+NO_CHARM_YET = "no-charm-yet"
+UNREADABLE = "unreadable"
+EXCLUDED = "excluded"
 
 
 # ── dates ───────────────────────────────────────────────────────────────────
@@ -214,6 +240,18 @@ def commit_asof(dest: Path, ref: str, date: dt.date) -> str | None:
     return sha or None
 
 
+def first_commit_date(dest: Path, ref: str) -> str | None:
+    """Return the date of the oldest commit on `ref`, or None if unreadable.
+
+    Only asked for when `commit_asof` came up empty, to say *how* new a repo
+    is rather than just that it is newer than the date being replayed.
+    """
+    out = _git_out(["log", "--reverse", "--date=short", "--format=%cd", ref], dest)
+    if not out:
+        return None
+    return out.splitlines()[0].strip() or None
+
+
 def checkout(dest: Path, sha: str) -> bool:
     """Detach the working tree at `sha`, discarding whatever the last date left.
 
@@ -227,95 +265,35 @@ def checkout(dest: Path, sha: str) -> bool:
     return True
 
 
-# ── the corpus list, at a date ──────────────────────────────────────────────
+# ── the corpus list ─────────────────────────────────────────────────────────
 
 
 @dataclass(frozen=True)
-class CorpusAtDate:
-    """The corpus list used for one backfilled date, and where it came from."""
+class CorpusSource:
+    """The single corpus list every date is replayed against.
 
-    path: Path
-    source: str  # "as-of" | "earliest" | "pinned"
-    commit: str | None
-    note: str = ""
-
-
-class HyrumHistory:
-    """Read hyrum's `charms.csv` as it stood on a given date.
-
-    The file only goes back to 2026-06-03, so `csv_at` reports which commit it
-    actually used and every caller passes that on to the snapshot's provenance
-    block instead of quietly presenting a June corpus as a January one.
+    Single on purpose — see the module docstring. `origin` is recorded in each
+    snapshot so a series built against a pinned CSV can be told from one built
+    against the live list.
     """
 
-    def __init__(self, workdir: Path, repo_url: str = HYRUM_REPO_URL) -> None:
-        self.root = workdir / "hyrum"
-        self.repo_url = repo_url
-        self._out = workdir / "corpus"
-
-    def prepare(self) -> bool:
-        """Clone or refresh the corpus repo. Blobless: only one file is ever read."""
-        if self.root.exists():
-            return ensure_full_clone(self.repo_url, self.root) is not None
-        self.root.parent.mkdir(parents=True, exist_ok=True)
-        ok = _git_out(["clone", "--quiet", "--filter=blob:none", self.repo_url, str(self.root)])
-        if ok is None:
-            return False
-        _git_out(["remote", "set-head", "origin", "--auto"], self.root)
-        return True
-
-    def _ref(self) -> str:
-        return tracking_ref(self.root, None) or "origin/main"
-
-    def _commit_touching_csv(self, before: dt.date | None) -> str | None:
-        args = ["rev-list", "-1"]
-        if before is not None:
-            args.append(f"--before={cutoff(before)}")
-        args += [self._ref(), "--", HYRUM_CSV_PATH]
-        return _git_out(args, self.root) or None
-
-    def earliest_commit(self) -> str | None:
-        """First commit that introduced the CSV — the floor on time travel."""
-        out = _git_out(["rev-list", "--reverse", self._ref(), "--", HYRUM_CSV_PATH], self.root)
-        if not out:
-            return None
-        return out.splitlines()[0].strip() or None
-
-    def _write(self, commit: str, label: str) -> Path | None:
-        blob = _git_out(["show", f"{commit}:{HYRUM_CSV_PATH}"], self.root)
-        if blob is None:
-            return None
-        self._out.mkdir(parents=True, exist_ok=True)
-        path = self._out / f"charms-{label}.csv"
-        path.write_text(blob + "\n", encoding="utf-8")
-        return path
-
-    def csv_at(self, date: dt.date) -> CorpusAtDate | None:
-        """Return the CSV as of `date`, or the earliest one that exists."""
-        commit = self._commit_touching_csv(date)
-        if commit:
-            path = self._write(commit, date.isoformat())
-            return None if path is None else CorpusAtDate(path, "as-of", commit)
-        commit = self.earliest_commit()
-        if not commit:
-            return None
-        path = self._write(commit, "earliest")
-        if path is None:
-            return None
-        when = _git_out(["log", "-1", "--format=%ad", "--date=short", commit], self.root)
-        return CorpusAtDate(
-            path,
-            "earliest",
-            commit,
-            note=(
-                f"hyrum's {HYRUM_CSV_PATH} does not exist at this date; used the "
-                f"earliest available copy ({when or 'unknown date'}). Corpus "
-                "membership is therefore later than the code being scanned."
-            ),
-        )
+    path: Path
+    origin: str  # the URL it came from, or "local"
 
 
-# ── the scan, at a date ─────────────────────────────────────────────────────
+def resolve_corpus(path: Path | None, url: str, workdir: Path) -> CorpusSource:
+    """Return the corpus list to use for every date.
+
+    `--corpus` wins when given; otherwise the current list is fetched once and
+    cached in the workdir, which is also what makes a re-run reproducible
+    without the network.
+    """
+    if path is not None:
+        return CorpusSource(path, "local")
+    return CorpusSource(corpus.fetch_to(url, workdir / "corpus.csv"), url)
+
+
+# ── the readings, at a date ─────────────────────────────────────────────────
 
 
 def unique_refs(refs: Iterable[CharmRef]) -> list[CharmRef]:
@@ -339,6 +317,21 @@ def catalogue_digest(features_path: Path) -> str:
     return hashlib.sha256(features_path.read_bytes()).hexdigest()[:12]
 
 
+@dataclass
+class RepoOutcome:
+    """What one repo produced for one date.
+
+    `kind` is the repo-level verdict the provenance block tallies; `records`
+    and `skipped` are merged into the snapshot as-is. A monorepo can carry
+    both — some sub-charms scanned, others excluded by overrides — so the two
+    are not alternatives.
+    """
+
+    kind: str
+    records: dict[str, dict] = field(default_factory=dict)
+    skipped: dict[str, str] = field(default_factory=dict)
+
+
 def scan_repo_asof(
     ref: CharmRef,
     dest: Path,
@@ -346,101 +339,123 @@ def scan_repo_asof(
     feats: list,
     pats: list,
     overrides: corpus.CorpusOverrides,
-) -> tuple[dict[str, dict], dict[str, str]]:
-    """Scan one repo as it stood on `date`. Returns `(records, skipped)`.
+) -> RepoOutcome:
+    """Scan one repo as it stood on `date`.
 
     Mirrors `cli.cmd_scan`'s per-ref handling — monorepo fan-out, sub-charm
     and feature excludes, the same slug scheme — because the output has to be
     indistinguishable from a real snapshot's for `trend` to read the two in
     one series.
+
+    The two ways a listed charm can be absent from a date are kept apart:
+    `NOT_YET_CREATED` (no history before the cutoff — the repo itself is
+    newer) and `NO_CHARM_YET` (history, but no charm files in it yet). Both
+    land in `__skipped__` with a reason naming the date, so neither is read
+    later as a charm that had the chance to adopt something and didn't.
     """
     track = tracking_ref(dest, ref.branch)
     if track is None:
-        return {}, {ref.slug: "no remote-tracking branch to replay"}
+        return RepoOutcome(UNREADABLE, skipped={ref.slug: "no remote-tracking branch to replay"})
     sha = commit_asof(dest, track, date)
     if sha is None:
-        return {}, {ref.slug: f"no commit before {date.isoformat()}"}
+        born = first_commit_date(dest, track)
+        detail = f"first commit {born}" if born else "no commit history readable"
+        return RepoOutcome(
+            NOT_YET_CREATED,
+            skipped={ref.slug: f"repo did not exist on {date.isoformat()} ({detail})"},
+        )
     if not checkout(dest, sha):
-        return {}, {ref.slug: f"checkout of {sha[:12]} failed"}
+        return RepoOutcome(UNREADABLE, skipped={ref.slug: f"checkout of {sha[:12]} failed"})
 
     charm_roots = scan.find_charm_roots(dest)
     if not charm_roots:
-        return {}, {ref.slug: "no charmcraft.yaml or metadata.yaml found"}
+        return RepoOutcome(
+            NO_CHARM_YET,
+            skipped={
+                ref.slug: (
+                    f"repo exists but has no charmcraft.yaml or metadata.yaml "
+                    f"at {date.isoformat()}"
+                )
+            },
+        )
 
-    records: dict[str, dict] = {}
-    skipped: dict[str, str] = {}
+    outcome = RepoOutcome(SCANNED)
     if len(charm_roots) == 1 and charm_roots[0] == dest:
         features = scan.scan_charm(dest, feats, pats)
         _apply_feature_excludes(features, overrides, ref.repo_url, "")
-        records[ref.slug] = {
+        outcome.records[ref.slug] = {
             "name": ref.name,
             "team": ref.team,
             "repo_url": ref.repo_url,
             "features": features,
         }
-        return records, skipped
+        return outcome
 
     for sub in charm_roots:
         rel = sub.relative_to(dest)
         sub_slug = f"{ref.slug}/{rel}"
         reason = overrides.sub_charm_skip_reason(ref.repo_url, str(rel))
         if reason:
-            skipped[sub_slug] = reason
+            outcome.skipped[sub_slug] = reason
             continue
         features = scan.scan_charm(sub, feats, pats)
         _apply_feature_excludes(features, overrides, ref.repo_url, str(rel))
-        records[sub_slug] = {
+        outcome.records[sub_slug] = {
             "name": f"{ref.name}/{rel}",
             "team": ref.team,
             "repo_url": ref.repo_url,
             "subpath": str(rel),
             "features": features,
         }
-    return records, skipped
+    return outcome
 
 
 def snapshot_for_date(
     date: dt.date,
-    corpus_at: CorpusAtDate,
+    refs: list[CharmRef],
     workdir: Path,
     feats: list,
     pats: list,
     overrides: corpus.CorpusOverrides,
     features_path: Path,
-    *,
-    limit: int | None = None,
+    corpus_source: CorpusSource,
 ) -> dict:
-    """Replay every corpus repo at `date` and return the snapshot dict."""
-    refs = unique_refs(corpus.load(corpus_at.path))
-    if limit is not None:
-        refs = refs[:limit]
+    """Replay every corpus repo at `date` and return the snapshot dict.
+
+    `refs` is the same list for every date: membership is fixed, only the
+    readings move.
+    """
     clones = workdir / "charms"
 
     out: dict[str, object] = {}
     skipped: dict[str, str] = {}
+    tally = dict.fromkeys((SCANNED, NOT_YET_CREATED, NO_CHARM_YET, UNREADABLE, EXCLUDED), 0)
     for index, ref in enumerate(refs, start=1):
         adjusted, exclude_reason = overrides.apply(ref)
         if adjusted is None:
             skipped[ref.slug] = exclude_reason or "excluded by corpus-overrides.yaml"
+            tally[EXCLUDED] += 1
             continue
         ref = adjusted
         dest = clones / ref.slug
         print(f"  [{index}/{len(refs)}] {ref.name}", file=sys.stderr)
         if not (dest / ".git").exists():
             skipped[ref.slug] = "no local clone (prepare phase failed?)"
+            tally[UNREADABLE] += 1
             continue
-        records, repo_skipped = scan_repo_asof(ref, dest, date, feats, pats, overrides)
-        out.update(records)
-        skipped.update(repo_skipped)
+        outcome = scan_repo_asof(ref, dest, date, feats, pats, overrides)
+        out.update(outcome.records)
+        skipped.update(outcome.skipped)
+        tally[outcome.kind] += 1
 
     if skipped:
         out["__skipped__"] = skipped
     out["__backfill__"] = {
         "cutoff": cutoff(date),
-        "corpus_source": corpus_at.source,
-        "corpus_commit": corpus_at.commit,
-        "corpus_note": corpus_at.note,
+        "corpus_origin": corpus_source.origin,
+        "corpus_fixed_across_dates": True,
         "catalogue_digest": catalogue_digest(features_path),
+        "outcomes": tally,
         "rocks": "not scanned (backfill cannot time-travel rockcraft.yaml)",
         "tool": "charmtally.tools.backfill",
     }
@@ -531,18 +546,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="Feature catalogue (default: the one inside the package).",
     )
     p.add_argument(
-        "--corpus-mode",
-        choices=("as-of", "pinned"),
-        default="as-of",
-        help="as-of: read hyrum's charms.csv at each date, falling back to the "
-        "earliest copy for dates before it existed. pinned: use --corpus for "
-        "every date.",
-    )
-    p.add_argument(
         "--corpus",
         type=Path,
         default=None,
-        help="Corpus CSV to pin every date to (required by --corpus-mode pinned).",
+        help="Corpus CSV to replay every date against. Default: fetch --corpus-url "
+        "once and cache it in the workdir. The list is fixed across dates either "
+        "way — only the readings move in time.",
+    )
+    p.add_argument(
+        "--corpus-url",
+        default=corpus.HYRUM_CHARMS_CSV_URL,
+        help="URL of the corpus CSV (default: canonical/hyrum charm-list).",
     )
     p.add_argument("--jobs", type=int, default=DEFAULT_JOBS, help="Parallel clones in prepare.")
     p.add_argument(
@@ -564,7 +578,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--dry-run",
         action="store_true",
-        help="Print the plan (dates, corpus per date, repo count) and stop.",
+        help="Print the plan (dates, corpus list, repo count) and stop.",
     )
     return p
 
@@ -585,10 +599,6 @@ def main(argv: list[str] | None = None) -> int:
     """Plan the range, prepare the clones, then replay each date."""
     args = build_parser().parse_args(argv)
 
-    if args.corpus_mode == "pinned" and args.corpus is None:
-        print("--corpus-mode pinned needs --corpus <local.csv>", file=sys.stderr)
-        return 2
-
     existing = _existing_snapshot_dates(args.snapshots_dir)
     end = args.end
     if end is None:
@@ -607,50 +617,32 @@ def main(argv: list[str] | None = None) -> int:
         print("nothing to do", file=sys.stderr)
         return 0
 
-    history: HyrumHistory | None = None
-    if args.corpus_mode == "as-of":
-        history = HyrumHistory(args.workdir)
-        print(f"… preparing corpus history ({HYRUM_REPO_URL})", file=sys.stderr)
-        if not history.prepare():
-            print("could not read the corpus repo; use --corpus-mode pinned", file=sys.stderr)
-            return 1
-
-    def corpus_for(date: dt.date) -> CorpusAtDate | None:
-        if history is None:
-            return CorpusAtDate(args.corpus, "pinned", None)
-        return history.csv_at(date)
-
-    plan: list[tuple[dt.date, CorpusAtDate]] = []
-    for date in dates:
-        at = corpus_for(date)
-        if at is None:
-            print(f"  {date}: no corpus CSV available; skipping", file=sys.stderr)
-            continue
-        plan.append((date, at))
-    if not plan:
-        print("no dates have a usable corpus list", file=sys.stderr)
+    args.workdir.mkdir(parents=True, exist_ok=True)
+    try:
+        source = resolve_corpus(args.corpus, args.corpus_url, args.workdir)
+    except OSError as exc:
+        print(f"could not read the corpus list: {exc}", file=sys.stderr)
+        return 1
+    refs = unique_refs(corpus.load(source.path))
+    if args.limit is not None:
+        refs = refs[: args.limit]
+    if not refs:
+        print(f"no charms in {source.path}", file=sys.stderr)
         return 1
 
-    # Union of every date's repo list: the prepare phase clones once, and a
-    # repo that only appears in the newest CSV is still needed by the oldest
-    # date (its history reaches back further than its listing does).
-    all_refs = unique_refs([ref for _, at in plan for ref in corpus.load(at.path)])
-    if args.limit is not None:
-        all_refs = all_refs[: args.limit]
-
     print(
-        f"plan: {len(plan)} dates ({plan[0][0]} → {plan[-1][0]}), {len(all_refs)} repos",
+        f"plan: {len(dates)} dates ({dates[0]} → {dates[-1]}), {len(refs)} repos, "
+        f"corpus {source.origin} (fixed across dates)",
         file=sys.stderr,
     )
-    for date, at in plan:
-        suffix = f" — {at.note}" if at.note else ""
-        print(f"  {date}: corpus {at.source} {(at.commit or '')[:12]}{suffix}", file=sys.stderr)
     if args.dry_run:
+        for date in dates:
+            print(f"  {date}", file=sys.stderr)
         return 0
 
     if not args.skip_prepare:
-        print(f"… cloning {len(all_refs)} repos with full history", file=sys.stderr)
-        failures = prepare_clones(all_refs, args.workdir, jobs=args.jobs)
+        print(f"… cloning {len(refs)} repos with full history", file=sys.stderr)
+        failures = prepare_clones(refs, args.workdir, jobs=args.jobs)
         print(f"prepare done ({failures} failed)", file=sys.stderr)
 
     feats = catalogue.load(args.features)
@@ -660,23 +652,21 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     args.snapshots_dir.mkdir(parents=True, exist_ok=True)
-    for date, at in plan:
+    for date in dates:
         print(f"… replaying {date}", file=sys.stderr)
         snap = snapshot_for_date(
-            date,
-            at,
-            args.workdir,
-            feats,
-            pats,
-            overrides,
-            args.features,
-            limit=args.limit,
+            date, refs, args.workdir, feats, pats, overrides, args.features, source
         )
         out = args.snapshots_dir / f"scored-{date.isoformat()}.json"
         out.write_text(json.dumps(snap, indent=2) + "\n")
-        scanned = sum(1 for k in snap if not k.startswith("__"))
-        skipped = len(snap.get("__skipped__", {}))  # type: ignore[arg-type]
-        print(f"wrote {out} ({scanned} records, {skipped} skipped)", file=sys.stderr)
+        records = sum(1 for k in snap if not k.startswith("__"))
+        tally = snap["__backfill__"]["outcomes"]  # type: ignore[index]
+        print(
+            f"wrote {out} ({records} records; not yet created: "
+            f"{tally[NOT_YET_CREATED]}, no charm yet: {tally[NO_CHARM_YET]}, "
+            f"unreadable: {tally[UNREADABLE]})",
+            file=sys.stderr,
+        )
 
     return 0
 
