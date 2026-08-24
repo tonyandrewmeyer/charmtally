@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>charmtally — charm tech adoption</title>
+<style>
+  body { font: 14px/1.5 system-ui, sans-serif; margin: 2em; max-width: 1200px; }
+  h1 { margin-bottom: 0; }
+  .meta { color: #666; font-size: 12px; }
+  nav a { margin-right: 1em; }
+  table { border-collapse: collapse; margin: 0 0 1em 0; font-size: 13px; }
+  th, td { border: 1px solid #ddd; padding: 3px 8px; text-align: left; }
+  th { background: #f4f4f4; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  .cards { display: flex; flex-wrap: wrap; gap: 1em; margin: 1.5em 0 2em 0; }
+  .card {
+    border: 1px solid #ddd; border-radius: 12px; padding: 1em 1.2em;
+    min-width: 240px; flex: 1 1 240px;
+  }
+  .card h2 { font-size: 15px; margin: 0 0 .2em 0; }
+  .card .q { color: #666; font-size: 12px; margin: 0 0 .6em 0; }
+  .headline { font-size: 34px; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .headline .unit { font-size: 18px; color: #666; }
+  .delta { font-size: 13px; margin-left: .4em; }
+  .delta.up { color: #060; }
+  .delta.down { color: #b00; }
+  .delta.flat, .delta.none { color: #888; }
+  .card .basis { color: #666; font-size: 12px; margin-top: .4em; }
+  .card.pending { background: #fafafa; }
+  .card.pending .headline { color: #bbb; }
+
+  section.metric { border-top: 1px solid #eee; padding-top: 1.2em; margin-top: 2em; }
+  section.metric h2 { margin-bottom: .2em; }
+  .detail { color: #444; max-width: 70ch; margin: 0 0 .8em 0; }
+  .caveats { color: #85560a; font-size: 12px; max-width: 70ch; }
+  .partial { color: #85560a; font-size: 12px; }
+  .chart { height: 320px; }
+  .pending-note {
+    border-left: 3px solid #ddd; padding-left: .8em; color: #666; max-width: 70ch;
+  }
+</style>
+</head>
+<body>
+
+<h1>charm tech adoption</h1>
+<p class="meta">
+  Is the tooling charm tech ships being picked up? A small, deliberately
+  stable set of metrics across the scanned charm corpus.
+  {% if generated_at %}Generated {{ generated_at }}.{% endif %}
+</p>
+
+<nav>
+  <a href="dashboard.html">← Current</a>
+  <a href="trend.html">History</a>
+</nav>
+
+<div class="cards">
+  {% for card in cards %}
+  <div class="card{{ ' pending' if card.pending else '' }}">
+    <h2>{{ card.metric.title }}</h2>
+    <p class="q">{{ card.metric.question }}</p>
+    {% if card.latest %}
+    <div class="headline">
+      {{ card.latest.value }}<span class="unit">%</span>
+      {% if card.delta is none %}
+      <span class="delta none" title="only one reading so far">—</span>
+      {% elif card.delta > 0 %}
+      <span class="delta up">▲ {{ card.delta }}</span>
+      {% elif card.delta < 0 %}
+      <span class="delta down">▼ {{ -card.delta }}</span>
+      {% else %}
+      <span class="delta flat">no change</span>
+      {% endif %}
+    </div>
+    <p class="basis">
+      {{ card.latest.numerator }} / {{ card.latest.denominator }} charms,
+      {{ card.latest.date }}
+    </p>
+    {% else %}
+    <div class="headline">—</div>
+    <p class="basis">{{ card.pending or "no data yet" }}</p>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+{% for card in cards %}
+<section class="metric" id="metric-{{ card.metric.key }}">
+  <h2>{{ card.metric.title }}</h2>
+  <p class="detail">{{ card.metric.detail|safe }}</p>
+
+  {% if card.series %}
+  <div class="chart" id="chart-{{ card.metric.key }}"></div>
+
+  <p class="meta">Static fallback — headline value and breakdown, per snapshot date:</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th class="num">{{ card.metric.title }}</th>
+        {% for key in card.metric.breakdown_keys %}<th class="num">{{ key }}</th>{% endfor %}
+        <th class="num">charms</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for point in card.series %}
+      <tr>
+        <td>{{ point.date }}</td>
+        <td class="num">{{ point.value }}%</td>
+        {% for key in card.metric.breakdown_keys %}
+        <td class="num">
+          {% if key in point.breakdown %}{{ point.breakdown[key] }}%{% else %}—{% endif %}
+        </td>
+        {% endfor %}
+        <td class="num">{{ point.denominator }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if card.latest and card.latest.partial %}
+  <p class="partial">Latest point is partial: {{ card.latest.partial }}.</p>
+  {% endif %}
+  {% else %}
+  <p class="pending-note">
+    No series yet — {{ card.pending or "no snapshot carries the inputs for this metric" }}.
+  </p>
+  {% endif %}
+
+  {% if card.metric.caveats %}
+  <ul class="caveats">
+    {% for c in card.metric.caveats %}<li>{{ c }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+</section>
+{% endfor %}
+
+<p class="meta">
+  Denominator for every metric is <em>eligible</em> charms: the scanned corpus
+  minus reactive and legacy-classic charms, which pre-date ops and could never
+  adopt these APIs. The corpus itself grows between scans, so read a series as
+  a share, not as a count.
+</p>
+
+<script type="application/json" id="adoption-metrics-data">{{ chart_data|tojson }}</script>
+
+{# Plotly from the CDN with SRI, same pin as the history page — keep the two
+   in step. The hash pins plotly-2.35.2.min.js exactly; regenerate it whenever
+   the version in the URL changes:
+     curl -sSfL <url> | openssl dgst -sha384 -binary | openssl base64 -A #}
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"
+        integrity="sha384-cCVCZkAjYNxaYKbM8lsArLznDF/SvMFr1jcZrvOpSTCa0W40ZAdLzHCEulnUa5i7"
+        crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+<script>
+// Per-metric charts — progressive enhancement over the static tables above.
+// If the CDN script fails to load (offline, CSP), Plotly is undefined and
+// this block is a no-op; the tables remain the source of truth.
+(function () {
+  if (typeof Plotly === 'undefined') return;
+  const metrics = JSON.parse(
+    document.getElementById('adoption-metrics-data').textContent);
+
+  metrics.forEach(m => {
+    const el = document.getElementById('chart-' + m.key);
+    if (!el || !m.series.length) return;
+    const dates = m.series.map(p => p.date);
+
+    // Breakdown as stacked areas (the composition), headline as a line on
+    // top (the number the card reports). The headline is one of the
+    // breakdown keys, so it is drawn again rather than left implicit —
+    // reading it off a stack boundary is exactly what stacked charts are
+    // bad at.
+    const traces = m.breakdown_keys.map(key => ({
+      name: key,
+      x: dates,
+      y: m.series.map(p => (key in p.breakdown ? p.breakdown[key] : null)),
+      stackgroup: 'one',
+      groupnorm: '',
+      mode: 'none',
+      hovertemplate: '%{y}% ' + key + '<extra></extra>',
+    }));
+    traces.push({
+      name: m.title,
+      x: dates,
+      y: m.series.map(p => p.value),
+      mode: 'lines+markers',
+      line: { color: '#224', width: 2 },
+      marker: { color: '#224' },
+      hovertemplate: '%{y}%<extra>' + m.title + '</extra>',
+    });
+
+    Plotly.newPlot(el, traces, {
+      yaxis: { title: '% of eligible charms', range: [0, 100] },
+      xaxis: { title: 'snapshot date' },
+      margin: { t: 20 },
+      height: 320,
+    }, { responsive: true, displayModeBar: false });
+  });
+})();
+</script>
+
+</body>
+</html>

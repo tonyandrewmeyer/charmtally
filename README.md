@@ -45,6 +45,9 @@ charmtally dashboard scored.json --pairs pairs.json --out dashboard.html
 # Render the History page from the dated snapshots under snapshots/.
 charmtally trend --snapshots-dir snapshots --live scored.json --out trend.html
 
+# Render the charm-tech adoption scorecard (a few headline metrics over time).
+charmtally adoption --snapshots-dir snapshots --live scored.json --out adoption.html
+
 # Optional: re-score `worth-considering` records with an LLM.
 # Needs OPENROUTER_API_KEY; --dry-run reports what would be sent.
 charmtally llm-score scored.json --workdir /tmp/charms --dry-run
@@ -54,8 +57,9 @@ charmtally llm-calibrate scored.json ground-truth.json
 ```
 
 The weekly [`scan` workflow](.github/workflows/scan.yaml) runs that pipeline
-every Monday and commits the refreshed `results.json`, `dashboard.html` and
-`trend.html` (plus a dated snapshot under `snapshots/`) back to `main`.
+every Monday and commits the refreshed `results.json`, `dashboard.html`,
+`trend.html` and `adoption.html` (plus a dated snapshot under `snapshots/`)
+back to `main`.
 `scored.json`, `llm-scored.json` and `pairs.json` are intermediates and are
 not committed.
 

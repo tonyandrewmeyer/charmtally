@@ -35,6 +35,12 @@ Usage:
         Adoption trend, per-charm timeline and diff list across the dated
         snapshots → the standalone History page.
 
+    charmtally adoption [--snapshots-dir snapshots] [--live scored.json]
+                        [--since DATE] [--metric KEY] [--out adoption.html]
+        Charm-tech adoption scorecard: a handful of headline metrics
+        (typed relation data, jubilant, charmlibs share, ...) over the same
+        dated snapshots the trend page reads → the standalone Adoption page.
+
     charmtally llm-score scored.json [--dry-run] [--out llm-scored.json]
         Optional LLM pass over `worth-considering` records. Needs
         OPENROUTER_API_KEY; capped by --max-llm-calls and a spend budget.
@@ -52,7 +58,7 @@ import sys
 from dataclasses import asdict
 from pathlib import Path
 
-from . import __version__, catalogue, corpus, dashboard, scan
+from . import __version__, adoption, catalogue, corpus, dashboard, scan
 from . import llm_score as _llm_score
 from . import metadata as _metadata
 from . import pairs as _pairs
@@ -428,6 +434,57 @@ def cmd_trend(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_adoption(args: argparse.Namespace) -> int:
+    """Charm-tech adoption scorecard across CI snapshots → adoption.html.
+
+    Same inputs as `trend`, a much narrower question: are the few things
+    charm tech ships actually being adopted? See adoption.py for the metric
+    definitions and the eligibility / feature-drift guards.
+    """
+    snapshots = _trend.load_snapshots(args.snapshots_dir, args.live)
+    if not snapshots:
+        print(f"no snapshots found under {args.snapshots_dir}", file=sys.stderr)
+        return 1
+
+    ranged = _trend.select_range(snapshots, args.since)
+    if not ranged:
+        print(f"no snapshots on/after --since {args.since}", file=sys.stderr)
+        return 1
+
+    if args.metric and adoption.metric_by_key(args.metric) is None:
+        known = ", ".join(m.key for m in adoption.METRICS)
+        print(f"unknown metric {args.metric!r}; known metrics: {known}", file=sys.stderr)
+        return 2
+
+    metrics = [m for m in adoption.METRICS if not args.metric or m.key == args.metric]
+    series = adoption.compute_series(ranged, only=args.metric)
+
+    html = dashboard.render_adoption(metrics, series)
+    args.out.write_text(html)
+    print(f"wrote {args.out}", file=sys.stderr)
+
+    if args.emit_json:
+        json_out = args.out.with_suffix(".json")
+        payload = {
+            "metrics": [
+                {
+                    "key": m.key,
+                    "title": m.title,
+                    "question": m.question,
+                    "unit": m.unit,
+                    "scope": m.scope,
+                    "pending": m.pending,
+                    "series": series.get(m.key, []),
+                }
+                for m in metrics
+            ]
+        }
+        json_out.write_text(json.dumps(payload, indent=2) + "\n")
+        print(f"wrote {json_out}", file=sys.stderr)
+
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     """Run the charmtally command-line interface."""
     p = argparse.ArgumentParser(prog="charmtally")
@@ -655,6 +712,46 @@ def main(argv: list[str] | None = None) -> int:
         help="Also write the computed trend data as JSON alongside the HTML (<out>.json).",
     )
     p_trend.set_defaults(func=cmd_trend)
+
+    p_adoption = sub.add_parser(
+        "adoption",
+        help="Charm-tech adoption scorecard across CI snapshots → adoption.html.",
+    )
+    p_adoption.add_argument(
+        "--snapshots-dir",
+        type=Path,
+        default=Path("snapshots"),
+        dest="snapshots_dir",
+        help="Directory of scored-YYYY-MM-DD.json snapshots (default: snapshots/).",
+    )
+    p_adoption.add_argument(
+        "--live",
+        type=Path,
+        default=Path("scored.json"),
+        help=(
+            "Live scored.json, included as today's snapshot unless one already "
+            "exists (default: scored.json)."
+        ),
+    )
+    p_adoption.add_argument(
+        "--metric",
+        default=None,
+        help="Restrict the page to one metric key (default: the whole scorecard).",
+    )
+    p_adoption.add_argument(
+        "--since",
+        default=None,
+        metavar="DATE",
+        help="ISO date (YYYY-MM-DD). Trims every series to snapshots on/after it.",
+    )
+    p_adoption.add_argument("--out", type=Path, default=Path("adoption.html"))
+    p_adoption.add_argument(
+        "--json",
+        action="store_true",
+        dest="emit_json",
+        help="Also write the computed metrics as JSON alongside the HTML (<out>.json).",
+    )
+    p_adoption.set_defaults(func=cmd_adoption)
 
     args = p.parse_args(argv)
     return args.func(args)

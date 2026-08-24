@@ -23,9 +23,14 @@ from __future__ import annotations
 
 import datetime as dt
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import jinja2
+
+from . import adoption as _adoption
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
 
@@ -509,5 +514,57 @@ def render_trend(
         timeline_dates=timeline_dates,
         timeline_condensed=timeline_condensed,
         feature_filter=feature_filter,
+        generated_at=dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+    )
+
+
+def render_adoption(
+    metrics: Sequence[_adoption.Metric],
+    series: dict[str, list[dict]],
+) -> str:
+    """Render the `adoption` subcommand's output — the charm-tech scorecard.
+
+    `metrics` is `adoption.METRICS` (or a filtered subset) and `series` the
+    matching output of `adoption.compute_series`. A metric with no series —
+    either not yet defined, or defined but with no snapshot old enough to
+    carry its inputs — still gets a card, so the page shows the full
+    scorecard rather than silently dropping a metric.
+
+    The template renders `metric.detail` with `|safe`: those strings are
+    authored in `adoption.py` and carry deliberate `<code>` markup. Nothing
+    else on this page comes from a charm repository — the metrics are
+    aggregates, so unlike the dashboard there is no third-party text to
+    escape — but keep any new field that *does* carry charm data escaped.
+    """
+    env = _environment()
+    tmpl = env.get_template("adoption.html.j2")
+
+    cards: list[dict[str, Any]] = []
+    for metric in metrics:
+        points = series.get(metric.key, [])
+        latest, delta = _adoption.latest_and_delta(points)
+        cards.append({
+            "metric": metric,
+            "series": points,
+            "latest": latest,
+            "delta": delta,
+            "pending": metric.pending,
+        })
+
+    # Built from the Metric objects rather than by reaching back into `cards`,
+    # whose values are a union the type checker can't attribute-access.
+    chart_data = [
+        {
+            "key": metric.key,
+            "title": metric.title,
+            "breakdown_keys": list(metric.breakdown_keys),
+            "series": series.get(metric.key, []),
+        }
+        for metric in metrics
+    ]
+
+    return tmpl.render(
+        cards=cards,
+        chart_data=chart_data,
         generated_at=dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
     )
