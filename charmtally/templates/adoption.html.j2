@@ -27,6 +27,7 @@
   .delta.down { color: #b00; }
   .delta.flat, .delta.none { color: #888; }
   .card .basis { color: #666; font-size: 12px; margin-top: .4em; }
+  .card .denom { color: #85560a; }
   .card.pending { background: #fafafa; }
   .card.pending .headline { color: #bbb; }
 
@@ -39,6 +40,9 @@
   .pending-note {
     border-left: 3px solid #ddd; padding-left: .8em; color: #666; max-width: 70ch;
   }
+  details.fallback { margin: .6em 0 1em 0; }
+  details.fallback summary { color: #666; font-size: 12px; cursor: pointer; }
+  details.fallback table { margin-top: .6em; }
 </style>
 </head>
 <body>
@@ -51,8 +55,7 @@
 </p>
 
 <nav>
-  <a href="dashboard.html">← Current</a>
-  <a href="trend.html">History</a>
+  <a href="dashboard.html">← Full tally</a>
 </nav>
 
 <div class="cards">
@@ -76,6 +79,9 @@
     <p class="basis">
       {{ card.latest.numerator }} / {{ card.latest.denominator }} charms,
       {{ card.latest.date }}
+      {% if card.metric.denominator_note %}
+      <br><span class="denom">Denominator: {{ card.metric.denominator_note }}.</span>
+      {% endif %}
     </p>
     {% else %}
     <div class="headline">—</div>
@@ -93,7 +99,8 @@
   {% if card.series %}
   <div class="chart" id="chart-{{ card.metric.key }}"></div>
 
-  <p class="meta">Static fallback — headline value and breakdown, per snapshot date:</p>
+  <details class="fallback">
+  <summary>Static fallback — headline value and breakdown, per snapshot date</summary>
   <table>
     <thead>
       <tr>
@@ -118,6 +125,7 @@
       {% endfor %}
     </tbody>
   </table>
+  </details>
 
   {% if card.latest and card.latest.partial %}
   <p class="partial">Latest point is partial: {{ card.latest.partial }}.</p>
@@ -137,10 +145,12 @@
 {% endfor %}
 
 <p class="meta">
-  Denominator for every metric is <em>eligible</em> charms: the scanned corpus
-  minus reactive and legacy-classic charms, which pre-date ops and could never
-  adopt these APIs. The corpus itself grows between scans, so read a series as
-  a share, not as a count.
+  Unless a card says otherwise, the denominator is <em>eligible</em> charms:
+  the scanned corpus minus reactive and legacy-classic charms, which pre-date
+  ops and could never adopt these APIs. Metrics about tooling that works
+  whatever the charm is built on — Jubilant, say — measure against the whole
+  corpus instead, and name that on the card. The corpus itself grows between
+  scans, so read a series as a share, not as a count.
 </p>
 
 <script type="application/json" id="adoption-metrics-data">{{ chart_data|tojson }}</script>
@@ -192,7 +202,9 @@
     });
 
     Plotly.newPlot(el, traces, {
-      yaxis: { title: '% of eligible charms', range: [0, 100] },
+      // Per-metric denominators differ (see `denominator_note`), so the axis
+      // label stays generic; the card names the population.
+      yaxis: { title: '% of charms', range: [0, 100] },
       xaxis: { title: 'snapshot date' },
       margin: { t: 20 },
       height: 320,

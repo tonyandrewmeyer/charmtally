@@ -19,8 +19,12 @@ history page reads, so a metric is only as old as the data behind it:
   - **Eligibility.** Reactive and legacy-classic charms pre-date ops entirely
     (see `scoring.score_absent`, which scores every ops feature
     `not-applicable` for them). Counting them in a denominator would make
-    adoption look permanently stuck, so they are excluded — `eligible_charms`
-    is the denominator for every metric here.
+    adoption look permanently stuck, so `eligible_charms` is the denominator
+    for every metric measuring adoption of an *ops-era API*. It is not a
+    universal denominator: a metric about tooling that works regardless of
+    charm framework — Jubilant drives a deployed Juju model and neither
+    knows nor cares what the charm is built on — measures against the whole
+    corpus, and says so in its `denominator_note`.
 
 A metric's `compute` returns None when its inputs are missing; the series
 simply skips that date.
@@ -30,6 +34,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
+
+from . import rocks
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -43,7 +49,7 @@ if TYPE_CHECKING:
 TYPED_RELATION = "typed-relation"
 INTEGRATION_TESTING = "integration-testing"
 CHARMLIBS_SHARE = "charmlibs-share"
-PEBBLE = "pebble"
+ROOTLESS = "rootless"
 
 
 @dataclass(frozen=True)
@@ -68,6 +74,10 @@ class Metric:
     detail: str = ""
     scope: str = "charms"  # "charms" | "rocks" | "charms+rocks"
     pending: str = ""  # why this metric has no data yet, if it has none
+    # Set when this metric's denominator is NOT `eligible_charms`, to say what
+    # it is instead. Rendered on the card and in the page footnote, because a
+    # reader comparing two cards will otherwise assume a shared denominator.
+    denominator_note: str = ""
     caveats: tuple[str, ...] = field(default_factory=tuple)
 
 
@@ -157,7 +167,13 @@ _NO_TESTS = "no-integration-tests"
 
 
 def compute_integration_testing(snapshot: Snapshot) -> dict | None:
-    """How eligible charms drive their integration tests, as four shares.
+    """How charms drive their integration tests, as four shares.
+
+    Measured against the **whole corpus**, not `eligible_charms`: jubilant
+    talks to a deployed Juju model over the CLI, so a reactive or
+    legacy-classic charm can adopt it as readily as an ops charm. Excluding
+    them here would hide real adopters (there is already one) for a reason
+    that only holds for ops-API metrics.
 
     A charm mid-migration can hit both framework detectors; jubilant is
     counted first, so a part-migrated charm reads as adopted rather than as
@@ -171,7 +187,7 @@ def compute_integration_testing(snapshot: Snapshot) -> dict | None:
     """
     if "jubilant.integration-tests" not in snapshot.feature_names:
         return None
-    charms = eligible_charms(snapshot)
+    charms = snapshot.charms
     if not charms:
         return None
     scanned_pytest_operator = "testing.pytest-operator" in snapshot.feature_names
@@ -222,7 +238,10 @@ def _has_charmlibs_data(snapshot: Snapshot) -> bool:
 def compute_charmlibs_share(snapshot: Snapshot) -> dict | None:
     """Mean per-charm share of libraries that come from `charmlibs`.
 
-    Per charm: `charmlibs / (charmlibs + vendored Charmhub libs)`. The
+    Per charm: `charmlibs / (charmlibs + vendored Charmhub libs used)`. The
+    denominator counts libraries the charm *consumes*: `library_count`
+    excludes `lib/charms/<own_name>/`, so publishing a Charmhub library
+    doesn't count against the publisher's charmlibs share. The
     headline is the mean of that ratio over charms that use at least one
     library either way — an unweighted mean, so a charm with two libraries
     counts as much as one with twenty. That is the intent: this tracks how
@@ -275,6 +294,93 @@ def compute_charmlibs_share(snapshot: Snapshot) -> dict | None:
     )
 
 
+# ── metric: rootless (charms + rocks) ───────────────────────────────────────
+
+_DAEMON = "run-user: _daemon_"
+_NON_ROOT = "charm-user: non-root"
+_SUDOER = "charm-user: sudoer"
+_OTHER_USER = "other non-root user"
+_AS_ROOT = "root (or unset)"
+#: `charm-user` values that mean "not root". `root` is a real value too, and
+#: buckets with an unset key: both run as root.
+_CHARM_USER_BUCKETS = {"non-root": _NON_ROOT, "sudoer": _SUDOER}
+
+
+def _rock_bucket(record: dict) -> str:
+    """Bucket one rock by its `run-user`, or None-ish → root."""
+    run_user = record.get("run_user")
+    if not run_user:
+        return _AS_ROOT
+    return _DAEMON if run_user == rocks.DAEMON_USER else _OTHER_USER
+
+
+def _charm_bucket(meta: dict) -> str:
+    """Bucket one k8s charm by its `charm-user`.
+
+    An unset key is Juju's default, which is root — the same reading as an
+    explicit `charm-user: root`, so the two share a bucket. A value that is
+    neither (a typo; charmcraft would reject it) counts as non-root rather
+    than being silently read as root.
+    """
+    charm_user = meta.get("charm_user")
+    if not charm_user:
+        return _AS_ROOT
+    if charm_user == "root":
+        return _AS_ROOT
+    return _CHARM_USER_BUCKETS.get(charm_user, _OTHER_USER)
+
+
+def _has_charm_user_data(snapshot: Snapshot) -> bool:
+    """Whether this snapshot's `__meta__` carries `charm_user` at all.
+
+    Key presence, not value, for the same reason as `_has_charmlibs_data`:
+    an unset `charm-user` is legitimately None, so None can't distinguish
+    "runs as root" from "this scan didn't look".
+    """
+    return any("charm_user" in _meta(charm) for charm in snapshot.charms.values())
+
+
+def compute_rootless(snapshot: Snapshot) -> dict | None:
+    """Share of rocks and k8s charms that declare a non-root user.
+
+    One denominator over two populations, because the question — did this
+    artefact drop root? — is the same one on both sides even though the key
+    differs. Both halves must have been scanned for a point to exist: a
+    number computed from rocks alone, or charms alone, would read as a
+    corpus-wide share while measuring half the corpus.
+
+    Rocks whose `rockcraft.yaml` couldn't be fetched are excluded rather than
+    counted as root; `readable` is what separates "runs as root" from "we
+    couldn't look".
+    """
+    if not snapshot.rocks_scanned or not _has_charm_user_data(snapshot):
+        return None
+
+    counts = {_DAEMON: 0, _NON_ROOT: 0, _SUDOER: 0, _OTHER_USER: 0, _AS_ROOT: 0}
+    for record in snapshot.rocks.values():
+        if not record.get("readable"):
+            continue
+        counts[_rock_bucket(record)] += 1
+    for charm in snapshot.charms.values():
+        meta = _meta(charm)
+        if not meta.get("has_containers"):
+            continue
+        counts[_charm_bucket(meta)] += 1
+
+    total = sum(counts.values())
+    if not total:
+        return None
+    rootless = total - counts[_AS_ROOT]
+    return _point(
+        snapshot,
+        value=_percent(rootless, total),
+        numerator=rootless,
+        denominator=total,
+        breakdown={k: _percent(v, total) for k, v in counts.items()},
+        counts=counts,
+    )
+
+
 # ── the scorecard ───────────────────────────────────────────────────────────
 
 METRICS: tuple[Metric, ...] = (
@@ -299,9 +405,15 @@ METRICS: tuple[Metric, ...] = (
         compute=compute_integration_testing,
         breakdown_keys=(_JUBILANT, _PYTEST_OPERATOR, _OTHER_TESTS, _NO_TESTS),
         detail=(
-            "Percent of eligible charms whose integration tests import "
-            "<code>jubilant</code>, split against pytest-operator, other "
-            "harnesses, and charms with no integration tests found at all."
+            "Percent of <em>all</em> scanned charms whose integration tests "
+            "import <code>jubilant</code>, split against pytest-operator, "
+            "other harnesses, and charms with no integration tests found at "
+            "all."
+        ),
+        denominator_note=(
+            "the whole scanned corpus, not just eligible charms — jubilant "
+            "drives a deployed model, so a reactive or legacy-classic charm "
+            "can use it too"
         ),
         caveats=(
             "A charm hitting both framework detectors is counted as jubilant — "
@@ -328,23 +440,41 @@ METRICS: tuple[Metric, ...] = (
         ),
     ),
     Metric(
-        key=PEBBLE,
-        title="Pebble (to be confirmed)",
-        question="Are workloads driven through Pebble the way we intend?",
+        key=ROOTLESS,
+        title="Rootless by default",
+        question="Are rocks and charms declaring a non-root user?",
         unit="percent",
-        compute=None,
+        compute=compute_rootless,
         scope="charms+rocks",
+        breakdown_keys=(_DAEMON, _NON_ROOT, _SUDOER, _OTHER_USER, _AS_ROOT),
         detail=(
-            "Placeholder. Two candidate definitions, both spanning charms and "
-            "rocks: <strong>health checks</strong> (charm side already "
-            "detectable via <code>pebble.checks</code>; rock side is "
-            "<code>checks:</code> in rockcraft.yaml) or <strong>custom "
-            "notices</strong> (charm side <code>ops.pebble-custom-notice</code>; "
-            "rock side is whatever emits them). Either way the rocks half needs "
-            "a scan pipeline over <code>rocks.csv</code>, which does not exist "
-            "yet — only the corpus CSV does."
+            "Percent of scanned artefacts that declare a non-root user: rocks "
+            "setting <code>run-user</code> in <code>rockcraft.yaml</code> "
+            "(<code>_daemon_</code> is the only value rockcraft accepts today) "
+            "and Kubernetes charms setting <code>charm-user</code> in "
+            "<code>charmcraft.yaml</code> (<code>non-root</code> or "
+            "<code>sudoer</code>). Anything that leaves the key unset runs as "
+            "root, which is the default on both sides."
         ),
-        pending="definition still to be confirmed: health checks or custom notices",
+        denominator_note=(
+            "rocks plus Kubernetes charms, not just eligible charms — "
+            "<code>run-user</code> is a rock key and <code>charm-user</code> "
+            "only affects k8s charms, so machine charms can adopt neither"
+        ),
+        pending=(
+            "charm-user and the rocks scan were both added on 2026-08-24, so "
+            "this series starts at the first scan after that date"
+        ),
+        caveats=(
+            "The two halves are not the same process: <code>run-user</code> is "
+            "the rock's OCI user (the workload), <code>charm-user</code> is the "
+            "user the charm code itself runs as.",
+            "<code>sudoer</code> counts towards the headline — it is a non-root "
+            "user — but it keeps its own bucket, because it can still escalate "
+            "via sudo.",
+            "Archived repos and forks are dropped from the rocks half, as are "
+            "rocks whose rockcraft.yaml could not be read at scan time.",
+        ),
     ),
 )
 

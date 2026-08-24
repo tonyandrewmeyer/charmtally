@@ -22,13 +22,17 @@ from __future__ import annotations
 import datetime as dt
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 _SNAPSHOT_RE = re.compile(r"scored-(\d{4}-\d{2}-\d{2})\.json$")
+#: Where `charmtally scan-rocks` parks the rocks half of a scan inside
+#: scored.json. Underscored so the charm loaders, which drop every `__`-keyed
+#: entry, skip it without needing to know it exists.
+ROCKS_KEY = "__rocks__"
 
 
 @dataclass(frozen=True)
@@ -42,6 +46,12 @@ class Snapshot:
     feature_names: frozenset[
         str
     ]  # the feature catalogue as scanned at this date, from the data itself
+    # The rocks half of the scan (`charmtally scan-rocks`), slug -> record.
+    # Empty for a snapshot taken before rocks were scanned — which is not the
+    # same as "no rocks exist", hence `rocks_scanned`, read from key presence
+    # the same way the feature catalogue is read from the data itself.
+    rocks: dict[str, dict] = field(default_factory=dict)
+    rocks_scanned: bool = False
 
 
 def _feature_names_of(charm: dict) -> set[str]:
@@ -54,7 +64,15 @@ def _load_one(path: Path, date: str) -> Snapshot:
     feature_names: set[str] = set()
     for charm in charms.values():
         feature_names |= _feature_names_of(charm)
-    return Snapshot(date=date, charms=charms, feature_names=frozenset(feature_names))
+    rocks_block = raw.get(ROCKS_KEY)
+    rocks = rocks_block.get("rocks", {}) if isinstance(rocks_block, dict) else {}
+    return Snapshot(
+        date=date,
+        charms=charms,
+        feature_names=frozenset(feature_names),
+        rocks=rocks if isinstance(rocks, dict) else {},
+        rocks_scanned=isinstance(rocks_block, dict),
+    )
 
 
 def load_snapshots(

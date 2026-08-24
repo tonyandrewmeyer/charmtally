@@ -41,6 +41,12 @@ Usage:
         (typed relation data, jubilant, charmlibs share, ...) over the same
         dated snapshots the trend page reads → the standalone Adoption page.
 
+    charmtally scan-rocks [--rocks rocks.csv] [--into scored.json]
+                          [--out rocks.json]
+        Fetch each rock's rockcraft.yaml from raw.githubusercontent and record
+        its facts. `--into` parks them in scored.json's `__rocks__` block so
+        the weekly snapshot carries them; `--out` writes them standalone.
+
     charmtally llm-score scored.json [--dry-run] [--out llm-scored.json]
         Optional LLM pass over `worth-considering` records. Needs
         OPENROUTER_API_KEY; capped by --max-llm-calls and a spend budget.
@@ -62,6 +68,7 @@ from . import __version__, adoption, catalogue, corpus, dashboard, scan
 from . import llm_score as _llm_score
 from . import metadata as _metadata
 from . import pairs as _pairs
+from . import rocks as _rocks
 from . import scoring as _scoring
 from . import trend as _trend
 
@@ -288,6 +295,38 @@ def cmd_score(args: argparse.Namespace) -> int:
 
     args.out.write_text(json.dumps(results, indent=2) + "\n")
     print(f"wrote {args.out}", file=sys.stderr)
+    return 0
+
+
+def cmd_scan_rocks(args: argparse.Namespace) -> int:
+    """Scan the rocks corpus → `__rocks__` in scored.json (and/or a standalone file).
+
+    Writing into scored.json is the path the weekly workflow takes: the rocks
+    half then rides along into the dated snapshot, and the adoption scorecard
+    gets history for the rootless metric without a second snapshot series to
+    keep in step.
+    """
+    refs = _rocks.load_csv(args.rocks)
+    if not refs:
+        print(f"no scannable rows in {args.rocks}", file=sys.stderr)
+        return 1
+    print(f"… fetching rockcraft.yaml for {len(refs)} rocks", file=sys.stderr)
+    records = _rocks.scan_rocks(refs, workers=args.workers)
+    readable = sum(1 for r in records.values() if r.get("readable"))
+    print(f"read {readable} of {len(records)} rockcraft.yaml files", file=sys.stderr)
+
+    block = {"scanned": len(records), "readable": readable, "rocks": records}
+    if args.out is not None:
+        args.out.write_text(json.dumps(block, indent=2) + "\n")
+        print(f"wrote {args.out}", file=sys.stderr)
+    if args.into is not None:
+        scored: dict = json.loads(args.into.read_text())
+        scored[_trend.ROCKS_KEY] = block
+        args.into.write_text(json.dumps(scored, indent=2) + "\n")
+        print(f"wrote {_trend.ROCKS_KEY} into {args.into}", file=sys.stderr)
+    if args.out is None and args.into is None:
+        print("nothing written: pass --out and/or --into", file=sys.stderr)
+        return 2
     return 0
 
 
@@ -581,6 +620,35 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     p_score.set_defaults(func=cmd_score)
+
+    p_rocks = sub.add_parser(
+        "scan-rocks", help="Scan rocks.csv's rockcraft.yaml files → __rocks__ / rocks.json."
+    )
+    p_rocks.add_argument(
+        "--rocks",
+        type=Path,
+        default=Path("rocks.csv"),
+        help="Rocks corpus CSV, as maintained by tools/rockfind.py (default: rocks.csv).",
+    )
+    p_rocks.add_argument(
+        "--into",
+        type=Path,
+        default=None,
+        help="Scored JSON to write the `__rocks__` block into, in place.",
+    )
+    p_rocks.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help="Write the block to this standalone JSON file as well.",
+    )
+    p_rocks.add_argument(
+        "--workers",
+        type=int,
+        default=_rocks.DEFAULT_WORKERS,
+        help=f"Parallel fetches (default: {_rocks.DEFAULT_WORKERS}).",
+    )
+    p_rocks.set_defaults(func=cmd_scan_rocks)
 
     p_dash = sub.add_parser("dashboard", help="Render results.json/scored.json → dashboard.html.")
     p_dash.add_argument("results", type=Path, help="Path to results/scored JSON.")

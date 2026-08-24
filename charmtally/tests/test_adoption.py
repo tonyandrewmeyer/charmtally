@@ -136,6 +136,29 @@ def test_part_migrated_charm_counts_as_jubilant() -> None:
     assert point["counts"]["pytest-operator"] == 0
 
 
+def test_integration_testing_counts_reactive_and_legacy_classic_charms() -> None:
+    """Jubilant drives a deployed model, so any charm can adopt it: unlike the
+    ops-API metrics this one measures against the whole corpus."""
+    snap = _snapshot({
+        "modern": _testing_charm(jubilant=True, pytest_operator=False, has_tests=True),
+        "reactive": _charm(
+            features={"jubilant.integration-tests": True, "testing.pytest-operator": False},
+            meta={"is_reactive": True, "has_integration_tests": True},
+        ),
+        "classic": _charm(
+            features={"jubilant.integration-tests": False, "testing.pytest-operator": False},
+            meta={"is_legacy_classic": True, "has_integration_tests": False},
+        ),
+    })
+
+    point = adoption.compute_integration_testing(snap)
+
+    assert point is not None
+    assert point["denominator"] == 3
+    assert point["counts"]["jubilant"] == 2
+    assert point["counts"]["no-integration-tests"] == 1
+
+
 def test_integration_testing_without_pytest_operator_scanned_is_partial() -> None:
     """Older snapshots have no pytest-operator column — don't report it as 0%."""
     snap = _snapshot({
@@ -216,10 +239,11 @@ def test_compute_series_skips_dates_missing_the_inputs() -> None:
     assert [p["date"] for p in series[adoption.TYPED_RELATION]] == ["2026-06-18"]
 
 
-def test_pending_metric_has_an_empty_series() -> None:
+def test_metric_with_unscanned_inputs_has_an_empty_series() -> None:
+    """A snapshot predating rocks (and charm-user) yields no rootless point."""
     snap = _snapshot({"a": _charm(features={"ops.typed-relation": True})})
 
-    assert adoption.compute_series([snap])[adoption.PEBBLE] == []
+    assert adoption.compute_series([snap])[adoption.ROOTLESS] == []
 
 
 def test_compute_series_only_filters_to_one_metric() -> None:
@@ -249,6 +273,105 @@ def test_metric_by_key() -> None:
     assert adoption.metric_by_key("no-such-metric") is None
 
 
+# --- rootless (charms + rocks) ---------------------------------------------
+
+
+def _k8s_charm(charm_user: str | None) -> dict:
+    return _charm(meta={"has_containers": True, "charm_user": charm_user})
+
+
+def _rock(run_user: str | None, *, readable: bool = True) -> dict:
+    return {"name": "r", "readable": readable, "run_user": run_user}
+
+
+def _rootless_snapshot(charms: dict, rocks: dict) -> trend.Snapshot:
+    snap = _snapshot(charms)
+    return trend.Snapshot(
+        date=snap.date,
+        charms=snap.charms,
+        feature_names=snap.feature_names,
+        rocks=rocks,
+        rocks_scanned=True,
+    )
+
+
+def test_rootless_counts_both_halves_in_one_denominator() -> None:
+    snap = _rootless_snapshot(
+        {
+            "nonroot": _k8s_charm("non-root"),
+            "sudoer": _k8s_charm("sudoer"),
+            "explicit-root": _k8s_charm("root"),
+            "unset": _k8s_charm(None),
+        },
+        {"a": _rock("_daemon_"), "b": _rock(None)},
+    )
+
+    point = adoption.compute_rootless(snap)
+
+    assert point is not None
+    assert point["denominator"] == 6
+    assert point["counts"] == {
+        "run-user: _daemon_": 1,
+        "charm-user: non-root": 1,
+        "charm-user: sudoer": 1,
+        "other non-root user": 0,
+        "root (or unset)": 3,
+    }
+    assert point["numerator"] == 3
+    assert point["value"] == 50.0
+
+
+def test_rootless_excludes_machine_charms() -> None:
+    """`charm-user` only affects k8s charms, so a machine charm can't adopt it."""
+    snap = _rootless_snapshot(
+        {"machine": _charm(meta={"has_containers": False}), "k8s": _k8s_charm("non-root")},
+        {},
+    )
+
+    point = adoption.compute_rootless(snap)
+
+    assert point is not None
+    assert point["denominator"] == 1
+
+
+def test_rootless_excludes_unreadable_rocks() -> None:
+    """An unfetchable rockcraft.yaml is a gap, not a rock running as root."""
+    snap = _rootless_snapshot(
+        {"k8s": _k8s_charm("non-root")},
+        {"ok": _rock(None), "gone": _rock(None, readable=False)},
+    )
+
+    point = adoption.compute_rootless(snap)
+
+    assert point is not None
+    assert point["denominator"] == 2
+
+
+def test_rootless_buckets_an_unknown_user_value_separately() -> None:
+    snap = _rootless_snapshot({"typo": _k8s_charm("nonroot")}, {"r": _rock("_pebble_")})
+
+    point = adoption.compute_rootless(snap)
+
+    assert point is not None
+    assert point["counts"]["other non-root user"] == 2
+    assert point["value"] == 100.0
+
+
+def test_rootless_needs_both_halves_scanned() -> None:
+    """Half a corpus would still read as a corpus-wide share."""
+    charms_only = _snapshot({"k8s": _k8s_charm("non-root")})
+    assert adoption.compute_rootless(charms_only) is None
+
+    rocks_only = trend.Snapshot(
+        date="2026-06-11",
+        charms={"k8s": _charm(meta={"has_containers": True})},
+        feature_names=frozenset(),
+        rocks={"r": _rock("_daemon_")},
+        rocks_scanned=True,
+    )
+    assert adoption.compute_rootless(rocks_only) is None
+
+
 # --- rendering + CLI --------------------------------------------------------
 
 
@@ -261,9 +384,9 @@ def test_render_adoption_includes_cards_for_pending_metrics() -> None:
     assert "charm tech adoption" in html
     for metric in adoption.METRICS:
         assert metric.title in html
-    pebble = adoption.metric_by_key(adoption.PEBBLE)
-    assert pebble is not None
-    assert pebble.pending in html
+    charmlibs = adoption.metric_by_key(adoption.CHARMLIBS_SHARE)
+    assert charmlibs is not None
+    assert charmlibs.pending in html
 
 
 def test_cli_adoption_writes_html_and_json(tmp_path: Path) -> None:

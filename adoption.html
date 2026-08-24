@@ -27,6 +27,7 @@
   .delta.down { color: #b00; }
   .delta.flat, .delta.none { color: #888; }
   .card .basis { color: #666; font-size: 12px; margin-top: .4em; }
+  .card .denom { color: #85560a; }
   .card.pending { background: #fafafa; }
   .card.pending .headline { color: #bbb; }
 
@@ -39,6 +40,9 @@
   .pending-note {
     border-left: 3px solid #ddd; padding-left: .8em; color: #666; max-width: 70ch;
   }
+  details.fallback { margin: .6em 0 1em 0; }
+  details.fallback summary { color: #666; font-size: 12px; cursor: pointer; }
+  details.fallback table { margin-top: .6em; }
 </style>
 </head>
 <body>
@@ -47,76 +51,80 @@
 <p class="meta">
   Is the tooling charm tech ships being picked up? A small, deliberately
   stable set of metrics across the scanned charm corpus.
-  Generated 2026-08-24 02:53 UTC.
+  Generated 2026-08-24 03:42 UTC.
 </p>
 
 <nav>
-  <a href="dashboard.html">← Current</a>
-  <a href="trend.html">History</a>
+  <a href="dashboard.html">← Full tally</a>
 </nav>
 
 <div class="cards">
-  
+
   <div class="card">
     <h2>Typed relation data</h2>
     <p class="q">Are charms reading and writing relation data through the typed API?</p>
-    
+
     <div class="headline">
       0.8<span class="unit">%</span>
-      
+
       <span class="delta flat">no change</span>
-      
+
     </div>
     <p class="basis">
       5 / 604 charms,
       2026-08-24
+
     </p>
-    
+
   </div>
-  
+
   <div class="card">
     <h2>Jubilant adoption</h2>
     <p class="q">What do charms use to drive their integration tests?</p>
-    
+
     <div class="headline">
-      26.3<span class="unit">%</span>
-      
-      <span class="delta up">▲ 0.7</span>
-      
+      21.1<span class="unit">%</span>
+
+      <span class="delta up">▲ 0.2</span>
+
     </div>
     <p class="basis">
-      159 / 604 charms,
+      160 / 760 charms,
       2026-08-24
+
+      <br><span class="denom">Denominator: the whole scanned corpus, not just eligible charms — jubilant drives a deployed model, so a reactive or legacy-classic charm can use it too.</span>
+
     </p>
-    
+
   </div>
-  
+
   <div class="card">
     <h2>charmlibs share</h2>
     <p class="q">How much of a charm&#39;s library surface comes from charmlibs?</p>
-    
+
     <div class="headline">
       11.9<span class="unit">%</span>
-      
+
       <span class="delta none" title="only one reading so far">—</span>
-      
+
     </div>
     <p class="basis">
       89 / 395 charms,
       2026-08-24
+
     </p>
-    
+
   </div>
-  
+
   <div class="card pending">
-    <h2>Pebble (to be confirmed)</h2>
-    <p class="q">Are workloads driven through Pebble the way we intend?</p>
-    
+    <h2>Rootless by default</h2>
+    <p class="q">Are rocks and charms declaring a non-root user?</p>
+
     <div class="headline">—</div>
-    <p class="basis">definition still to be confirmed: health checks or custom notices</p>
-    
+    <p class="basis">charm-user and the rocks scan were both added on 2026-08-24, so this series starts at the first scan after that date</p>
+
   </div>
-  
+
 </div>
 
 
@@ -124,10 +132,11 @@
   <h2>Typed relation data</h2>
   <p class="detail">Percent of eligible charms calling <code>Relation.load</code> or <code>Relation.save</code> (either counts). Backed by the <code>ops.typed-relation</code> feature.</p>
 
-  
+
   <div class="chart" id="chart-typed-relation"></div>
 
-  <p class="meta">Static fallback — headline value and breakdown, per snapshot date:</p>
+  <details class="fallback">
+  <summary>Static fallback — headline value and breakdown, per snapshot date</summary>
   <table>
     <thead>
       <tr>
@@ -138,219 +147,221 @@
       </tr>
     </thead>
     <tbody>
-      
+
       <tr>
         <td>2026-06-11</td>
         <td class="num">0.0%</td>
-        
+
         <td class="num">
           0.0%
         </td>
-        
+
         <td class="num">
           100.0%
         </td>
-        
+
         <td class="num">283</td>
       </tr>
-      
+
       <tr>
         <td>2026-06-15</td>
         <td class="num">0.0%</td>
-        
+
         <td class="num">
           0.0%
         </td>
-        
+
         <td class="num">
           100.0%
         </td>
-        
+
         <td class="num">262</td>
       </tr>
-      
+
       <tr>
         <td>2026-06-22</td>
         <td class="num">0.0%</td>
-        
+
         <td class="num">
           0.0%
         </td>
-        
+
         <td class="num">
           100.0%
         </td>
-        
+
         <td class="num">262</td>
       </tr>
-      
+
       <tr>
         <td>2026-06-25</td>
         <td class="num">0.0%</td>
-        
+
         <td class="num">
           0.0%
         </td>
-        
+
         <td class="num">
           100.0%
         </td>
-        
+
         <td class="num">262</td>
       </tr>
-      
+
       <tr>
         <td>2026-06-29</td>
         <td class="num">0.0%</td>
-        
+
         <td class="num">
           0.0%
         </td>
-        
+
         <td class="num">
           100.0%
         </td>
-        
+
         <td class="num">262</td>
       </tr>
-      
+
       <tr>
         <td>2026-07-06</td>
         <td class="num">0.2%</td>
-        
+
         <td class="num">
           0.2%
         </td>
-        
+
         <td class="num">
           99.8%
         </td>
-        
+
         <td class="num">614</td>
       </tr>
-      
+
       <tr>
         <td>2026-07-13</td>
         <td class="num">0.2%</td>
-        
+
         <td class="num">
           0.2%
         </td>
-        
+
         <td class="num">
           99.8%
         </td>
-        
+
         <td class="num">610</td>
       </tr>
-      
+
       <tr>
         <td>2026-07-20</td>
         <td class="num">0.2%</td>
-        
+
         <td class="num">
           0.2%
         </td>
-        
+
         <td class="num">
           99.8%
         </td>
-        
+
         <td class="num">610</td>
       </tr>
-      
+
       <tr>
         <td>2026-07-27</td>
         <td class="num">0.8%</td>
-        
+
         <td class="num">
           0.8%
         </td>
-        
+
         <td class="num">
           99.2%
         </td>
-        
+
         <td class="num">616</td>
       </tr>
-      
+
       <tr>
         <td>2026-08-03</td>
         <td class="num">0.8%</td>
-        
+
         <td class="num">
           0.8%
         </td>
-        
+
         <td class="num">
           99.2%
         </td>
-        
+
         <td class="num">616</td>
       </tr>
-      
+
       <tr>
         <td>2026-08-10</td>
         <td class="num">0.8%</td>
-        
+
         <td class="num">
           0.8%
         </td>
-        
+
         <td class="num">
           99.2%
         </td>
-        
+
         <td class="num">616</td>
       </tr>
-      
+
       <tr>
         <td>2026-08-17</td>
         <td class="num">0.8%</td>
-        
+
         <td class="num">
           0.8%
         </td>
-        
+
         <td class="num">
           99.2%
         </td>
-        
+
         <td class="num">616</td>
       </tr>
-      
+
       <tr>
         <td>2026-08-24</td>
         <td class="num">0.8%</td>
-        
+
         <td class="num">
           0.8%
         </td>
-        
+
         <td class="num">
           99.2%
         </td>
-        
+
         <td class="num">604</td>
       </tr>
-      
+
     </tbody>
   </table>
+  </details>
 
-  
-  
 
-  
+
+
+
 </section>
 
 <section class="metric" id="metric-integration-testing">
   <h2>Jubilant adoption</h2>
-  <p class="detail">Percent of eligible charms whose integration tests import <code>jubilant</code>, split against pytest-operator, other harnesses, and charms with no integration tests found at all.</p>
+  <p class="detail">Percent of <em>all</em> scanned charms whose integration tests import <code>jubilant</code>, split against pytest-operator, other harnesses, and charms with no integration tests found at all.</p>
 
-  
+
   <div class="chart" id="chart-integration-testing"></div>
 
-  <p class="meta">Static fallback — headline value and breakdown, per snapshot date:</p>
+  <details class="fallback">
+  <summary>Static fallback — headline value and breakdown, per snapshot date</summary>
   <table>
     <thead>
       <tr>
@@ -361,327 +372,329 @@
       </tr>
     </thead>
     <tbody>
-      
+
       <tr>
         <td>2026-06-11</td>
-        <td class="num">16.6%</td>
-        
+        <td class="num">13.7%</td>
+
         <td class="num">
-          16.6%
+          13.7%
         </td>
-        
+
         <td class="num">
           —
         </td>
-        
+
         <td class="num">
-          35.0%
+          29.4%
         </td>
-        
+
         <td class="num">
-          48.4%
+          57.0%
         </td>
-        
-        <td class="num">283</td>
+
+        <td class="num">344</td>
       </tr>
-      
+
       <tr>
         <td>2026-06-15</td>
-        <td class="num">19.5%</td>
-        
+        <td class="num">14.8%</td>
+
         <td class="num">
-          19.5%
+          14.8%
         </td>
-        
+
         <td class="num">
           —
         </td>
-        
+
         <td class="num">
-          36.6%
+          28.4%
         </td>
-        
+
         <td class="num">
-          43.9%
+          56.8%
         </td>
-        
-        <td class="num">262</td>
+
+        <td class="num">345</td>
       </tr>
-      
+
       <tr>
         <td>2026-06-22</td>
-        <td class="num">19.5%</td>
-        
+        <td class="num">14.8%</td>
+
         <td class="num">
-          19.5%
+          14.8%
         </td>
-        
+
         <td class="num">
           —
         </td>
-        
+
         <td class="num">
-          36.6%
+          28.4%
         </td>
-        
+
         <td class="num">
-          43.9%
+          56.8%
         </td>
-        
-        <td class="num">262</td>
+
+        <td class="num">345</td>
       </tr>
-      
+
       <tr>
         <td>2026-06-25</td>
-        <td class="num">19.5%</td>
-        
+        <td class="num">14.8%</td>
+
         <td class="num">
-          19.5%
+          14.8%
         </td>
-        
+
         <td class="num">
           —
         </td>
-        
+
         <td class="num">
-          36.6%
+          28.4%
         </td>
-        
+
         <td class="num">
-          43.9%
+          56.8%
         </td>
-        
-        <td class="num">262</td>
+
+        <td class="num">345</td>
       </tr>
-      
+
       <tr>
         <td>2026-06-29</td>
+        <td class="num">14.8%</td>
+
+        <td class="num">
+          14.8%
+        </td>
+
+        <td class="num">
+          —
+        </td>
+
+        <td class="num">
+          28.4%
+        </td>
+
+        <td class="num">
+          56.8%
+        </td>
+
+        <td class="num">345</td>
+      </tr>
+
+      <tr>
+        <td>2026-07-06</td>
+        <td class="num">19.6%</td>
+
+        <td class="num">
+          19.6%
+        </td>
+
+        <td class="num">
+          —
+        </td>
+
+        <td class="num">
+          28.5%
+        </td>
+
+        <td class="num">
+          51.9%
+        </td>
+
+        <td class="num">761</td>
+      </tr>
+
+      <tr>
+        <td>2026-07-13</td>
+        <td class="num">19.3%</td>
+
+        <td class="num">
+          19.3%
+        </td>
+
+        <td class="num">
+          —
+        </td>
+
+        <td class="num">
+          28.7%
+        </td>
+
+        <td class="num">
+          51.9%
+        </td>
+
+        <td class="num">755</td>
+      </tr>
+
+      <tr>
+        <td>2026-07-20</td>
         <td class="num">19.5%</td>
-        
+
         <td class="num">
           19.5%
         </td>
-        
+
         <td class="num">
           —
         </td>
-        
+
         <td class="num">
-          36.6%
+          28.6%
         </td>
-        
+
         <td class="num">
-          43.9%
+          51.9%
         </td>
-        
-        <td class="num">262</td>
+
+        <td class="num">755</td>
       </tr>
-      
-      <tr>
-        <td>2026-07-06</td>
-        <td class="num">24.1%</td>
-        
-        <td class="num">
-          24.1%
-        </td>
-        
-        <td class="num">
-          —
-        </td>
-        
-        <td class="num">
-          34.9%
-        </td>
-        
-        <td class="num">
-          41.0%
-        </td>
-        
-        <td class="num">614</td>
-      </tr>
-      
-      <tr>
-        <td>2026-07-13</td>
-        <td class="num">23.8%</td>
-        
-        <td class="num">
-          23.8%
-        </td>
-        
-        <td class="num">
-          —
-        </td>
-        
-        <td class="num">
-          35.1%
-        </td>
-        
-        <td class="num">
-          41.1%
-        </td>
-        
-        <td class="num">610</td>
-      </tr>
-      
-      <tr>
-        <td>2026-07-20</td>
-        <td class="num">23.9%</td>
-        
-        <td class="num">
-          23.9%
-        </td>
-        
-        <td class="num">
-          —
-        </td>
-        
-        <td class="num">
-          34.9%
-        </td>
-        
-        <td class="num">
-          41.1%
-        </td>
-        
-        <td class="num">610</td>
-      </tr>
-      
+
       <tr>
         <td>2026-07-27</td>
-        <td class="num">25.6%</td>
-        
+        <td class="num">20.9%</td>
+
         <td class="num">
-          25.6%
+          20.9%
         </td>
-        
+
         <td class="num">
           —
         </td>
-        
+
         <td class="num">
-          32.0%
+          26.2%
         </td>
-        
+
         <td class="num">
-          42.4%
+          52.9%
         </td>
-        
-        <td class="num">616</td>
+
+        <td class="num">762</td>
       </tr>
-      
+
       <tr>
         <td>2026-08-03</td>
-        <td class="num">25.6%</td>
-        
+        <td class="num">20.9%</td>
+
         <td class="num">
-          25.6%
+          20.9%
         </td>
-        
+
         <td class="num">
           —
         </td>
-        
+
         <td class="num">
-          32.0%
+          26.2%
         </td>
-        
+
         <td class="num">
-          42.4%
+          52.9%
         </td>
-        
-        <td class="num">616</td>
+
+        <td class="num">762</td>
       </tr>
-      
+
       <tr>
         <td>2026-08-10</td>
-        <td class="num">25.6%</td>
-        
+        <td class="num">20.9%</td>
+
         <td class="num">
-          25.6%
+          20.9%
         </td>
-        
+
         <td class="num">
           —
         </td>
-        
+
         <td class="num">
-          32.0%
+          26.2%
         </td>
-        
+
         <td class="num">
-          42.4%
+          52.9%
         </td>
-        
-        <td class="num">616</td>
+
+        <td class="num">762</td>
       </tr>
-      
+
       <tr>
         <td>2026-08-17</td>
-        <td class="num">25.6%</td>
-        
+        <td class="num">20.9%</td>
+
         <td class="num">
-          25.6%
+          20.9%
         </td>
-        
+
         <td class="num">
           —
         </td>
-        
+
         <td class="num">
-          32.0%
+          26.4%
         </td>
-        
+
         <td class="num">
-          42.4%
+          52.7%
         </td>
-        
-        <td class="num">616</td>
+
+        <td class="num">759</td>
       </tr>
-      
+
       <tr>
         <td>2026-08-24</td>
-        <td class="num">26.3%</td>
-        
+        <td class="num">21.1%</td>
+
         <td class="num">
-          26.3%
+          21.1%
         </td>
-        
+
         <td class="num">
-          31.6%
+          26.4%
         </td>
-        
+
         <td class="num">
           0.3%
         </td>
-        
+
         <td class="num">
-          41.7%
+          52.2%
         </td>
-        
-        <td class="num">604</td>
+
+        <td class="num">760</td>
       </tr>
-      
+
     </tbody>
   </table>
+  </details>
 
-  
-  
 
-  
+
+
+
   <ul class="caveats">
     <li>A charm hitting both framework detectors is counted as jubilant — part-migrated reads as adopted.</li>
   </ul>
-  
+
 </section>
 
 <section class="metric" id="metric-charmlibs-share">
   <h2>charmlibs share</h2>
   <p class="detail">Mean over charms of <code>charmlibs / (charmlibs + vendored Charmhub libs)</code>. Charms using no libraries at all are excluded from the mean and tracked separately.</p>
 
-  
+
   <div class="chart" id="chart-charmlibs-share"></div>
 
-  <p class="meta">Static fallback — headline value and breakdown, per snapshot date:</p>
+  <details class="fallback">
+  <summary>Static fallback — headline value and breakdown, per snapshot date</summary>
   <table>
     <thead>
       <tr>
@@ -692,61 +705,68 @@
       </tr>
     </thead>
     <tbody>
-      
+
       <tr>
         <td>2026-08-24</td>
         <td class="num">11.9%</td>
-        
+
         <td class="num">
           11.9%
         </td>
-        
+
         <td class="num">
           88.1%
         </td>
-        
+
         <td class="num">
           34.6%
         </td>
-        
+
         <td class="num">395</td>
       </tr>
-      
+
     </tbody>
   </table>
+  </details>
 
-  
-  
 
-  
+
+
+
   <ul class="caveats">
     <li>Unweighted mean of per-charm ratios: every charm counts once, regardless of how many libraries it pulls in.</li><li>charmlibs counts were added to the scan on 2026-08-24, so this series starts at the first scan after that date.</li>
   </ul>
-  
+
 </section>
 
-<section class="metric" id="metric-pebble">
-  <h2>Pebble (to be confirmed)</h2>
-  <p class="detail">Placeholder. Two candidate definitions, both spanning charms and rocks: <strong>health checks</strong> (charm side already detectable via <code>pebble.checks</code>; rock side is <code>checks:</code> in rockcraft.yaml) or <strong>custom notices</strong> (charm side <code>ops.pebble-custom-notice</code>; rock side is whatever emits them). Either way the rocks half needs a scan pipeline over <code>rocks.csv</code>, which does not exist yet — only the corpus CSV does.</p>
+<section class="metric" id="metric-rootless">
+  <h2>Rootless by default</h2>
+  <p class="detail">Percent of scanned artefacts that declare a non-root user: rocks setting <code>run-user</code> in <code>rockcraft.yaml</code> (<code>_daemon_</code> is the only value rockcraft accepts today) and Kubernetes charms setting <code>charm-user</code> in <code>charmcraft.yaml</code> (<code>non-root</code> or <code>sudoer</code>). Anything that leaves the key unset runs as root, which is the default on both sides.</p>
 
-  
+
   <p class="pending-note">
-    No series yet — definition still to be confirmed: health checks or custom notices.
+    No series yet — charm-user and the rocks scan were both added on 2026-08-24, so this series starts at the first scan after that date.
   </p>
-  
 
-  
+
+
+  <ul class="caveats">
+    <li>The two halves are not the same process: &lt;code&gt;run-user&lt;/code&gt; is the rock&#39;s OCI user (the workload), &lt;code&gt;charm-user&lt;/code&gt; is the user the charm code itself runs as.</li><li>&lt;code&gt;sudoer&lt;/code&gt; counts towards the headline — it is a non-root user — but it keeps its own bucket, because it can still escalate via sudo.</li><li>Archived repos and forks are dropped from the rocks half, as are rocks whose rockcraft.yaml could not be read at scan time.</li>
+  </ul>
+
 </section>
 
 
 <p class="meta">
-  Denominator for every metric is <em>eligible</em> charms: the scanned corpus
-  minus reactive and legacy-classic charms, which pre-date ops and could never
-  adopt these APIs. The corpus itself grows between scans, so read a series as
-  a share, not as a count.
+  Unless a card says otherwise, the denominator is <em>eligible</em> charms:
+  the scanned corpus minus reactive and legacy-classic charms, which pre-date
+  ops and could never adopt these APIs. Metrics about tooling that works
+  whatever the charm is built on — Jubilant, say — measure against the whole
+  corpus instead, and name that on the card. The corpus itself grows between
+  scans, so read a series as a share, not as a count.
 </p>
 
-<script type="application/json" id="adoption-metrics-data">[{"breakdown_keys": ["typed", "untyped"], "key": "typed-relation", "series": [{"breakdown": {"typed": 0.0, "untyped": 100.0}, "counts": {"typed": 0, "untyped": 283}, "date": "2026-06-11", "denominator": 283, "numerator": 0, "partial": "", "value": 0.0}, {"breakdown": {"typed": 0.0, "untyped": 100.0}, "counts": {"typed": 0, "untyped": 262}, "date": "2026-06-15", "denominator": 262, "numerator": 0, "partial": "", "value": 0.0}, {"breakdown": {"typed": 0.0, "untyped": 100.0}, "counts": {"typed": 0, "untyped": 262}, "date": "2026-06-22", "denominator": 262, "numerator": 0, "partial": "", "value": 0.0}, {"breakdown": {"typed": 0.0, "untyped": 100.0}, "counts": {"typed": 0, "untyped": 262}, "date": "2026-06-25", "denominator": 262, "numerator": 0, "partial": "", "value": 0.0}, {"breakdown": {"typed": 0.0, "untyped": 100.0}, "counts": {"typed": 0, "untyped": 262}, "date": "2026-06-29", "denominator": 262, "numerator": 0, "partial": "", "value": 0.0}, {"breakdown": {"typed": 0.2, "untyped": 99.8}, "counts": {"typed": 1, "untyped": 613}, "date": "2026-07-06", "denominator": 614, "numerator": 1, "partial": "", "value": 0.2}, {"breakdown": {"typed": 0.2, "untyped": 99.8}, "counts": {"typed": 1, "untyped": 609}, "date": "2026-07-13", "denominator": 610, "numerator": 1, "partial": "", "value": 0.2}, {"breakdown": {"typed": 0.2, "untyped": 99.8}, "counts": {"typed": 1, "untyped": 609}, "date": "2026-07-20", "denominator": 610, "numerator": 1, "partial": "", "value": 0.2}, {"breakdown": {"typed": 0.8, "untyped": 99.2}, "counts": {"typed": 5, "untyped": 611}, "date": "2026-07-27", "denominator": 616, "numerator": 5, "partial": "", "value": 0.8}, {"breakdown": {"typed": 0.8, "untyped": 99.2}, "counts": {"typed": 5, "untyped": 611}, "date": "2026-08-03", "denominator": 616, "numerator": 5, "partial": "", "value": 0.8}, {"breakdown": {"typed": 0.8, "untyped": 99.2}, "counts": {"typed": 5, "untyped": 611}, "date": "2026-08-10", "denominator": 616, "numerator": 5, "partial": "", "value": 0.8}, {"breakdown": {"typed": 0.8, "untyped": 99.2}, "counts": {"typed": 5, "untyped": 611}, "date": "2026-08-17", "denominator": 616, "numerator": 5, "partial": "", "value": 0.8}, {"breakdown": {"typed": 0.8, "untyped": 99.2}, "counts": {"typed": 5, "untyped": 599}, "date": "2026-08-24", "denominator": 604, "numerator": 5, "partial": "", "value": 0.8}], "title": "Typed relation data"}, {"breakdown_keys": ["jubilant", "pytest-operator", "other-integration-tests", "no-integration-tests"], "key": "integration-testing", "series": [{"breakdown": {"jubilant": 16.6, "no-integration-tests": 48.4, "other-integration-tests": 35.0}, "counts": {"jubilant": 47, "no-integration-tests": 137, "other-integration-tests": 99}, "date": "2026-06-11", "denominator": 283, "numerator": 47, "partial": "testing.pytest-operator not yet scanned", "value": 16.6}, {"breakdown": {"jubilant": 19.5, "no-integration-tests": 43.9, "other-integration-tests": 36.6}, "counts": {"jubilant": 51, "no-integration-tests": 115, "other-integration-tests": 96}, "date": "2026-06-15", "denominator": 262, "numerator": 51, "partial": "testing.pytest-operator not yet scanned", "value": 19.5}, {"breakdown": {"jubilant": 19.5, "no-integration-tests": 43.9, "other-integration-tests": 36.6}, "counts": {"jubilant": 51, "no-integration-tests": 115, "other-integration-tests": 96}, "date": "2026-06-22", "denominator": 262, "numerator": 51, "partial": "testing.pytest-operator not yet scanned", "value": 19.5}, {"breakdown": {"jubilant": 19.5, "no-integration-tests": 43.9, "other-integration-tests": 36.6}, "counts": {"jubilant": 51, "no-integration-tests": 115, "other-integration-tests": 96}, "date": "2026-06-25", "denominator": 262, "numerator": 51, "partial": "testing.pytest-operator not yet scanned", "value": 19.5}, {"breakdown": {"jubilant": 19.5, "no-integration-tests": 43.9, "other-integration-tests": 36.6}, "counts": {"jubilant": 51, "no-integration-tests": 115, "other-integration-tests": 96}, "date": "2026-06-29", "denominator": 262, "numerator": 51, "partial": "testing.pytest-operator not yet scanned", "value": 19.5}, {"breakdown": {"jubilant": 24.1, "no-integration-tests": 41.0, "other-integration-tests": 34.9}, "counts": {"jubilant": 148, "no-integration-tests": 252, "other-integration-tests": 214}, "date": "2026-07-06", "denominator": 614, "numerator": 148, "partial": "testing.pytest-operator not yet scanned", "value": 24.1}, {"breakdown": {"jubilant": 23.8, "no-integration-tests": 41.1, "other-integration-tests": 35.1}, "counts": {"jubilant": 145, "no-integration-tests": 251, "other-integration-tests": 214}, "date": "2026-07-13", "denominator": 610, "numerator": 145, "partial": "testing.pytest-operator not yet scanned", "value": 23.8}, {"breakdown": {"jubilant": 23.9, "no-integration-tests": 41.1, "other-integration-tests": 34.9}, "counts": {"jubilant": 146, "no-integration-tests": 251, "other-integration-tests": 213}, "date": "2026-07-20", "denominator": 610, "numerator": 146, "partial": "testing.pytest-operator not yet scanned", "value": 23.9}, {"breakdown": {"jubilant": 25.6, "no-integration-tests": 42.4, "other-integration-tests": 32.0}, "counts": {"jubilant": 158, "no-integration-tests": 261, "other-integration-tests": 197}, "date": "2026-07-27", "denominator": 616, "numerator": 158, "partial": "testing.pytest-operator not yet scanned", "value": 25.6}, {"breakdown": {"jubilant": 25.6, "no-integration-tests": 42.4, "other-integration-tests": 32.0}, "counts": {"jubilant": 158, "no-integration-tests": 261, "other-integration-tests": 197}, "date": "2026-08-03", "denominator": 616, "numerator": 158, "partial": "testing.pytest-operator not yet scanned", "value": 25.6}, {"breakdown": {"jubilant": 25.6, "no-integration-tests": 42.4, "other-integration-tests": 32.0}, "counts": {"jubilant": 158, "no-integration-tests": 261, "other-integration-tests": 197}, "date": "2026-08-10", "denominator": 616, "numerator": 158, "partial": "testing.pytest-operator not yet scanned", "value": 25.6}, {"breakdown": {"jubilant": 25.6, "no-integration-tests": 42.4, "other-integration-tests": 32.0}, "counts": {"jubilant": 158, "no-integration-tests": 261, "other-integration-tests": 197}, "date": "2026-08-17", "denominator": 616, "numerator": 158, "partial": "testing.pytest-operator not yet scanned", "value": 25.6}, {"breakdown": {"jubilant": 26.3, "no-integration-tests": 41.7, "other-integration-tests": 0.3, "pytest-operator": 31.6}, "counts": {"jubilant": 159, "no-integration-tests": 252, "other-integration-tests": 2, "pytest-operator": 191}, "date": "2026-08-24", "denominator": 604, "numerator": 159, "partial": "", "value": 26.3}], "title": "Jubilant adoption"}, {"breakdown_keys": ["charmlibs", "charmhub-libs", "no-libraries"], "key": "charmlibs-share", "series": [{"breakdown": {"charmhub-libs": 88.1, "charmlibs": 11.9, "no-libraries": 34.6}, "counts": {"charms-using-any-charmlib": 89, "charms-with-libraries": 395, "no-libraries": 209}, "date": "2026-08-24", "denominator": 395, "numerator": 89, "partial": "", "value": 11.9}], "title": "charmlibs share"}, {"breakdown_keys": [], "key": "pebble", "series": [], "title": "Pebble (to be confirmed)"}]</script>
+<script type="application/json" id="adoption-metrics-data">[{"breakdown_keys": ["typed", "untyped"], "key": "typed-relation", "series": [{"breakdown": {"typed": 0.0, "untyped": 100.0}, "counts": {"typed": 0, "untyped": 283}, "date": "2026-06-11", "denominator": 283, "numerator": 0, "partial": "", "value": 0.0}, {"breakdown": {"typed": 0.0, "untyped": 100.0}, "counts": {"typed": 0, "untyped": 262}, "date": "2026-06-15", "denominator": 262, "numerator": 0, "partial": "", "value": 0.0}, {"breakdown": {"typed": 0.0, "untyped": 100.0}, "counts": {"typed": 0, "untyped": 262}, "date": "2026-06-22", "denominator": 262, "numerator": 0, "partial": "", "value": 0.0}, {"breakdown": {"typed": 0.0, "untyped": 100.0}, "counts": {"typed": 0, "untyped": 262}, "date": "2026-06-25", "denominator": 262, "numerator": 0, "partial": "", "value": 0.0}, {"breakdown": {"typed": 0.0, "untyped": 100.0}, "counts": {"typed": 0, "untyped": 262}, "date": "2026-06-29", "denominator": 262, "numerator": 0, "partial": "", "value": 0.0}, {"breakdown": {"typed": 0.2, "untyped": 99.8}, "counts": {"typed": 1, "untyped": 613}, "date": "2026-07-06", "denominator": 614, "numerator": 1, "partial": "", "value": 0.2}, {"breakdown": {"typed": 0.2, "untyped": 99.8}, "counts": {"typed": 1, "untyped": 609}, "date": "2026-07-13", "denominator": 610, "numerator": 1, "partial": "", "value": 0.2}, {"breakdown": {"typed": 0.2, "untyped": 99.8}, "counts": {"typed": 1, "untyped": 609}, "date": "2026-07-20", "denominator": 610, "numerator": 1, "partial": "", "value": 0.2}, {"breakdown": {"typed": 0.8, "untyped": 99.2}, "counts": {"typed": 5, "untyped": 611}, "date": "2026-07-27", "denominator": 616, "numerator": 5, "partial": "", "value": 0.8}, {"breakdown": {"typed": 0.8, "untyped": 99.2}, "counts": {"typed": 5, "untyped": 611}, "date": "2026-08-03", "denominator": 616, "numerator": 5, "partial": "", "value": 0.8}, {"breakdown": {"typed": 0.8, "untyped": 99.2}, "counts": {"typed": 5, "untyped": 611}, "date": "2026-08-10", "denominator": 616, "numerator": 5, "partial": "", "value": 0.8}, {"breakdown": {"typed": 0.8, "untyped": 99.2}, "counts": {"typed": 5, "untyped": 611}, "date": "2026-08-17", "denominator": 616, "numerator": 5, "partial": "", "value": 0.8}, {"breakdown": {"typed": 0.8, "untyped": 99.2}, "counts": {"typed": 5, "untyped": 599}, "date": "2026-08-24", "denominator": 604, "numerator": 5, "partial": "", "value": 0.8}], "title": "Typed relation data"}, {"breakdown_keys": ["jubilant", "pytest-operator", "other-integration-tests", "no-integration-tests"], "key": "integration-testing", "series": [{"breakdown": {"jubilant": 13.7, "no-integration-tests": 57.0, "other-integration-tests": 29.4}, "counts": {"jubilant": 47, "no-integration-tests": 196, "other-integration-tests": 101}, "date": "2026-06-11", "denominator": 344, "numerator": 47, "partial": "testing.pytest-operator not yet scanned", "value": 13.7}, {"breakdown": {"jubilant": 14.8, "no-integration-tests": 56.8, "other-integration-tests": 28.4}, "counts": {"jubilant": 51, "no-integration-tests": 196, "other-integration-tests": 98}, "date": "2026-06-15", "denominator": 345, "numerator": 51, "partial": "testing.pytest-operator not yet scanned", "value": 14.8}, {"breakdown": {"jubilant": 14.8, "no-integration-tests": 56.8, "other-integration-tests": 28.4}, "counts": {"jubilant": 51, "no-integration-tests": 196, "other-integration-tests": 98}, "date": "2026-06-22", "denominator": 345, "numerator": 51, "partial": "testing.pytest-operator not yet scanned", "value": 14.8}, {"breakdown": {"jubilant": 14.8, "no-integration-tests": 56.8, "other-integration-tests": 28.4}, "counts": {"jubilant": 51, "no-integration-tests": 196, "other-integration-tests": 98}, "date": "2026-06-25", "denominator": 345, "numerator": 51, "partial": "testing.pytest-operator not yet scanned", "value": 14.8}, {"breakdown": {"jubilant": 14.8, "no-integration-tests": 56.8, "other-integration-tests": 28.4}, "counts": {"jubilant": 51, "no-integration-tests": 196, "other-integration-tests": 98}, "date": "2026-06-29", "denominator": 345, "numerator": 51, "partial": "testing.pytest-operator not yet scanned", "value": 14.8}, {"breakdown": {"jubilant": 19.6, "no-integration-tests": 51.9, "other-integration-tests": 28.5}, "counts": {"jubilant": 149, "no-integration-tests": 395, "other-integration-tests": 217}, "date": "2026-07-06", "denominator": 761, "numerator": 149, "partial": "testing.pytest-operator not yet scanned", "value": 19.6}, {"breakdown": {"jubilant": 19.3, "no-integration-tests": 51.9, "other-integration-tests": 28.7}, "counts": {"jubilant": 146, "no-integration-tests": 392, "other-integration-tests": 217}, "date": "2026-07-13", "denominator": 755, "numerator": 146, "partial": "testing.pytest-operator not yet scanned", "value": 19.3}, {"breakdown": {"jubilant": 19.5, "no-integration-tests": 51.9, "other-integration-tests": 28.6}, "counts": {"jubilant": 147, "no-integration-tests": 392, "other-integration-tests": 216}, "date": "2026-07-20", "denominator": 755, "numerator": 147, "partial": "testing.pytest-operator not yet scanned", "value": 19.5}, {"breakdown": {"jubilant": 20.9, "no-integration-tests": 52.9, "other-integration-tests": 26.2}, "counts": {"jubilant": 159, "no-integration-tests": 403, "other-integration-tests": 200}, "date": "2026-07-27", "denominator": 762, "numerator": 159, "partial": "testing.pytest-operator not yet scanned", "value": 20.9}, {"breakdown": {"jubilant": 20.9, "no-integration-tests": 52.9, "other-integration-tests": 26.2}, "counts": {"jubilant": 159, "no-integration-tests": 403, "other-integration-tests": 200}, "date": "2026-08-03", "denominator": 762, "numerator": 159, "partial": "testing.pytest-operator not yet scanned", "value": 20.9}, {"breakdown": {"jubilant": 20.9, "no-integration-tests": 52.9, "other-integration-tests": 26.2}, "counts": {"jubilant": 159, "no-integration-tests": 403, "other-integration-tests": 200}, "date": "2026-08-10", "denominator": 762, "numerator": 159, "partial": "testing.pytest-operator not yet scanned", "value": 20.9}, {"breakdown": {"jubilant": 20.9, "no-integration-tests": 52.7, "other-integration-tests": 26.4}, "counts": {"jubilant": 159, "no-integration-tests": 400, "other-integration-tests": 200}, "date": "2026-08-17", "denominator": 759, "numerator": 159, "partial": "testing.pytest-operator not yet scanned", "value": 20.9}, {"breakdown": {"jubilant": 21.1, "no-integration-tests": 52.2, "other-integration-tests": 0.3, "pytest-operator": 26.4}, "counts": {"jubilant": 160, "no-integration-tests": 397, "other-integration-tests": 2, "pytest-operator": 201}, "date": "2026-08-24", "denominator": 760, "numerator": 160, "partial": "", "value": 21.1}], "title": "Jubilant adoption"}, {"breakdown_keys": ["charmlibs", "charmhub-libs", "no-libraries"], "key": "charmlibs-share", "series": [{"breakdown": {"charmhub-libs": 88.1, "charmlibs": 11.9, "no-libraries": 34.6}, "counts": {"charms-using-any-charmlib": 89, "charms-with-libraries": 395, "no-libraries": 209}, "date": "2026-08-24", "denominator": 395, "numerator": 89, "partial": "", "value": 11.9}], "title": "charmlibs share"}, {"breakdown_keys": ["run-user: _daemon_", "charm-user: non-root", "charm-user: sudoer", "other non-root user", "root (or unset)"], "key": "rootless", "series": [], "title": "Rootless by default"}]</script>
 
 
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"
@@ -792,7 +812,9 @@
     });
 
     Plotly.newPlot(el, traces, {
-      yaxis: { title: '% of eligible charms', range: [0, 100] },
+      // Per-metric denominators differ (see `denominator_note`), so the axis
+      // label stays generic; the card names the population.
+      yaxis: { title: '% of charms', range: [0, 100] },
       xaxis: { title: 'snapshot date' },
       margin: { t: 20 },
       height: 320,

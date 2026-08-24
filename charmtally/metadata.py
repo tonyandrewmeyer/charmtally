@@ -34,7 +34,14 @@ Descriptive facts surfaced for the dashboard (no scoring rules attached):
                             charm, poetry, ...) — modern-stack signal
     bases                 — base/bases entries (e.g. ubuntu@22.04)
     min_juju_version      — Juju version asserted in `assumes:` (or None)
-    library_count         — distinct lib/charms/<libname>/ subdirs imported
+    charm_user            — `charm-user:` from charmcraft.yaml: root / sudoer
+                            / non-root, or None when unset (Juju's default,
+                            i.e. root). Only affects Kubernetes charms on
+                            Juju 3.6+, so read it against has_containers
+    library_count         — distinct lib/charms/<libname>/ subdirs the charm
+                            USES: its own published library (the subdir named
+                            after the charm) is excluded, so publishing a lib
+                            never reads as consuming one
     library_names         — the same set, by name (used by pair detection
                             to spot k8s/machine pairs sharing a charmlib)
     charmlibs_count       — distinct `charmlibs` namespace packages used
@@ -42,7 +49,9 @@ Descriptive facts surfaced for the dashboard (no scoring rules attached):
                             `interfaces.tls`, ...). The PyPI charmlibs, not
                             the vendored Charmhub libs above; the adoption
                             dashboard divides one by the other.
-    provides_own_library  — true if lib/charms/<charm_name>/ exists
+    provides_own_library  — true if lib/charms/<charm_name>/ exists; this is
+                            where a published library is reported, since
+                            library_names excludes it
     has_terraform_module  — true if terraform/ dir or .tf files at root
     tooling               — subset of ["tox","make","just"] based on
                             tox.ini / Makefile / justfile presence
@@ -114,6 +123,7 @@ class CharmMeta:
     charmcraft_plugins: tuple[str, ...] = ()
     bases: tuple[str, ...] = ()
     min_juju_version: str | None = None
+    charm_user: str | None = None
     library_count: int = 0
     library_names: tuple[str, ...] = ()
     charmlibs_count: int = 0
@@ -150,6 +160,7 @@ class CharmMeta:
             "charmcraft_plugins": list(self.charmcraft_plugins),
             "bases": list(self.bases),
             "min_juju_version": self.min_juju_version,
+            "charm_user": self.charm_user,
             "library_count": self.library_count,
             "library_names": list(self.library_names),
             "charmlibs_count": self.charmlibs_count,
@@ -185,6 +196,7 @@ class CharmMeta:
             charmcraft_plugins=tuple(raw.get("charmcraft_plugins") or []),
             bases=tuple(raw.get("bases") or []),
             min_juju_version=raw.get("min_juju_version"),
+            charm_user=raw.get("charm_user"),
             library_count=int(raw.get("library_count", 0)),
             library_names=tuple(raw.get("library_names") or []),
             charmlibs_count=int(raw.get("charmlibs_count", 0)),
@@ -458,6 +470,7 @@ def read(charm_root: Path) -> CharmMeta:
     plugins: list[str] = []
     bases: list[str] = []
     min_juju: str | None = None
+    charm_user: str | None = None
 
     for meta_path in _find_metadata_files(charm_root):
         data = _load_yaml(meta_path)
@@ -492,6 +505,14 @@ def read(charm_root: Path) -> CharmMeta:
                 bases.append(b)
         if min_juju is None:
             min_juju = _extract_min_juju_version(data)
+        if charm_user is None:
+            # charmcraft validates this against a literal enum, so anything
+            # else in the file is a typo; record it as written rather than
+            # normalising, so a typo shows up as its own bucket instead of
+            # being counted as one of the real values.
+            cu = data.get("charm-user")
+            if isinstance(cu, str) and cu.strip():
+                charm_user = cu.strip()
 
     # De-duplicate (a charm can have both charmcraft.yaml and metadata.yaml
     # listing the same relation/config).
@@ -550,17 +571,28 @@ def read(charm_root: Path) -> CharmMeta:
     is_legacy_classic = has_legacy_hooks_dir and not has_modern_entry and not is_reactive
 
     # Charmhub-hosted libraries vendored under lib/charms/<libname>/...
+    #
+    # A charm that PUBLISHES a library hosts it at `lib/charms/<own_name>/`,
+    # the same place `charmcraft fetch-lib` drops a CONSUMED one. Counting the
+    # charm's own package would make publishing look like consumption: it
+    # inflates the library count, and it drags the charmlibs share down for
+    # exactly the charms doing the most charm-tech work. Publication is
+    # already reported separately as `provides_own_library`, so
+    # `library_names` is the *used* set.
     lib_root = charm_root / "lib" / "charms"
+    own_lib = charm_name.replace("-", "_") if charm_name else None
     library_names: list[str] = []
     if lib_root.is_dir():
-        library_names.extend(entry.name for entry in lib_root.iterdir() if entry.is_dir())
+        library_names.extend(
+            entry.name for entry in lib_root.iterdir() if entry.is_dir() and entry.name != own_lib
+        )
     library_count = len(library_names)
 
     # PyPI `charmlibs` namespace packages — the replacement for the vendored
     # libs above, and the numerator of the adoption dashboard's charmlibs share.
     charmlibs_names = _charmlibs_names(charm_root)
 
-    provides_own_library = bool(charm_name and (lib_root / charm_name.replace("-", "_")).is_dir())
+    provides_own_library = bool(own_lib and (lib_root / own_lib).is_dir())
 
     # Workload-less classification: a principal charm that drives
     # no processes. All three negatives must hold:
@@ -605,6 +637,7 @@ def read(charm_root: Path) -> CharmMeta:
         charmcraft_plugins=tuple(plugins),
         bases=tuple(bases),
         min_juju_version=min_juju,
+        charm_user=charm_user,
         library_count=library_count,
         library_names=tuple(library_names),
         charmlibs_count=len(charmlibs_names),
