@@ -51,7 +51,7 @@
 <p class="meta">
   Is the tooling charm tech ships being picked up? A small, deliberately
   stable set of metrics across the scanned charm corpus.
-  Generated 2026-08-24 03:54 UTC.
+  Generated 2026-08-24 13:09 UTC.
 </p>
 
 <nav>
@@ -59,80 +59,80 @@
 </nav>
 
 <div class="cards">
-
+  
   <div class="card">
-    <h2>Typed relation data</h2>
-    <p class="q">Are charms reading and writing relation data through the typed API?</p>
-
+    <h2>Typed Juju data</h2>
+    <p class="q">Are charms reading Juju data through the typed APIs?</p>
+    
     <div class="headline">
       0.8<span class="unit">%</span>
-
+      
       <span class="delta flat">no change</span>
-
+      
     </div>
     <p class="basis">
       5 / 604 charms,
       2026-08-24
-
+      
     </p>
-
+    
   </div>
-
+  
   <div class="card">
     <h2>Jubilant adoption</h2>
     <p class="q">What do charms use to drive their integration tests?</p>
-
+    
     <div class="headline">
       21.1<span class="unit">%</span>
-
+      
       <span class="delta up">▲ 0.2</span>
-
+      
     </div>
     <p class="basis">
       160 / 760 charms,
       2026-08-24
-
+      
       <br><span class="denom">Denominator: the whole scanned corpus, not just eligible charms — jubilant drives a deployed model, so a reactive or legacy-classic charm can use it too.</span>
-
+      
     </p>
-
+    
   </div>
-
+  
   <div class="card">
     <h2>charmlibs share</h2>
     <p class="q">How much of a charm&#39;s library surface comes from charmlibs?</p>
-
+    
     <div class="headline">
       11.9<span class="unit">%</span>
-
-      <span class="delta none" title="only one reading so far">—</span>
-
+      
+      <span class="delta up">▲ 0.7</span>
+      
     </div>
     <p class="basis">
       89 / 395 charms,
       2026-08-24
-
+      
     </p>
-
+    
   </div>
-
+  
   <div class="card pending">
     <h2>Rootless by default</h2>
     <p class="q">Are rocks and charms declaring a non-root user?</p>
-
+    
     <div class="headline">—</div>
     <p class="basis">charm-user and the rocks scan were both added on 2026-08-24, so this series starts at the first scan after that date</p>
-
+    
   </div>
-
+  
 </div>
 
 
 <section class="metric" id="metric-typed-relation">
-  <h2>Typed relation data</h2>
-  <p class="detail">Percent of eligible charms calling <code>Relation.load</code> or <code>Relation.save</code> (either counts). Backed by the <code>ops.typed-relation</code> feature.</p>
+  <h2>Typed Juju data</h2>
+  <p class="detail">Percent of eligible charms calling any of <code>load_config</code>, <code>load_params</code>, <code>Relation.load</code> or <code>Relation.save</code> — any one counts. Backed by the <code>ops.typed-relation</code> and <code>ops.typed-config</code> features.</p>
 
-
+  
   <div class="chart" id="chart-typed-relation"></div>
 
   <details class="fallback">
@@ -141,223 +141,574 @@
     <thead>
       <tr>
         <th>Date</th>
-        <th class="num">Typed relation data</th>
+        <th class="num">Typed Juju data</th>
         <th class="num">typed</th><th class="num">untyped</th>
         <th class="num">charms</th>
       </tr>
     </thead>
     <tbody>
-
+      
+      <tr>
+        <td>2026-01-05</td>
+        <td class="num">1.7%</td>
+        
+        <td class="num">
+          1.7%
+        </td>
+        
+        <td class="num">
+          98.3%
+        </td>
+        
+        <td class="num">515</td>
+      </tr>
+      
+      <tr>
+        <td>2026-01-12</td>
+        <td class="num">1.7%</td>
+        
+        <td class="num">
+          1.7%
+        </td>
+        
+        <td class="num">
+          98.3%
+        </td>
+        
+        <td class="num">516</td>
+      </tr>
+      
+      <tr>
+        <td>2026-01-19</td>
+        <td class="num">1.7%</td>
+        
+        <td class="num">
+          1.7%
+        </td>
+        
+        <td class="num">
+          98.3%
+        </td>
+        
+        <td class="num">519</td>
+      </tr>
+      
+      <tr>
+        <td>2026-01-26</td>
+        <td class="num">1.7%</td>
+        
+        <td class="num">
+          1.7%
+        </td>
+        
+        <td class="num">
+          98.3%
+        </td>
+        
+        <td class="num">526</td>
+      </tr>
+      
+      <tr>
+        <td>2026-02-02</td>
+        <td class="num">2.1%</td>
+        
+        <td class="num">
+          2.1%
+        </td>
+        
+        <td class="num">
+          97.9%
+        </td>
+        
+        <td class="num">529</td>
+      </tr>
+      
+      <tr>
+        <td>2026-02-09</td>
+        <td class="num">1.9%</td>
+        
+        <td class="num">
+          1.9%
+        </td>
+        
+        <td class="num">
+          98.1%
+        </td>
+        
+        <td class="num">530</td>
+      </tr>
+      
+      <tr>
+        <td>2026-02-16</td>
+        <td class="num">1.9%</td>
+        
+        <td class="num">
+          1.9%
+        </td>
+        
+        <td class="num">
+          98.1%
+        </td>
+        
+        <td class="num">536</td>
+      </tr>
+      
+      <tr>
+        <td>2026-02-23</td>
+        <td class="num">2.4%</td>
+        
+        <td class="num">
+          2.4%
+        </td>
+        
+        <td class="num">
+          97.6%
+        </td>
+        
+        <td class="num">537</td>
+      </tr>
+      
+      <tr>
+        <td>2026-03-02</td>
+        <td class="num">2.6%</td>
+        
+        <td class="num">
+          2.6%
+        </td>
+        
+        <td class="num">
+          97.4%
+        </td>
+        
+        <td class="num">543</td>
+      </tr>
+      
+      <tr>
+        <td>2026-03-09</td>
+        <td class="num">2.7%</td>
+        
+        <td class="num">
+          2.7%
+        </td>
+        
+        <td class="num">
+          97.3%
+        </td>
+        
+        <td class="num">547</td>
+      </tr>
+      
+      <tr>
+        <td>2026-03-16</td>
+        <td class="num">2.7%</td>
+        
+        <td class="num">
+          2.7%
+        </td>
+        
+        <td class="num">
+          97.3%
+        </td>
+        
+        <td class="num">547</td>
+      </tr>
+      
+      <tr>
+        <td>2026-03-23</td>
+        <td class="num">2.7%</td>
+        
+        <td class="num">
+          2.7%
+        </td>
+        
+        <td class="num">
+          97.3%
+        </td>
+        
+        <td class="num">551</td>
+      </tr>
+      
+      <tr>
+        <td>2026-03-30</td>
+        <td class="num">3.1%</td>
+        
+        <td class="num">
+          3.1%
+        </td>
+        
+        <td class="num">
+          96.9%
+        </td>
+        
+        <td class="num">553</td>
+      </tr>
+      
+      <tr>
+        <td>2026-04-06</td>
+        <td class="num">3.1%</td>
+        
+        <td class="num">
+          3.1%
+        </td>
+        
+        <td class="num">
+          96.9%
+        </td>
+        
+        <td class="num">555</td>
+      </tr>
+      
+      <tr>
+        <td>2026-04-13</td>
+        <td class="num">3.1%</td>
+        
+        <td class="num">
+          3.1%
+        </td>
+        
+        <td class="num">
+          96.9%
+        </td>
+        
+        <td class="num">555</td>
+      </tr>
+      
+      <tr>
+        <td>2026-04-20</td>
+        <td class="num">3.2%</td>
+        
+        <td class="num">
+          3.2%
+        </td>
+        
+        <td class="num">
+          96.8%
+        </td>
+        
+        <td class="num">555</td>
+      </tr>
+      
+      <tr>
+        <td>2026-04-27</td>
+        <td class="num">3.2%</td>
+        
+        <td class="num">
+          3.2%
+        </td>
+        
+        <td class="num">
+          96.8%
+        </td>
+        
+        <td class="num">587</td>
+      </tr>
+      
+      <tr>
+        <td>2026-05-04</td>
+        <td class="num">3.2%</td>
+        
+        <td class="num">
+          3.2%
+        </td>
+        
+        <td class="num">
+          96.8%
+        </td>
+        
+        <td class="num">587</td>
+      </tr>
+      
+      <tr>
+        <td>2026-05-11</td>
+        <td class="num">3.2%</td>
+        
+        <td class="num">
+          3.2%
+        </td>
+        
+        <td class="num">
+          96.8%
+        </td>
+        
+        <td class="num">588</td>
+      </tr>
+      
+      <tr>
+        <td>2026-05-18</td>
+        <td class="num">3.2%</td>
+        
+        <td class="num">
+          3.2%
+        </td>
+        
+        <td class="num">
+          96.8%
+        </td>
+        
+        <td class="num">588</td>
+      </tr>
+      
+      <tr>
+        <td>2026-05-25</td>
+        <td class="num">3.4%</td>
+        
+        <td class="num">
+          3.4%
+        </td>
+        
+        <td class="num">
+          96.6%
+        </td>
+        
+        <td class="num">589</td>
+      </tr>
+      
+      <tr>
+        <td>2026-06-01</td>
+        <td class="num">3.4%</td>
+        
+        <td class="num">
+          3.4%
+        </td>
+        
+        <td class="num">
+          96.6%
+        </td>
+        
+        <td class="num">591</td>
+      </tr>
+      
+      <tr>
+        <td>2026-06-08</td>
+        <td class="num">3.4%</td>
+        
+        <td class="num">
+          3.4%
+        </td>
+        
+        <td class="num">
+          96.6%
+        </td>
+        
+        <td class="num">595</td>
+      </tr>
+      
       <tr>
         <td>2026-06-11</td>
         <td class="num">0.0%</td>
-
+        
         <td class="num">
           0.0%
         </td>
-
+        
         <td class="num">
           100.0%
         </td>
-
+        
         <td class="num">283</td>
       </tr>
-
+      
       <tr>
         <td>2026-06-15</td>
         <td class="num">0.0%</td>
-
+        
         <td class="num">
           0.0%
         </td>
-
+        
         <td class="num">
           100.0%
         </td>
-
+        
         <td class="num">262</td>
       </tr>
-
+      
       <tr>
         <td>2026-06-22</td>
         <td class="num">0.0%</td>
-
+        
         <td class="num">
           0.0%
         </td>
-
+        
         <td class="num">
           100.0%
         </td>
-
+        
         <td class="num">262</td>
       </tr>
-
+      
       <tr>
         <td>2026-06-25</td>
         <td class="num">0.0%</td>
-
+        
         <td class="num">
           0.0%
         </td>
-
+        
         <td class="num">
           100.0%
         </td>
-
+        
         <td class="num">262</td>
       </tr>
-
+      
       <tr>
         <td>2026-06-29</td>
         <td class="num">0.0%</td>
-
+        
         <td class="num">
           0.0%
         </td>
-
+        
         <td class="num">
           100.0%
         </td>
-
+        
         <td class="num">262</td>
       </tr>
-
+      
       <tr>
         <td>2026-07-06</td>
         <td class="num">0.2%</td>
-
+        
         <td class="num">
           0.2%
         </td>
-
+        
         <td class="num">
           99.8%
         </td>
-
+        
         <td class="num">614</td>
       </tr>
-
+      
       <tr>
         <td>2026-07-13</td>
         <td class="num">0.2%</td>
-
+        
         <td class="num">
           0.2%
         </td>
-
+        
         <td class="num">
           99.8%
         </td>
-
+        
         <td class="num">610</td>
       </tr>
-
+      
       <tr>
         <td>2026-07-20</td>
         <td class="num">0.2%</td>
-
+        
         <td class="num">
           0.2%
         </td>
-
+        
         <td class="num">
           99.8%
         </td>
-
+        
         <td class="num">610</td>
       </tr>
-
+      
       <tr>
         <td>2026-07-27</td>
         <td class="num">0.8%</td>
-
+        
         <td class="num">
           0.8%
         </td>
-
+        
         <td class="num">
           99.2%
         </td>
-
+        
         <td class="num">616</td>
       </tr>
-
+      
       <tr>
         <td>2026-08-03</td>
         <td class="num">0.8%</td>
-
+        
         <td class="num">
           0.8%
         </td>
-
+        
         <td class="num">
           99.2%
         </td>
-
+        
         <td class="num">616</td>
       </tr>
-
+      
       <tr>
         <td>2026-08-10</td>
         <td class="num">0.8%</td>
-
+        
         <td class="num">
           0.8%
         </td>
-
+        
         <td class="num">
           99.2%
         </td>
-
+        
         <td class="num">616</td>
       </tr>
-
+      
       <tr>
         <td>2026-08-17</td>
         <td class="num">0.8%</td>
-
+        
         <td class="num">
           0.8%
         </td>
-
+        
         <td class="num">
           99.2%
         </td>
-
+        
         <td class="num">616</td>
       </tr>
-
+      
       <tr>
         <td>2026-08-24</td>
         <td class="num">0.8%</td>
-
+        
         <td class="num">
           0.8%
         </td>
-
+        
         <td class="num">
           99.2%
         </td>
-
+        
         <td class="num">604</td>
       </tr>
-
+      
     </tbody>
   </table>
   </details>
 
+  
+  <p class="partial">Latest point is partial: ops.typed-config not yet scanned.</p>
+  
+  
 
-
-
-
+  
+  <ul class="caveats">
+    <li><code>ops.typed-config</code> (load_config / load_params) was added to the scan on 2026-08-24; earlier points in this series count the <code>Relation.load</code> / <code>.save</code> half only.</li>
+  </ul>
+  
 </section>
 
 <section class="metric" id="metric-integration-testing">
   <h2>Jubilant adoption</h2>
   <p class="detail">Percent of <em>all</em> scanned charms whose integration tests import <code>jubilant</code>, split against pytest-operator, other harnesses, and charms with no integration tests found at all.</p>
 
-
+  
   <div class="chart" id="chart-integration-testing"></div>
 
   <details class="fallback">
@@ -372,325 +723,854 @@
       </tr>
     </thead>
     <tbody>
-
+      
       <tr>
-        <td>2026-06-11</td>
-        <td class="num">13.7%</td>
-
+        <td>2026-01-05</td>
+        <td class="num">12.4%</td>
+        
         <td class="num">
-          13.7%
+          12.4%
         </td>
-
+        
         <td class="num">
-          —
+          37.6%
         </td>
-
+        
         <td class="num">
-          29.4%
+          0.4%
         </td>
-
+        
         <td class="num">
-          57.0%
+          49.6%
         </td>
-
-        <td class="num">344</td>
+        
+        <td class="num">672</td>
       </tr>
-
+      
       <tr>
-        <td>2026-06-15</td>
-        <td class="num">14.8%</td>
-
+        <td>2026-01-12</td>
+        <td class="num">12.6%</td>
+        
         <td class="num">
-          14.8%
+          12.6%
         </td>
-
+        
         <td class="num">
-          —
+          37.3%
         </td>
-
+        
         <td class="num">
-          28.4%
+          0.4%
         </td>
-
+        
         <td class="num">
-          56.8%
+          49.6%
         </td>
-
-        <td class="num">345</td>
+        
+        <td class="num">673</td>
       </tr>
-
+      
       <tr>
-        <td>2026-06-22</td>
-        <td class="num">14.8%</td>
-
+        <td>2026-01-19</td>
+        <td class="num">13.6%</td>
+        
         <td class="num">
-          14.8%
+          13.6%
         </td>
-
+        
         <td class="num">
-          —
+          36.4%
         </td>
-
+        
         <td class="num">
-          28.4%
+          0.4%
         </td>
-
+        
         <td class="num">
-          56.8%
+          49.6%
         </td>
-
-        <td class="num">345</td>
+        
+        <td class="num">676</td>
       </tr>
-
+      
       <tr>
-        <td>2026-06-25</td>
-        <td class="num">14.8%</td>
-
+        <td>2026-01-26</td>
+        <td class="num">14.3%</td>
+        
         <td class="num">
-          14.8%
+          14.3%
         </td>
-
+        
         <td class="num">
-          —
+          35.7%
         </td>
-
+        
         <td class="num">
-          28.4%
+          0.4%
         </td>
-
+        
         <td class="num">
-          56.8%
+          49.5%
         </td>
-
-        <td class="num">345</td>
+        
+        <td class="num">683</td>
       </tr>
-
+      
       <tr>
-        <td>2026-06-29</td>
-        <td class="num">14.8%</td>
-
+        <td>2026-02-02</td>
+        <td class="num">14.9%</td>
+        
         <td class="num">
-          14.8%
+          14.9%
         </td>
-
+        
         <td class="num">
-          —
+          35.1%
         </td>
-
+        
         <td class="num">
-          28.4%
+          0.4%
         </td>
-
+        
         <td class="num">
-          56.8%
+          49.6%
         </td>
-
-        <td class="num">345</td>
+        
+        <td class="num">686</td>
       </tr>
-
+      
       <tr>
-        <td>2026-07-06</td>
-        <td class="num">19.6%</td>
-
+        <td>2026-02-09</td>
+        <td class="num">15.3%</td>
+        
         <td class="num">
-          19.6%
+          15.3%
         </td>
-
+        
         <td class="num">
-          —
+          34.8%
         </td>
-
+        
         <td class="num">
-          28.5%
+          0.4%
         </td>
-
+        
         <td class="num">
-          51.9%
+          49.5%
         </td>
-
-        <td class="num">761</td>
+        
+        <td class="num">687</td>
       </tr>
-
+      
       <tr>
-        <td>2026-07-13</td>
-        <td class="num">19.3%</td>
-
+        <td>2026-02-16</td>
+        <td class="num">15.6%</td>
+        
         <td class="num">
-          19.3%
+          15.6%
         </td>
-
+        
         <td class="num">
-          —
+          34.5%
         </td>
-
+        
         <td class="num">
-          28.7%
+          0.4%
         </td>
-
+        
         <td class="num">
-          51.9%
+          49.5%
         </td>
-
-        <td class="num">755</td>
+        
+        <td class="num">693</td>
       </tr>
-
+      
       <tr>
-        <td>2026-07-20</td>
-        <td class="num">19.5%</td>
-
+        <td>2026-02-23</td>
+        <td class="num">15.6%</td>
+        
         <td class="num">
-          19.5%
+          15.6%
         </td>
-
+        
         <td class="num">
-          —
+          34.4%
         </td>
-
+        
         <td class="num">
-          28.6%
+          0.4%
         </td>
-
+        
         <td class="num">
-          51.9%
+          49.6%
         </td>
-
-        <td class="num">755</td>
+        
+        <td class="num">694</td>
       </tr>
-
+      
       <tr>
-        <td>2026-07-27</td>
-        <td class="num">20.9%</td>
-
+        <td>2026-03-02</td>
+        <td class="num">15.6%</td>
+        
         <td class="num">
-          20.9%
+          15.6%
         </td>
-
+        
         <td class="num">
-          —
+          34.1%
         </td>
-
+        
         <td class="num">
-          26.2%
+          0.4%
         </td>
-
+        
         <td class="num">
-          52.9%
+          49.9%
         </td>
-
-        <td class="num">762</td>
+        
+        <td class="num">700</td>
       </tr>
-
+      
       <tr>
-        <td>2026-08-03</td>
-        <td class="num">20.9%</td>
-
+        <td>2026-03-09</td>
+        <td class="num">15.5%</td>
+        
         <td class="num">
-          20.9%
+          15.5%
         </td>
-
+        
         <td class="num">
-          —
+          34.1%
         </td>
-
+        
         <td class="num">
-          26.2%
+          0.4%
         </td>
-
+        
         <td class="num">
-          52.9%
+          50.0%
         </td>
-
-        <td class="num">762</td>
+        
+        <td class="num">704</td>
       </tr>
-
+      
       <tr>
-        <td>2026-08-10</td>
-        <td class="num">20.9%</td>
-
+        <td>2026-03-16</td>
+        <td class="num">15.6%</td>
+        
         <td class="num">
-          20.9%
+          15.6%
         </td>
-
+        
         <td class="num">
-          —
+          34.1%
         </td>
-
+        
         <td class="num">
-          26.2%
+          0.4%
         </td>
-
+        
         <td class="num">
-          52.9%
+          49.9%
         </td>
-
-        <td class="num">762</td>
+        
+        <td class="num">704</td>
       </tr>
-
+      
       <tr>
-        <td>2026-08-17</td>
-        <td class="num">20.9%</td>
-
+        <td>2026-03-23</td>
+        <td class="num">16.1%</td>
+        
         <td class="num">
-          20.9%
+          16.1%
         </td>
-
+        
         <td class="num">
-          —
+          33.2%
         </td>
-
+        
         <td class="num">
-          26.4%
+          0.4%
         </td>
-
+        
+        <td class="num">
+          50.3%
+        </td>
+        
+        <td class="num">708</td>
+      </tr>
+      
+      <tr>
+        <td>2026-03-30</td>
+        <td class="num">15.9%</td>
+        
+        <td class="num">
+          15.9%
+        </td>
+        
+        <td class="num">
+          33.0%
+        </td>
+        
+        <td class="num">
+          0.4%
+        </td>
+        
+        <td class="num">
+          50.7%
+        </td>
+        
+        <td class="num">710</td>
+      </tr>
+      
+      <tr>
+        <td>2026-04-06</td>
+        <td class="num">15.9%</td>
+        
+        <td class="num">
+          15.9%
+        </td>
+        
+        <td class="num">
+          33.0%
+        </td>
+        
+        <td class="num">
+          0.4%
+        </td>
+        
+        <td class="num">
+          50.7%
+        </td>
+        
+        <td class="num">712</td>
+      </tr>
+      
+      <tr>
+        <td>2026-04-13</td>
+        <td class="num">16.0%</td>
+        
+        <td class="num">
+          16.0%
+        </td>
+        
+        <td class="num">
+          32.9%
+        </td>
+        
+        <td class="num">
+          0.4%
+        </td>
+        
+        <td class="num">
+          50.7%
+        </td>
+        
+        <td class="num">712</td>
+      </tr>
+      
+      <tr>
+        <td>2026-04-20</td>
+        <td class="num">16.2%</td>
+        
+        <td class="num">
+          16.2%
+        </td>
+        
+        <td class="num">
+          32.7%
+        </td>
+        
+        <td class="num">
+          0.4%
+        </td>
+        
+        <td class="num">
+          50.7%
+        </td>
+        
+        <td class="num">712</td>
+      </tr>
+      
+      <tr>
+        <td>2026-04-27</td>
+        <td class="num">15.7%</td>
+        
+        <td class="num">
+          15.7%
+        </td>
+        
+        <td class="num">
+          31.2%
+        </td>
+        
+        <td class="num">
+          0.4%
+        </td>
+        
         <td class="num">
           52.7%
         </td>
-
-        <td class="num">759</td>
+        
+        <td class="num">744</td>
       </tr>
-
+      
       <tr>
-        <td>2026-08-24</td>
-        <td class="num">21.1%</td>
-
+        <td>2026-05-04</td>
+        <td class="num">16.1%</td>
+        
         <td class="num">
-          21.1%
+          16.1%
         </td>
-
+        
+        <td class="num">
+          30.9%
+        </td>
+        
+        <td class="num">
+          0.4%
+        </td>
+        
+        <td class="num">
+          52.6%
+        </td>
+        
+        <td class="num">744</td>
+      </tr>
+      
+      <tr>
+        <td>2026-05-11</td>
+        <td class="num">16.1%</td>
+        
+        <td class="num">
+          16.1%
+        </td>
+        
+        <td class="num">
+          31.0%
+        </td>
+        
+        <td class="num">
+          0.4%
+        </td>
+        
+        <td class="num">
+          52.5%
+        </td>
+        
+        <td class="num">745</td>
+      </tr>
+      
+      <tr>
+        <td>2026-05-18</td>
+        <td class="num">16.1%</td>
+        
+        <td class="num">
+          16.1%
+        </td>
+        
+        <td class="num">
+          30.9%
+        </td>
+        
+        <td class="num">
+          0.5%
+        </td>
+        
+        <td class="num">
+          52.5%
+        </td>
+        
+        <td class="num">745</td>
+      </tr>
+      
+      <tr>
+        <td>2026-05-25</td>
+        <td class="num">16.2%</td>
+        
+        <td class="num">
+          16.2%
+        </td>
+        
+        <td class="num">
+          30.8%
+        </td>
+        
+        <td class="num">
+          0.5%
+        </td>
+        
+        <td class="num">
+          52.4%
+        </td>
+        
+        <td class="num">746</td>
+      </tr>
+      
+      <tr>
+        <td>2026-06-01</td>
+        <td class="num">16.6%</td>
+        
+        <td class="num">
+          16.6%
+        </td>
+        
+        <td class="num">
+          30.5%
+        </td>
+        
+        <td class="num">
+          0.5%
+        </td>
+        
+        <td class="num">
+          52.4%
+        </td>
+        
+        <td class="num">748</td>
+      </tr>
+      
+      <tr>
+        <td>2026-06-08</td>
+        <td class="num">18.1%</td>
+        
+        <td class="num">
+          18.1%
+        </td>
+        
+        <td class="num">
+          29.4%
+        </td>
+        
+        <td class="num">
+          0.4%
+        </td>
+        
+        <td class="num">
+          52.1%
+        </td>
+        
+        <td class="num">752</td>
+      </tr>
+      
+      <tr>
+        <td>2026-06-11</td>
+        <td class="num">13.7%</td>
+        
+        <td class="num">
+          13.7%
+        </td>
+        
+        <td class="num">
+          —
+        </td>
+        
+        <td class="num">
+          29.4%
+        </td>
+        
+        <td class="num">
+          57.0%
+        </td>
+        
+        <td class="num">344</td>
+      </tr>
+      
+      <tr>
+        <td>2026-06-15</td>
+        <td class="num">14.8%</td>
+        
+        <td class="num">
+          14.8%
+        </td>
+        
+        <td class="num">
+          —
+        </td>
+        
+        <td class="num">
+          28.4%
+        </td>
+        
+        <td class="num">
+          56.8%
+        </td>
+        
+        <td class="num">345</td>
+      </tr>
+      
+      <tr>
+        <td>2026-06-22</td>
+        <td class="num">14.8%</td>
+        
+        <td class="num">
+          14.8%
+        </td>
+        
+        <td class="num">
+          —
+        </td>
+        
+        <td class="num">
+          28.4%
+        </td>
+        
+        <td class="num">
+          56.8%
+        </td>
+        
+        <td class="num">345</td>
+      </tr>
+      
+      <tr>
+        <td>2026-06-25</td>
+        <td class="num">14.8%</td>
+        
+        <td class="num">
+          14.8%
+        </td>
+        
+        <td class="num">
+          —
+        </td>
+        
+        <td class="num">
+          28.4%
+        </td>
+        
+        <td class="num">
+          56.8%
+        </td>
+        
+        <td class="num">345</td>
+      </tr>
+      
+      <tr>
+        <td>2026-06-29</td>
+        <td class="num">14.8%</td>
+        
+        <td class="num">
+          14.8%
+        </td>
+        
+        <td class="num">
+          —
+        </td>
+        
+        <td class="num">
+          28.4%
+        </td>
+        
+        <td class="num">
+          56.8%
+        </td>
+        
+        <td class="num">345</td>
+      </tr>
+      
+      <tr>
+        <td>2026-07-06</td>
+        <td class="num">19.6%</td>
+        
+        <td class="num">
+          19.6%
+        </td>
+        
+        <td class="num">
+          —
+        </td>
+        
+        <td class="num">
+          28.5%
+        </td>
+        
+        <td class="num">
+          51.9%
+        </td>
+        
+        <td class="num">761</td>
+      </tr>
+      
+      <tr>
+        <td>2026-07-13</td>
+        <td class="num">19.3%</td>
+        
+        <td class="num">
+          19.3%
+        </td>
+        
+        <td class="num">
+          —
+        </td>
+        
+        <td class="num">
+          28.7%
+        </td>
+        
+        <td class="num">
+          51.9%
+        </td>
+        
+        <td class="num">755</td>
+      </tr>
+      
+      <tr>
+        <td>2026-07-20</td>
+        <td class="num">19.5%</td>
+        
+        <td class="num">
+          19.5%
+        </td>
+        
+        <td class="num">
+          —
+        </td>
+        
+        <td class="num">
+          28.6%
+        </td>
+        
+        <td class="num">
+          51.9%
+        </td>
+        
+        <td class="num">755</td>
+      </tr>
+      
+      <tr>
+        <td>2026-07-27</td>
+        <td class="num">20.9%</td>
+        
+        <td class="num">
+          20.9%
+        </td>
+        
+        <td class="num">
+          —
+        </td>
+        
+        <td class="num">
+          26.2%
+        </td>
+        
+        <td class="num">
+          52.9%
+        </td>
+        
+        <td class="num">762</td>
+      </tr>
+      
+      <tr>
+        <td>2026-08-03</td>
+        <td class="num">20.9%</td>
+        
+        <td class="num">
+          20.9%
+        </td>
+        
+        <td class="num">
+          —
+        </td>
+        
+        <td class="num">
+          26.2%
+        </td>
+        
+        <td class="num">
+          52.9%
+        </td>
+        
+        <td class="num">762</td>
+      </tr>
+      
+      <tr>
+        <td>2026-08-10</td>
+        <td class="num">20.9%</td>
+        
+        <td class="num">
+          20.9%
+        </td>
+        
+        <td class="num">
+          —
+        </td>
+        
+        <td class="num">
+          26.2%
+        </td>
+        
+        <td class="num">
+          52.9%
+        </td>
+        
+        <td class="num">762</td>
+      </tr>
+      
+      <tr>
+        <td>2026-08-17</td>
+        <td class="num">20.9%</td>
+        
+        <td class="num">
+          20.9%
+        </td>
+        
+        <td class="num">
+          —
+        </td>
+        
         <td class="num">
           26.4%
         </td>
-
+        
+        <td class="num">
+          52.7%
+        </td>
+        
+        <td class="num">759</td>
+      </tr>
+      
+      <tr>
+        <td>2026-08-24</td>
+        <td class="num">21.1%</td>
+        
+        <td class="num">
+          21.1%
+        </td>
+        
+        <td class="num">
+          26.4%
+        </td>
+        
         <td class="num">
           0.3%
         </td>
-
+        
         <td class="num">
           52.2%
         </td>
-
+        
         <td class="num">760</td>
       </tr>
-
+      
     </tbody>
   </table>
   </details>
 
+  
+  
 
-
-
-
+  
   <ul class="caveats">
     <li>A charm hitting both framework detectors is counted as jubilant — part-migrated reads as adopted.</li>
   </ul>
-
+  
 </section>
 
 <section class="metric" id="metric-charmlibs-share">
   <h2>charmlibs share</h2>
   <p class="detail">Mean over charms of <code>charmlibs / (charmlibs + vendored Charmhub libs)</code>. Charms using no libraries at all are excluded from the mean and tracked separately.</p>
 
-
+  
   <div class="chart" id="chart-charmlibs-share"></div>
 
   <details class="fallback">
@@ -705,55 +1585,492 @@
       </tr>
     </thead>
     <tbody>
-
+      
+      <tr>
+        <td>2026-01-05</td>
+        <td class="num">5.4%</td>
+        
+        <td class="num">
+          5.4%
+        </td>
+        
+        <td class="num">
+          94.6%
+        </td>
+        
+        <td class="num">
+          38.1%
+        </td>
+        
+        <td class="num">319</td>
+      </tr>
+      
+      <tr>
+        <td>2026-01-12</td>
+        <td class="num">5.5%</td>
+        
+        <td class="num">
+          5.5%
+        </td>
+        
+        <td class="num">
+          94.5%
+        </td>
+        
+        <td class="num">
+          37.8%
+        </td>
+        
+        <td class="num">321</td>
+      </tr>
+      
+      <tr>
+        <td>2026-01-19</td>
+        <td class="num">6.4%</td>
+        
+        <td class="num">
+          6.4%
+        </td>
+        
+        <td class="num">
+          93.6%
+        </td>
+        
+        <td class="num">
+          37.6%
+        </td>
+        
+        <td class="num">324</td>
+      </tr>
+      
+      <tr>
+        <td>2026-01-26</td>
+        <td class="num">6.4%</td>
+        
+        <td class="num">
+          6.4%
+        </td>
+        
+        <td class="num">
+          93.6%
+        </td>
+        
+        <td class="num">
+          36.9%
+        </td>
+        
+        <td class="num">332</td>
+      </tr>
+      
+      <tr>
+        <td>2026-02-02</td>
+        <td class="num">6.7%</td>
+        
+        <td class="num">
+          6.7%
+        </td>
+        
+        <td class="num">
+          93.3%
+        </td>
+        
+        <td class="num">
+          36.9%
+        </td>
+        
+        <td class="num">334</td>
+      </tr>
+      
+      <tr>
+        <td>2026-02-09</td>
+        <td class="num">6.7%</td>
+        
+        <td class="num">
+          6.7%
+        </td>
+        
+        <td class="num">
+          93.3%
+        </td>
+        
+        <td class="num">
+          36.8%
+        </td>
+        
+        <td class="num">335</td>
+      </tr>
+      
+      <tr>
+        <td>2026-02-16</td>
+        <td class="num">7.2%</td>
+        
+        <td class="num">
+          7.2%
+        </td>
+        
+        <td class="num">
+          92.8%
+        </td>
+        
+        <td class="num">
+          36.8%
+        </td>
+        
+        <td class="num">339</td>
+      </tr>
+      
+      <tr>
+        <td>2026-02-23</td>
+        <td class="num">7.8%</td>
+        
+        <td class="num">
+          7.8%
+        </td>
+        
+        <td class="num">
+          92.2%
+        </td>
+        
+        <td class="num">
+          36.9%
+        </td>
+        
+        <td class="num">339</td>
+      </tr>
+      
+      <tr>
+        <td>2026-03-02</td>
+        <td class="num">8.0%</td>
+        
+        <td class="num">
+          8.0%
+        </td>
+        
+        <td class="num">
+          92.0%
+        </td>
+        
+        <td class="num">
+          37.4%
+        </td>
+        
+        <td class="num">340</td>
+      </tr>
+      
+      <tr>
+        <td>2026-03-09</td>
+        <td class="num">8.6%</td>
+        
+        <td class="num">
+          8.6%
+        </td>
+        
+        <td class="num">
+          91.4%
+        </td>
+        
+        <td class="num">
+          37.3%
+        </td>
+        
+        <td class="num">343</td>
+      </tr>
+      
+      <tr>
+        <td>2026-03-16</td>
+        <td class="num">8.8%</td>
+        
+        <td class="num">
+          8.8%
+        </td>
+        
+        <td class="num">
+          91.2%
+        </td>
+        
+        <td class="num">
+          37.1%
+        </td>
+        
+        <td class="num">344</td>
+      </tr>
+      
+      <tr>
+        <td>2026-03-23</td>
+        <td class="num">8.8%</td>
+        
+        <td class="num">
+          8.8%
+        </td>
+        
+        <td class="num">
+          91.2%
+        </td>
+        
+        <td class="num">
+          37.2%
+        </td>
+        
+        <td class="num">346</td>
+      </tr>
+      
+      <tr>
+        <td>2026-03-30</td>
+        <td class="num">8.9%</td>
+        
+        <td class="num">
+          8.9%
+        </td>
+        
+        <td class="num">
+          91.1%
+        </td>
+        
+        <td class="num">
+          37.3%
+        </td>
+        
+        <td class="num">347</td>
+      </tr>
+      
+      <tr>
+        <td>2026-04-06</td>
+        <td class="num">8.9%</td>
+        
+        <td class="num">
+          8.9%
+        </td>
+        
+        <td class="num">
+          91.1%
+        </td>
+        
+        <td class="num">
+          37.3%
+        </td>
+        
+        <td class="num">348</td>
+      </tr>
+      
+      <tr>
+        <td>2026-04-13</td>
+        <td class="num">8.7%</td>
+        
+        <td class="num">
+          8.7%
+        </td>
+        
+        <td class="num">
+          91.3%
+        </td>
+        
+        <td class="num">
+          37.1%
+        </td>
+        
+        <td class="num">349</td>
+      </tr>
+      
+      <tr>
+        <td>2026-04-20</td>
+        <td class="num">8.8%</td>
+        
+        <td class="num">
+          8.8%
+        </td>
+        
+        <td class="num">
+          91.2%
+        </td>
+        
+        <td class="num">
+          37.1%
+        </td>
+        
+        <td class="num">349</td>
+      </tr>
+      
+      <tr>
+        <td>2026-04-27</td>
+        <td class="num">8.8%</td>
+        
+        <td class="num">
+          8.8%
+        </td>
+        
+        <td class="num">
+          91.2%
+        </td>
+        
+        <td class="num">
+          40.2%
+        </td>
+        
+        <td class="num">351</td>
+      </tr>
+      
+      <tr>
+        <td>2026-05-04</td>
+        <td class="num">9.2%</td>
+        
+        <td class="num">
+          9.2%
+        </td>
+        
+        <td class="num">
+          90.8%
+        </td>
+        
+        <td class="num">
+          40.2%
+        </td>
+        
+        <td class="num">351</td>
+      </tr>
+      
+      <tr>
+        <td>2026-05-11</td>
+        <td class="num">10.1%</td>
+        
+        <td class="num">
+          10.1%
+        </td>
+        
+        <td class="num">
+          89.9%
+        </td>
+        
+        <td class="num">
+          40.3%
+        </td>
+        
+        <td class="num">351</td>
+      </tr>
+      
+      <tr>
+        <td>2026-05-18</td>
+        <td class="num">10.4%</td>
+        
+        <td class="num">
+          10.4%
+        </td>
+        
+        <td class="num">
+          89.6%
+        </td>
+        
+        <td class="num">
+          40.3%
+        </td>
+        
+        <td class="num">351</td>
+      </tr>
+      
+      <tr>
+        <td>2026-05-25</td>
+        <td class="num">10.4%</td>
+        
+        <td class="num">
+          10.4%
+        </td>
+        
+        <td class="num">
+          89.6%
+        </td>
+        
+        <td class="num">
+          40.4%
+        </td>
+        
+        <td class="num">351</td>
+      </tr>
+      
+      <tr>
+        <td>2026-06-01</td>
+        <td class="num">10.5%</td>
+        
+        <td class="num">
+          10.5%
+        </td>
+        
+        <td class="num">
+          89.5%
+        </td>
+        
+        <td class="num">
+          40.4%
+        </td>
+        
+        <td class="num">352</td>
+      </tr>
+      
+      <tr>
+        <td>2026-06-08</td>
+        <td class="num">11.2%</td>
+        
+        <td class="num">
+          11.2%
+        </td>
+        
+        <td class="num">
+          88.8%
+        </td>
+        
+        <td class="num">
+          39.7%
+        </td>
+        
+        <td class="num">359</td>
+      </tr>
+      
       <tr>
         <td>2026-08-24</td>
         <td class="num">11.9%</td>
-
+        
         <td class="num">
           11.9%
         </td>
-
+        
         <td class="num">
           88.1%
         </td>
-
+        
         <td class="num">
           34.6%
         </td>
-
+        
         <td class="num">395</td>
       </tr>
-
+      
     </tbody>
   </table>
   </details>
 
+  
+  
 
-
-
-
+  
   <ul class="caveats">
     <li>Unweighted mean of per-charm ratios: every charm counts once, regardless of how many libraries it pulls in.</li><li>charmlibs counts were added to the scan on 2026-08-24, so this series starts at the first scan after that date.</li>
   </ul>
-
+  
 </section>
 
 <section class="metric" id="metric-rootless">
   <h2>Rootless by default</h2>
   <p class="detail">Percent of scanned artefacts that declare a non-root user: rocks setting <code>run-user</code> in <code>rockcraft.yaml</code> (<code>_daemon_</code> is the only value rockcraft accepts today) and Kubernetes charms setting <code>charm-user</code> in <code>charmcraft.yaml</code> (<code>non-root</code> or <code>sudoer</code>). Anything that leaves the key unset runs as root, which is the default on both sides.</p>
 
-
+  
   <p class="pending-note">
     No series yet — charm-user and the rocks scan were both added on 2026-08-24, so this series starts at the first scan after that date.
   </p>
+  
 
-
-
+  
   <ul class="caveats">
     <li>The two halves are not the same process: <code>run-user</code> is the rock's OCI user (the workload), <code>charm-user</code> is the user the charm code itself runs as.</li><li><code>sudoer</code> counts towards the headline — it is a non-root user — but it keeps its own bucket, because it can still escalate via sudo.</li><li>Archived repos and forks are dropped from the rocks half, as are rocks whose rockcraft.yaml could not be read at scan time.</li>
   </ul>
-
+  
 </section>
 
 
@@ -766,7 +2083,7 @@
   scans, so read a series as a share, not as a count.
 </p>
 
-<script type="application/json" id="adoption-metrics-data">[{"breakdown_keys": ["typed", "untyped"], "key": "typed-relation", "series": [{"breakdown": {"typed": 0.0, "untyped": 100.0}, "counts": {"typed": 0, "untyped": 283}, "date": "2026-06-11", "denominator": 283, "numerator": 0, "partial": "", "value": 0.0}, {"breakdown": {"typed": 0.0, "untyped": 100.0}, "counts": {"typed": 0, "untyped": 262}, "date": "2026-06-15", "denominator": 262, "numerator": 0, "partial": "", "value": 0.0}, {"breakdown": {"typed": 0.0, "untyped": 100.0}, "counts": {"typed": 0, "untyped": 262}, "date": "2026-06-22", "denominator": 262, "numerator": 0, "partial": "", "value": 0.0}, {"breakdown": {"typed": 0.0, "untyped": 100.0}, "counts": {"typed": 0, "untyped": 262}, "date": "2026-06-25", "denominator": 262, "numerator": 0, "partial": "", "value": 0.0}, {"breakdown": {"typed": 0.0, "untyped": 100.0}, "counts": {"typed": 0, "untyped": 262}, "date": "2026-06-29", "denominator": 262, "numerator": 0, "partial": "", "value": 0.0}, {"breakdown": {"typed": 0.2, "untyped": 99.8}, "counts": {"typed": 1, "untyped": 613}, "date": "2026-07-06", "denominator": 614, "numerator": 1, "partial": "", "value": 0.2}, {"breakdown": {"typed": 0.2, "untyped": 99.8}, "counts": {"typed": 1, "untyped": 609}, "date": "2026-07-13", "denominator": 610, "numerator": 1, "partial": "", "value": 0.2}, {"breakdown": {"typed": 0.2, "untyped": 99.8}, "counts": {"typed": 1, "untyped": 609}, "date": "2026-07-20", "denominator": 610, "numerator": 1, "partial": "", "value": 0.2}, {"breakdown": {"typed": 0.8, "untyped": 99.2}, "counts": {"typed": 5, "untyped": 611}, "date": "2026-07-27", "denominator": 616, "numerator": 5, "partial": "", "value": 0.8}, {"breakdown": {"typed": 0.8, "untyped": 99.2}, "counts": {"typed": 5, "untyped": 611}, "date": "2026-08-03", "denominator": 616, "numerator": 5, "partial": "", "value": 0.8}, {"breakdown": {"typed": 0.8, "untyped": 99.2}, "counts": {"typed": 5, "untyped": 611}, "date": "2026-08-10", "denominator": 616, "numerator": 5, "partial": "", "value": 0.8}, {"breakdown": {"typed": 0.8, "untyped": 99.2}, "counts": {"typed": 5, "untyped": 611}, "date": "2026-08-17", "denominator": 616, "numerator": 5, "partial": "", "value": 0.8}, {"breakdown": {"typed": 0.8, "untyped": 99.2}, "counts": {"typed": 5, "untyped": 599}, "date": "2026-08-24", "denominator": 604, "numerator": 5, "partial": "", "value": 0.8}], "title": "Typed relation data"}, {"breakdown_keys": ["jubilant", "pytest-operator", "other-integration-tests", "no-integration-tests"], "key": "integration-testing", "series": [{"breakdown": {"jubilant": 13.7, "no-integration-tests": 57.0, "other-integration-tests": 29.4}, "counts": {"jubilant": 47, "no-integration-tests": 196, "other-integration-tests": 101}, "date": "2026-06-11", "denominator": 344, "numerator": 47, "partial": "testing.pytest-operator not yet scanned", "value": 13.7}, {"breakdown": {"jubilant": 14.8, "no-integration-tests": 56.8, "other-integration-tests": 28.4}, "counts": {"jubilant": 51, "no-integration-tests": 196, "other-integration-tests": 98}, "date": "2026-06-15", "denominator": 345, "numerator": 51, "partial": "testing.pytest-operator not yet scanned", "value": 14.8}, {"breakdown": {"jubilant": 14.8, "no-integration-tests": 56.8, "other-integration-tests": 28.4}, "counts": {"jubilant": 51, "no-integration-tests": 196, "other-integration-tests": 98}, "date": "2026-06-22", "denominator": 345, "numerator": 51, "partial": "testing.pytest-operator not yet scanned", "value": 14.8}, {"breakdown": {"jubilant": 14.8, "no-integration-tests": 56.8, "other-integration-tests": 28.4}, "counts": {"jubilant": 51, "no-integration-tests": 196, "other-integration-tests": 98}, "date": "2026-06-25", "denominator": 345, "numerator": 51, "partial": "testing.pytest-operator not yet scanned", "value": 14.8}, {"breakdown": {"jubilant": 14.8, "no-integration-tests": 56.8, "other-integration-tests": 28.4}, "counts": {"jubilant": 51, "no-integration-tests": 196, "other-integration-tests": 98}, "date": "2026-06-29", "denominator": 345, "numerator": 51, "partial": "testing.pytest-operator not yet scanned", "value": 14.8}, {"breakdown": {"jubilant": 19.6, "no-integration-tests": 51.9, "other-integration-tests": 28.5}, "counts": {"jubilant": 149, "no-integration-tests": 395, "other-integration-tests": 217}, "date": "2026-07-06", "denominator": 761, "numerator": 149, "partial": "testing.pytest-operator not yet scanned", "value": 19.6}, {"breakdown": {"jubilant": 19.3, "no-integration-tests": 51.9, "other-integration-tests": 28.7}, "counts": {"jubilant": 146, "no-integration-tests": 392, "other-integration-tests": 217}, "date": "2026-07-13", "denominator": 755, "numerator": 146, "partial": "testing.pytest-operator not yet scanned", "value": 19.3}, {"breakdown": {"jubilant": 19.5, "no-integration-tests": 51.9, "other-integration-tests": 28.6}, "counts": {"jubilant": 147, "no-integration-tests": 392, "other-integration-tests": 216}, "date": "2026-07-20", "denominator": 755, "numerator": 147, "partial": "testing.pytest-operator not yet scanned", "value": 19.5}, {"breakdown": {"jubilant": 20.9, "no-integration-tests": 52.9, "other-integration-tests": 26.2}, "counts": {"jubilant": 159, "no-integration-tests": 403, "other-integration-tests": 200}, "date": "2026-07-27", "denominator": 762, "numerator": 159, "partial": "testing.pytest-operator not yet scanned", "value": 20.9}, {"breakdown": {"jubilant": 20.9, "no-integration-tests": 52.9, "other-integration-tests": 26.2}, "counts": {"jubilant": 159, "no-integration-tests": 403, "other-integration-tests": 200}, "date": "2026-08-03", "denominator": 762, "numerator": 159, "partial": "testing.pytest-operator not yet scanned", "value": 20.9}, {"breakdown": {"jubilant": 20.9, "no-integration-tests": 52.9, "other-integration-tests": 26.2}, "counts": {"jubilant": 159, "no-integration-tests": 403, "other-integration-tests": 200}, "date": "2026-08-10", "denominator": 762, "numerator": 159, "partial": "testing.pytest-operator not yet scanned", "value": 20.9}, {"breakdown": {"jubilant": 20.9, "no-integration-tests": 52.7, "other-integration-tests": 26.4}, "counts": {"jubilant": 159, "no-integration-tests": 400, "other-integration-tests": 200}, "date": "2026-08-17", "denominator": 759, "numerator": 159, "partial": "testing.pytest-operator not yet scanned", "value": 20.9}, {"breakdown": {"jubilant": 21.1, "no-integration-tests": 52.2, "other-integration-tests": 0.3, "pytest-operator": 26.4}, "counts": {"jubilant": 160, "no-integration-tests": 397, "other-integration-tests": 2, "pytest-operator": 201}, "date": "2026-08-24", "denominator": 760, "numerator": 160, "partial": "", "value": 21.1}], "title": "Jubilant adoption"}, {"breakdown_keys": ["charmlibs", "charmhub-libs", "no-libraries"], "key": "charmlibs-share", "series": [{"breakdown": {"charmhub-libs": 88.1, "charmlibs": 11.9, "no-libraries": 34.6}, "counts": {"charms-using-any-charmlib": 89, "charms-with-libraries": 395, "no-libraries": 209}, "date": "2026-08-24", "denominator": 395, "numerator": 89, "partial": "", "value": 11.9}], "title": "charmlibs share"}, {"breakdown_keys": ["run-user: _daemon_", "charm-user: non-root", "charm-user: sudoer", "other non-root user", "root (or unset)"], "key": "rootless", "series": [], "title": "Rootless by default"}]</script>
+<script type="application/json" id="adoption-metrics-data">[{"breakdown_keys": ["typed", "untyped"], "key": "typed-relation", "series": [{"breakdown": {"typed": 1.7, "untyped": 98.3}, "counts": {"typed": 9, "untyped": 506}, "date": "2026-01-05", "denominator": 515, "numerator": 9, "partial": "", "value": 1.7}, {"breakdown": {"typed": 1.7, "untyped": 98.3}, "counts": {"typed": 9, "untyped": 507}, "date": "2026-01-12", "denominator": 516, "numerator": 9, "partial": "", "value": 1.7}, {"breakdown": {"typed": 1.7, "untyped": 98.3}, "counts": {"typed": 9, "untyped": 510}, "date": "2026-01-19", "denominator": 519, "numerator": 9, "partial": "", "value": 1.7}, {"breakdown": {"typed": 1.7, "untyped": 98.3}, "counts": {"typed": 9, "untyped": 517}, "date": "2026-01-26", "denominator": 526, "numerator": 9, "partial": "", "value": 1.7}, {"breakdown": {"typed": 2.1, "untyped": 97.9}, "counts": {"typed": 11, "untyped": 518}, "date": "2026-02-02", "denominator": 529, "numerator": 11, "partial": "", "value": 2.1}, {"breakdown": {"typed": 1.9, "untyped": 98.1}, "counts": {"typed": 10, "untyped": 520}, "date": "2026-02-09", "denominator": 530, "numerator": 10, "partial": "", "value": 1.9}, {"breakdown": {"typed": 1.9, "untyped": 98.1}, "counts": {"typed": 10, "untyped": 526}, "date": "2026-02-16", "denominator": 536, "numerator": 10, "partial": "", "value": 1.9}, {"breakdown": {"typed": 2.4, "untyped": 97.6}, "counts": {"typed": 13, "untyped": 524}, "date": "2026-02-23", "denominator": 537, "numerator": 13, "partial": "", "value": 2.4}, {"breakdown": {"typed": 2.6, "untyped": 97.4}, "counts": {"typed": 14, "untyped": 529}, "date": "2026-03-02", "denominator": 543, "numerator": 14, "partial": "", "value": 2.6}, {"breakdown": {"typed": 2.7, "untyped": 97.3}, "counts": {"typed": 15, "untyped": 532}, "date": "2026-03-09", "denominator": 547, "numerator": 15, "partial": "", "value": 2.7}, {"breakdown": {"typed": 2.7, "untyped": 97.3}, "counts": {"typed": 15, "untyped": 532}, "date": "2026-03-16", "denominator": 547, "numerator": 15, "partial": "", "value": 2.7}, {"breakdown": {"typed": 2.7, "untyped": 97.3}, "counts": {"typed": 15, "untyped": 536}, "date": "2026-03-23", "denominator": 551, "numerator": 15, "partial": "", "value": 2.7}, {"breakdown": {"typed": 3.1, "untyped": 96.9}, "counts": {"typed": 17, "untyped": 536}, "date": "2026-03-30", "denominator": 553, "numerator": 17, "partial": "", "value": 3.1}, {"breakdown": {"typed": 3.1, "untyped": 96.9}, "counts": {"typed": 17, "untyped": 538}, "date": "2026-04-06", "denominator": 555, "numerator": 17, "partial": "", "value": 3.1}, {"breakdown": {"typed": 3.1, "untyped": 96.9}, "counts": {"typed": 17, "untyped": 538}, "date": "2026-04-13", "denominator": 555, "numerator": 17, "partial": "", "value": 3.1}, {"breakdown": {"typed": 3.2, "untyped": 96.8}, "counts": {"typed": 18, "untyped": 537}, "date": "2026-04-20", "denominator": 555, "numerator": 18, "partial": "", "value": 3.2}, {"breakdown": {"typed": 3.2, "untyped": 96.8}, "counts": {"typed": 19, "untyped": 568}, "date": "2026-04-27", "denominator": 587, "numerator": 19, "partial": "", "value": 3.2}, {"breakdown": {"typed": 3.2, "untyped": 96.8}, "counts": {"typed": 19, "untyped": 568}, "date": "2026-05-04", "denominator": 587, "numerator": 19, "partial": "", "value": 3.2}, {"breakdown": {"typed": 3.2, "untyped": 96.8}, "counts": {"typed": 19, "untyped": 569}, "date": "2026-05-11", "denominator": 588, "numerator": 19, "partial": "", "value": 3.2}, {"breakdown": {"typed": 3.2, "untyped": 96.8}, "counts": {"typed": 19, "untyped": 569}, "date": "2026-05-18", "denominator": 588, "numerator": 19, "partial": "", "value": 3.2}, {"breakdown": {"typed": 3.4, "untyped": 96.6}, "counts": {"typed": 20, "untyped": 569}, "date": "2026-05-25", "denominator": 589, "numerator": 20, "partial": "", "value": 3.4}, {"breakdown": {"typed": 3.4, "untyped": 96.6}, "counts": {"typed": 20, "untyped": 571}, "date": "2026-06-01", "denominator": 591, "numerator": 20, "partial": "", "value": 3.4}, {"breakdown": {"typed": 3.4, "untyped": 96.6}, "counts": {"typed": 20, "untyped": 575}, "date": "2026-06-08", "denominator": 595, "numerator": 20, "partial": "", "value": 3.4}, {"breakdown": {"typed": 0.0, "untyped": 100.0}, "counts": {"typed": 0, "untyped": 283}, "date": "2026-06-11", "denominator": 283, "numerator": 0, "partial": "ops.typed-config not yet scanned", "value": 0.0}, {"breakdown": {"typed": 0.0, "untyped": 100.0}, "counts": {"typed": 0, "untyped": 262}, "date": "2026-06-15", "denominator": 262, "numerator": 0, "partial": "ops.typed-config not yet scanned", "value": 0.0}, {"breakdown": {"typed": 0.0, "untyped": 100.0}, "counts": {"typed": 0, "untyped": 262}, "date": "2026-06-22", "denominator": 262, "numerator": 0, "partial": "ops.typed-config not yet scanned", "value": 0.0}, {"breakdown": {"typed": 0.0, "untyped": 100.0}, "counts": {"typed": 0, "untyped": 262}, "date": "2026-06-25", "denominator": 262, "numerator": 0, "partial": "ops.typed-config not yet scanned", "value": 0.0}, {"breakdown": {"typed": 0.0, "untyped": 100.0}, "counts": {"typed": 0, "untyped": 262}, "date": "2026-06-29", "denominator": 262, "numerator": 0, "partial": "ops.typed-config not yet scanned", "value": 0.0}, {"breakdown": {"typed": 0.2, "untyped": 99.8}, "counts": {"typed": 1, "untyped": 613}, "date": "2026-07-06", "denominator": 614, "numerator": 1, "partial": "ops.typed-config not yet scanned", "value": 0.2}, {"breakdown": {"typed": 0.2, "untyped": 99.8}, "counts": {"typed": 1, "untyped": 609}, "date": "2026-07-13", "denominator": 610, "numerator": 1, "partial": "ops.typed-config not yet scanned", "value": 0.2}, {"breakdown": {"typed": 0.2, "untyped": 99.8}, "counts": {"typed": 1, "untyped": 609}, "date": "2026-07-20", "denominator": 610, "numerator": 1, "partial": "ops.typed-config not yet scanned", "value": 0.2}, {"breakdown": {"typed": 0.8, "untyped": 99.2}, "counts": {"typed": 5, "untyped": 611}, "date": "2026-07-27", "denominator": 616, "numerator": 5, "partial": "ops.typed-config not yet scanned", "value": 0.8}, {"breakdown": {"typed": 0.8, "untyped": 99.2}, "counts": {"typed": 5, "untyped": 611}, "date": "2026-08-03", "denominator": 616, "numerator": 5, "partial": "ops.typed-config not yet scanned", "value": 0.8}, {"breakdown": {"typed": 0.8, "untyped": 99.2}, "counts": {"typed": 5, "untyped": 611}, "date": "2026-08-10", "denominator": 616, "numerator": 5, "partial": "ops.typed-config not yet scanned", "value": 0.8}, {"breakdown": {"typed": 0.8, "untyped": 99.2}, "counts": {"typed": 5, "untyped": 611}, "date": "2026-08-17", "denominator": 616, "numerator": 5, "partial": "ops.typed-config not yet scanned", "value": 0.8}, {"breakdown": {"typed": 0.8, "untyped": 99.2}, "counts": {"typed": 5, "untyped": 599}, "date": "2026-08-24", "denominator": 604, "numerator": 5, "partial": "ops.typed-config not yet scanned", "value": 0.8}], "title": "Typed Juju data"}, {"breakdown_keys": ["jubilant", "pytest-operator", "other-integration-tests", "no-integration-tests"], "key": "integration-testing", "series": [{"breakdown": {"jubilant": 12.4, "no-integration-tests": 49.6, "other-integration-tests": 0.4, "pytest-operator": 37.6}, "counts": {"jubilant": 83, "no-integration-tests": 333, "other-integration-tests": 3, "pytest-operator": 253}, "date": "2026-01-05", "denominator": 672, "numerator": 83, "partial": "", "value": 12.4}, {"breakdown": {"jubilant": 12.6, "no-integration-tests": 49.6, "other-integration-tests": 0.4, "pytest-operator": 37.3}, "counts": {"jubilant": 85, "no-integration-tests": 334, "other-integration-tests": 3, "pytest-operator": 251}, "date": "2026-01-12", "denominator": 673, "numerator": 85, "partial": "", "value": 12.6}, {"breakdown": {"jubilant": 13.6, "no-integration-tests": 49.6, "other-integration-tests": 0.4, "pytest-operator": 36.4}, "counts": {"jubilant": 92, "no-integration-tests": 335, "other-integration-tests": 3, "pytest-operator": 246}, "date": "2026-01-19", "denominator": 676, "numerator": 92, "partial": "", "value": 13.6}, {"breakdown": {"jubilant": 14.3, "no-integration-tests": 49.5, "other-integration-tests": 0.4, "pytest-operator": 35.7}, "counts": {"jubilant": 98, "no-integration-tests": 338, "other-integration-tests": 3, "pytest-operator": 244}, "date": "2026-01-26", "denominator": 683, "numerator": 98, "partial": "", "value": 14.3}, {"breakdown": {"jubilant": 14.9, "no-integration-tests": 49.6, "other-integration-tests": 0.4, "pytest-operator": 35.1}, "counts": {"jubilant": 102, "no-integration-tests": 340, "other-integration-tests": 3, "pytest-operator": 241}, "date": "2026-02-02", "denominator": 686, "numerator": 102, "partial": "", "value": 14.9}, {"breakdown": {"jubilant": 15.3, "no-integration-tests": 49.5, "other-integration-tests": 0.4, "pytest-operator": 34.8}, "counts": {"jubilant": 105, "no-integration-tests": 340, "other-integration-tests": 3, "pytest-operator": 239}, "date": "2026-02-09", "denominator": 687, "numerator": 105, "partial": "", "value": 15.3}, {"breakdown": {"jubilant": 15.6, "no-integration-tests": 49.5, "other-integration-tests": 0.4, "pytest-operator": 34.5}, "counts": {"jubilant": 108, "no-integration-tests": 343, "other-integration-tests": 3, "pytest-operator": 239}, "date": "2026-02-16", "denominator": 693, "numerator": 108, "partial": "", "value": 15.6}, {"breakdown": {"jubilant": 15.6, "no-integration-tests": 49.6, "other-integration-tests": 0.4, "pytest-operator": 34.4}, "counts": {"jubilant": 108, "no-integration-tests": 344, "other-integration-tests": 3, "pytest-operator": 239}, "date": "2026-02-23", "denominator": 694, "numerator": 108, "partial": "", "value": 15.6}, {"breakdown": {"jubilant": 15.6, "no-integration-tests": 49.9, "other-integration-tests": 0.4, "pytest-operator": 34.1}, "counts": {"jubilant": 109, "no-integration-tests": 349, "other-integration-tests": 3, "pytest-operator": 239}, "date": "2026-03-02", "denominator": 700, "numerator": 109, "partial": "", "value": 15.6}, {"breakdown": {"jubilant": 15.5, "no-integration-tests": 50.0, "other-integration-tests": 0.4, "pytest-operator": 34.1}, "counts": {"jubilant": 109, "no-integration-tests": 352, "other-integration-tests": 3, "pytest-operator": 240}, "date": "2026-03-09", "denominator": 704, "numerator": 109, "partial": "", "value": 15.5}, {"breakdown": {"jubilant": 15.6, "no-integration-tests": 49.9, "other-integration-tests": 0.4, "pytest-operator": 34.1}, "counts": {"jubilant": 110, "no-integration-tests": 351, "other-integration-tests": 3, "pytest-operator": 240}, "date": "2026-03-16", "denominator": 704, "numerator": 110, "partial": "", "value": 15.6}, {"breakdown": {"jubilant": 16.1, "no-integration-tests": 50.3, "other-integration-tests": 0.4, "pytest-operator": 33.2}, "counts": {"jubilant": 114, "no-integration-tests": 356, "other-integration-tests": 3, "pytest-operator": 235}, "date": "2026-03-23", "denominator": 708, "numerator": 114, "partial": "", "value": 16.1}, {"breakdown": {"jubilant": 15.9, "no-integration-tests": 50.7, "other-integration-tests": 0.4, "pytest-operator": 33.0}, "counts": {"jubilant": 113, "no-integration-tests": 360, "other-integration-tests": 3, "pytest-operator": 234}, "date": "2026-03-30", "denominator": 710, "numerator": 113, "partial": "", "value": 15.9}, {"breakdown": {"jubilant": 15.9, "no-integration-tests": 50.7, "other-integration-tests": 0.4, "pytest-operator": 33.0}, "counts": {"jubilant": 113, "no-integration-tests": 361, "other-integration-tests": 3, "pytest-operator": 235}, "date": "2026-04-06", "denominator": 712, "numerator": 113, "partial": "", "value": 15.9}, {"breakdown": {"jubilant": 16.0, "no-integration-tests": 50.7, "other-integration-tests": 0.4, "pytest-operator": 32.9}, "counts": {"jubilant": 114, "no-integration-tests": 361, "other-integration-tests": 3, "pytest-operator": 234}, "date": "2026-04-13", "denominator": 712, "numerator": 114, "partial": "", "value": 16.0}, {"breakdown": {"jubilant": 16.2, "no-integration-tests": 50.7, "other-integration-tests": 0.4, "pytest-operator": 32.7}, "counts": {"jubilant": 115, "no-integration-tests": 361, "other-integration-tests": 3, "pytest-operator": 233}, "date": "2026-04-20", "denominator": 712, "numerator": 115, "partial": "", "value": 16.2}, {"breakdown": {"jubilant": 15.7, "no-integration-tests": 52.7, "other-integration-tests": 0.4, "pytest-operator": 31.2}, "counts": {"jubilant": 117, "no-integration-tests": 392, "other-integration-tests": 3, "pytest-operator": 232}, "date": "2026-04-27", "denominator": 744, "numerator": 117, "partial": "", "value": 15.7}, {"breakdown": {"jubilant": 16.1, "no-integration-tests": 52.6, "other-integration-tests": 0.4, "pytest-operator": 30.9}, "counts": {"jubilant": 120, "no-integration-tests": 391, "other-integration-tests": 3, "pytest-operator": 230}, "date": "2026-05-04", "denominator": 744, "numerator": 120, "partial": "", "value": 16.1}, {"breakdown": {"jubilant": 16.1, "no-integration-tests": 52.5, "other-integration-tests": 0.4, "pytest-operator": 31.0}, "counts": {"jubilant": 120, "no-integration-tests": 391, "other-integration-tests": 3, "pytest-operator": 231}, "date": "2026-05-11", "denominator": 745, "numerator": 120, "partial": "", "value": 16.1}, {"breakdown": {"jubilant": 16.1, "no-integration-tests": 52.5, "other-integration-tests": 0.5, "pytest-operator": 30.9}, "counts": {"jubilant": 120, "no-integration-tests": 391, "other-integration-tests": 4, "pytest-operator": 230}, "date": "2026-05-18", "denominator": 745, "numerator": 120, "partial": "", "value": 16.1}, {"breakdown": {"jubilant": 16.2, "no-integration-tests": 52.4, "other-integration-tests": 0.5, "pytest-operator": 30.8}, "counts": {"jubilant": 121, "no-integration-tests": 391, "other-integration-tests": 4, "pytest-operator": 230}, "date": "2026-05-25", "denominator": 746, "numerator": 121, "partial": "", "value": 16.2}, {"breakdown": {"jubilant": 16.6, "no-integration-tests": 52.4, "other-integration-tests": 0.5, "pytest-operator": 30.5}, "counts": {"jubilant": 124, "no-integration-tests": 392, "other-integration-tests": 4, "pytest-operator": 228}, "date": "2026-06-01", "denominator": 748, "numerator": 124, "partial": "", "value": 16.6}, {"breakdown": {"jubilant": 18.1, "no-integration-tests": 52.1, "other-integration-tests": 0.4, "pytest-operator": 29.4}, "counts": {"jubilant": 136, "no-integration-tests": 392, "other-integration-tests": 3, "pytest-operator": 221}, "date": "2026-06-08", "denominator": 752, "numerator": 136, "partial": "", "value": 18.1}, {"breakdown": {"jubilant": 13.7, "no-integration-tests": 57.0, "other-integration-tests": 29.4}, "counts": {"jubilant": 47, "no-integration-tests": 196, "other-integration-tests": 101}, "date": "2026-06-11", "denominator": 344, "numerator": 47, "partial": "testing.pytest-operator not yet scanned", "value": 13.7}, {"breakdown": {"jubilant": 14.8, "no-integration-tests": 56.8, "other-integration-tests": 28.4}, "counts": {"jubilant": 51, "no-integration-tests": 196, "other-integration-tests": 98}, "date": "2026-06-15", "denominator": 345, "numerator": 51, "partial": "testing.pytest-operator not yet scanned", "value": 14.8}, {"breakdown": {"jubilant": 14.8, "no-integration-tests": 56.8, "other-integration-tests": 28.4}, "counts": {"jubilant": 51, "no-integration-tests": 196, "other-integration-tests": 98}, "date": "2026-06-22", "denominator": 345, "numerator": 51, "partial": "testing.pytest-operator not yet scanned", "value": 14.8}, {"breakdown": {"jubilant": 14.8, "no-integration-tests": 56.8, "other-integration-tests": 28.4}, "counts": {"jubilant": 51, "no-integration-tests": 196, "other-integration-tests": 98}, "date": "2026-06-25", "denominator": 345, "numerator": 51, "partial": "testing.pytest-operator not yet scanned", "value": 14.8}, {"breakdown": {"jubilant": 14.8, "no-integration-tests": 56.8, "other-integration-tests": 28.4}, "counts": {"jubilant": 51, "no-integration-tests": 196, "other-integration-tests": 98}, "date": "2026-06-29", "denominator": 345, "numerator": 51, "partial": "testing.pytest-operator not yet scanned", "value": 14.8}, {"breakdown": {"jubilant": 19.6, "no-integration-tests": 51.9, "other-integration-tests": 28.5}, "counts": {"jubilant": 149, "no-integration-tests": 395, "other-integration-tests": 217}, "date": "2026-07-06", "denominator": 761, "numerator": 149, "partial": "testing.pytest-operator not yet scanned", "value": 19.6}, {"breakdown": {"jubilant": 19.3, "no-integration-tests": 51.9, "other-integration-tests": 28.7}, "counts": {"jubilant": 146, "no-integration-tests": 392, "other-integration-tests": 217}, "date": "2026-07-13", "denominator": 755, "numerator": 146, "partial": "testing.pytest-operator not yet scanned", "value": 19.3}, {"breakdown": {"jubilant": 19.5, "no-integration-tests": 51.9, "other-integration-tests": 28.6}, "counts": {"jubilant": 147, "no-integration-tests": 392, "other-integration-tests": 216}, "date": "2026-07-20", "denominator": 755, "numerator": 147, "partial": "testing.pytest-operator not yet scanned", "value": 19.5}, {"breakdown": {"jubilant": 20.9, "no-integration-tests": 52.9, "other-integration-tests": 26.2}, "counts": {"jubilant": 159, "no-integration-tests": 403, "other-integration-tests": 200}, "date": "2026-07-27", "denominator": 762, "numerator": 159, "partial": "testing.pytest-operator not yet scanned", "value": 20.9}, {"breakdown": {"jubilant": 20.9, "no-integration-tests": 52.9, "other-integration-tests": 26.2}, "counts": {"jubilant": 159, "no-integration-tests": 403, "other-integration-tests": 200}, "date": "2026-08-03", "denominator": 762, "numerator": 159, "partial": "testing.pytest-operator not yet scanned", "value": 20.9}, {"breakdown": {"jubilant": 20.9, "no-integration-tests": 52.9, "other-integration-tests": 26.2}, "counts": {"jubilant": 159, "no-integration-tests": 403, "other-integration-tests": 200}, "date": "2026-08-10", "denominator": 762, "numerator": 159, "partial": "testing.pytest-operator not yet scanned", "value": 20.9}, {"breakdown": {"jubilant": 20.9, "no-integration-tests": 52.7, "other-integration-tests": 26.4}, "counts": {"jubilant": 159, "no-integration-tests": 400, "other-integration-tests": 200}, "date": "2026-08-17", "denominator": 759, "numerator": 159, "partial": "testing.pytest-operator not yet scanned", "value": 20.9}, {"breakdown": {"jubilant": 21.1, "no-integration-tests": 52.2, "other-integration-tests": 0.3, "pytest-operator": 26.4}, "counts": {"jubilant": 160, "no-integration-tests": 397, "other-integration-tests": 2, "pytest-operator": 201}, "date": "2026-08-24", "denominator": 760, "numerator": 160, "partial": "", "value": 21.1}], "title": "Jubilant adoption"}, {"breakdown_keys": ["charmlibs", "charmhub-libs", "no-libraries"], "key": "charmlibs-share", "series": [{"breakdown": {"charmhub-libs": 94.6, "charmlibs": 5.4, "no-libraries": 38.1}, "counts": {"charms-using-any-charmlib": 33, "charms-with-libraries": 319, "no-libraries": 196}, "date": "2026-01-05", "denominator": 319, "numerator": 33, "partial": "", "value": 5.4}, {"breakdown": {"charmhub-libs": 94.5, "charmlibs": 5.5, "no-libraries": 37.8}, "counts": {"charms-using-any-charmlib": 34, "charms-with-libraries": 321, "no-libraries": 195}, "date": "2026-01-12", "denominator": 321, "numerator": 34, "partial": "", "value": 5.5}, {"breakdown": {"charmhub-libs": 93.6, "charmlibs": 6.4, "no-libraries": 37.6}, "counts": {"charms-using-any-charmlib": 40, "charms-with-libraries": 324, "no-libraries": 195}, "date": "2026-01-19", "denominator": 324, "numerator": 40, "partial": "", "value": 6.4}, {"breakdown": {"charmhub-libs": 93.6, "charmlibs": 6.4, "no-libraries": 36.9}, "counts": {"charms-using-any-charmlib": 41, "charms-with-libraries": 332, "no-libraries": 194}, "date": "2026-01-26", "denominator": 332, "numerator": 41, "partial": "", "value": 6.4}, {"breakdown": {"charmhub-libs": 93.3, "charmlibs": 6.7, "no-libraries": 36.9}, "counts": {"charms-using-any-charmlib": 44, "charms-with-libraries": 334, "no-libraries": 195}, "date": "2026-02-02", "denominator": 334, "numerator": 44, "partial": "", "value": 6.7}, {"breakdown": {"charmhub-libs": 93.3, "charmlibs": 6.7, "no-libraries": 36.8}, "counts": {"charms-using-any-charmlib": 43, "charms-with-libraries": 335, "no-libraries": 195}, "date": "2026-02-09", "denominator": 335, "numerator": 43, "partial": "", "value": 6.7}, {"breakdown": {"charmhub-libs": 92.8, "charmlibs": 7.2, "no-libraries": 36.8}, "counts": {"charms-using-any-charmlib": 49, "charms-with-libraries": 339, "no-libraries": 197}, "date": "2026-02-16", "denominator": 339, "numerator": 49, "partial": "", "value": 7.2}, {"breakdown": {"charmhub-libs": 92.2, "charmlibs": 7.8, "no-libraries": 36.9}, "counts": {"charms-using-any-charmlib": 52, "charms-with-libraries": 339, "no-libraries": 198}, "date": "2026-02-23", "denominator": 339, "numerator": 52, "partial": "", "value": 7.8}, {"breakdown": {"charmhub-libs": 92.0, "charmlibs": 8.0, "no-libraries": 37.4}, "counts": {"charms-using-any-charmlib": 53, "charms-with-libraries": 340, "no-libraries": 203}, "date": "2026-03-02", "denominator": 340, "numerator": 53, "partial": "", "value": 8.0}, {"breakdown": {"charmhub-libs": 91.4, "charmlibs": 8.6, "no-libraries": 37.3}, "counts": {"charms-using-any-charmlib": 55, "charms-with-libraries": 343, "no-libraries": 204}, "date": "2026-03-09", "denominator": 343, "numerator": 55, "partial": "", "value": 8.6}, {"breakdown": {"charmhub-libs": 91.2, "charmlibs": 8.8, "no-libraries": 37.1}, "counts": {"charms-using-any-charmlib": 56, "charms-with-libraries": 344, "no-libraries": 203}, "date": "2026-03-16", "denominator": 344, "numerator": 56, "partial": "", "value": 8.8}, {"breakdown": {"charmhub-libs": 91.2, "charmlibs": 8.8, "no-libraries": 37.2}, "counts": {"charms-using-any-charmlib": 56, "charms-with-libraries": 346, "no-libraries": 205}, "date": "2026-03-23", "denominator": 346, "numerator": 56, "partial": "", "value": 8.8}, {"breakdown": {"charmhub-libs": 91.1, "charmlibs": 8.9, "no-libraries": 37.3}, "counts": {"charms-using-any-charmlib": 57, "charms-with-libraries": 347, "no-libraries": 206}, "date": "2026-03-30", "denominator": 347, "numerator": 57, "partial": "", "value": 8.9}, {"breakdown": {"charmhub-libs": 91.1, "charmlibs": 8.9, "no-libraries": 37.3}, "counts": {"charms-using-any-charmlib": 58, "charms-with-libraries": 348, "no-libraries": 207}, "date": "2026-04-06", "denominator": 348, "numerator": 58, "partial": "", "value": 8.9}, {"breakdown": {"charmhub-libs": 91.3, "charmlibs": 8.7, "no-libraries": 37.1}, "counts": {"charms-using-any-charmlib": 56, "charms-with-libraries": 349, "no-libraries": 206}, "date": "2026-04-13", "denominator": 349, "numerator": 56, "partial": "", "value": 8.7}, {"breakdown": {"charmhub-libs": 91.2, "charmlibs": 8.8, "no-libraries": 37.1}, "counts": {"charms-using-any-charmlib": 57, "charms-with-libraries": 349, "no-libraries": 206}, "date": "2026-04-20", "denominator": 349, "numerator": 57, "partial": "", "value": 8.8}, {"breakdown": {"charmhub-libs": 91.2, "charmlibs": 8.8, "no-libraries": 40.2}, "counts": {"charms-using-any-charmlib": 57, "charms-with-libraries": 351, "no-libraries": 236}, "date": "2026-04-27", "denominator": 351, "numerator": 57, "partial": "", "value": 8.8}, {"breakdown": {"charmhub-libs": 90.8, "charmlibs": 9.2, "no-libraries": 40.2}, "counts": {"charms-using-any-charmlib": 64, "charms-with-libraries": 351, "no-libraries": 236}, "date": "2026-05-04", "denominator": 351, "numerator": 64, "partial": "", "value": 9.2}, {"breakdown": {"charmhub-libs": 89.9, "charmlibs": 10.1, "no-libraries": 40.3}, "counts": {"charms-using-any-charmlib": 67, "charms-with-libraries": 351, "no-libraries": 237}, "date": "2026-05-11", "denominator": 351, "numerator": 67, "partial": "", "value": 10.1}, {"breakdown": {"charmhub-libs": 89.6, "charmlibs": 10.4, "no-libraries": 40.3}, "counts": {"charms-using-any-charmlib": 69, "charms-with-libraries": 351, "no-libraries": 237}, "date": "2026-05-18", "denominator": 351, "numerator": 69, "partial": "", "value": 10.4}, {"breakdown": {"charmhub-libs": 89.6, "charmlibs": 10.4, "no-libraries": 40.4}, "counts": {"charms-using-any-charmlib": 69, "charms-with-libraries": 351, "no-libraries": 238}, "date": "2026-05-25", "denominator": 351, "numerator": 69, "partial": "", "value": 10.4}, {"breakdown": {"charmhub-libs": 89.5, "charmlibs": 10.5, "no-libraries": 40.4}, "counts": {"charms-using-any-charmlib": 71, "charms-with-libraries": 352, "no-libraries": 239}, "date": "2026-06-01", "denominator": 352, "numerator": 71, "partial": "", "value": 10.5}, {"breakdown": {"charmhub-libs": 88.8, "charmlibs": 11.2, "no-libraries": 39.7}, "counts": {"charms-using-any-charmlib": 77, "charms-with-libraries": 359, "no-libraries": 236}, "date": "2026-06-08", "denominator": 359, "numerator": 77, "partial": "", "value": 11.2}, {"breakdown": {"charmhub-libs": 88.1, "charmlibs": 11.9, "no-libraries": 34.6}, "counts": {"charms-using-any-charmlib": 89, "charms-with-libraries": 395, "no-libraries": 209}, "date": "2026-08-24", "denominator": 395, "numerator": 89, "partial": "", "value": 11.9}], "title": "charmlibs share"}, {"breakdown_keys": ["run-user: _daemon_", "charm-user: non-root", "charm-user: sudoer", "other non-root user", "root (or unset)"], "key": "rootless", "series": [], "title": "Rootless by default"}]</script>
 
 
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"
