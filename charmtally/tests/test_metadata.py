@@ -401,3 +401,69 @@ def test_charm_meta_from_dict_ignores_unknown_keys() -> None:
     """`architecture` rides alongside __meta__ but isn't a CharmMeta field."""
     meta = CharmMeta.from_dict({"architecture": ["reconcile"], "has_containers": True})
     assert meta.has_containers
+
+
+# --- charmlibs namespace packages -------------------------------------------
+
+
+def _src(d: Path, body: str) -> None:
+    src = d / "src"
+    src.mkdir(parents=True, exist_ok=True)
+    (src / "charm.py").write_text(body)
+
+
+def test_no_charmlibs_means_empty(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    _src(tmp_path, "import ops\nfrom charms.data_platform_libs.v0 import data_interfaces\n")
+    meta = read(tmp_path)
+    assert meta.charmlibs_count == 0
+    assert meta.charmlibs_names == ()
+
+
+def test_charmlibs_imports_collected_and_deduped(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    _src(
+        tmp_path,
+        "from charmlibs import pathops\n"
+        "from charmlibs.pathops import ContainerPath\n"
+        "import charmlibs.apt\n"
+        "from charmlibs import (\n    snap,\n    systemd as sysd,\n)\n",
+    )
+    meta = read(tmp_path)
+    assert meta.charmlibs_names == ("apt", "pathops", "snap", "systemd")
+    assert meta.charmlibs_count == 4
+
+
+def test_charmlibs_interfaces_keep_their_second_segment(tmp_path: Path) -> None:
+    """Two interface libs must not collapse into a single `interfaces` entry."""
+    _ops_charm(tmp_path)
+    _src(
+        tmp_path,
+        "from charmlibs.interfaces.tls_certificates.v1 import Requirer\n"
+        "from charmlibs.interfaces.ingress import Provider\n",
+    )
+    assert read(tmp_path).charmlibs_names == ("interfaces.ingress", "interfaces.tls_certificates")
+
+
+def test_charmlibs_requirements_count_without_an_import(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    (tmp_path / "requirements.txt").write_text(
+        "ops>=2.17\ncharmlibs-pathops>=1.0\ncharmlibs_interfaces_ingress==0.3\n"
+    )
+    assert read(tmp_path).charmlibs_names == ("interfaces.ingress", "pathops")
+
+
+def test_vendored_libs_do_not_contribute_charmlibs(tmp_path: Path) -> None:
+    """A vendored Charmhub lib importing charmlibs is not this charm's adoption."""
+    _ops_charm(tmp_path)
+    vendored = tmp_path / "lib" / "charms" / "other_charm" / "v0"
+    vendored.mkdir(parents=True)
+    (vendored / "iface.py").write_text("from charmlibs import pathops\n")
+    assert read(tmp_path).charmlibs_names == ()
+
+
+def test_charmlibs_round_trips_through_meta_dict(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    _src(tmp_path, "from charmlibs import pathops\n")
+    meta = read(tmp_path)
+    assert CharmMeta.from_dict(meta.to_dict()).charmlibs_names == ("pathops",)

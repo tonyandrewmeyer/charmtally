@@ -405,6 +405,27 @@ features:
     verified: []
     negative: []
 
+  - name: testing.pytest-operator
+    library: pytest-operator
+    summary: Integration tests use pytest-operator (python-libjuju).
+    scope: tests
+    detect:
+      - kind: import
+        module: pytest_operator
+      - kind: regex
+        pattern: 'def\s+test_\w*\s*\([^)]*\bops_test\b'
+    notes: |
+      The predecessor to jubilant, and the other half of the adoption
+      dashboard's integration-testing split (jubilant / pytest-operator /
+      neither). Two arms because the plugin is usually reached through its
+      `ops_test` fixture rather than an import: a test module that only
+      takes `ops_test` as a parameter never names `pytest_operator`.
+      A charm can legitimately hit both arms, and a charm mid-migration can
+      hit this *and* `jubilant.integration-tests` — the dashboard counts
+      jubilant first so a part-migrated charm reads as adopted.
+    verified: []
+    negative: []
+
   - name: testing.pytest-log-config
     library: python
     summary: Test config sets pytest log_level / log_cli_level / log_file_level.
@@ -433,6 +454,26 @@ features:
       Matches `def test_foo(..., caplog, ...):` shapes in tests/. Descriptive
       signal only; absent → not-applicable. `caplog` is a pytest-reserved
       fixture name, so name collisions are negligible.
+    verified: []
+    negative: []
+
+  - name: charmlibs.namespace
+    library: charmlibs
+    summary: Charm imports a library from the `charmlibs` namespace package.
+    scope: any
+    detect:
+      - kind: import
+        module: charmlibs
+    notes: |
+      The PyPI `charmlibs` namespace (`charmlibs-pathops`, `charmlibs-apt`,
+      `charmlibs-interfaces-*`) — charm-tech's replacement for Charmhub
+      libraries vendored under `lib/charms/`. Distinct from the other
+      `charmlibs.*` features here, which pre-date the namespace and match
+      those vendored libs by import path (`charms.data_platform_libs`, ...).
+      Scope is `any`: pathops in particular shows up in tests as often as
+      in src. The per-charm *counts* behind the adoption dashboard's
+      charmlibs share come from `__meta__.charmlibs_names`, not from this
+      feature — a feature is a boolean, and the share needs a numerator.
     verified: []
     negative: []
 

@@ -37,6 +37,11 @@ Descriptive facts surfaced for the dashboard (no scoring rules attached):
     library_count         — distinct lib/charms/<libname>/ subdirs imported
     library_names         — the same set, by name (used by pair detection
                             to spot k8s/machine pairs sharing a charmlib)
+    charmlibs_count       — distinct `charmlibs` namespace packages used
+    charmlibs_names       — the same set, by name (`pathops`, `apt`,
+                            `interfaces.tls`, ...). The PyPI charmlibs, not
+                            the vendored Charmhub libs above; the adoption
+                            dashboard divides one by the other.
     provides_own_library  — true if lib/charms/<charm_name>/ exists
     has_terraform_module  — true if terraform/ dir or .tf files at root
     tooling               — subset of ["tox","make","just"] based on
@@ -57,6 +62,7 @@ from typing import TYPE_CHECKING
 import yaml
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
     from pathlib import Path
 
 _SECRETY = re.compile(r"(password|token|secret|api[-_]?key)$", re.IGNORECASE)
@@ -65,6 +71,18 @@ _JUJU_VERSION = re.compile(r"juju\s*[>=]*\s*(\d+(?:\.\d+)*)", re.IGNORECASE)
 # `pebble.Layer(...)` or `pebble.LayerDict(...)` construction in src/ —
 # strong signal that the charm drives a workload via pebble.
 _PEBBLE_LAYER_CALL = re.compile(r"\bpebble\.Layer(Dict)?\s*\(")
+# Imports of the `charmlibs` namespace package — the libraries charm-tech
+# publishes to PyPI (`charmlibs-pathops`, `charmlibs-apt`,
+# `charmlibs-interfaces-*`, ...). Deliberately NOT the same thing as the
+# `charmlibs.*` features in features.yaml, which pre-date the namespace and
+# match vendored Charmhub libs under `lib/charms/`.
+_CHARMLIBS_FROM = re.compile(r"\bfrom\s+charmlibs(\.[\w.]+)?\s+import\s+(\([^)]*\)|[^\n]+)")
+_CHARMLIBS_IMPORT = re.compile(r"^\s*import\s+charmlibs\.([\w.]+)", re.MULTILINE)
+# `charmlibs-pathops`, `charmlibs_interfaces_tls_certificates`, ... as spelled
+# in a requirements file or a pyproject dependency list.
+_CHARMLIBS_REQUIREMENT = re.compile(r"\bcharmlibs[-_]([A-Za-z0-9][\w.-]*)")
+# Directories a source walk must not descend into when looking for imports.
+_SKIP_WALK_DIRS = {".git", ".tox", ".venv", "venv", "node_modules", "build", "dist", "lib"}
 
 
 @dataclass(frozen=True)
@@ -98,6 +116,8 @@ class CharmMeta:
     min_juju_version: str | None = None
     library_count: int = 0
     library_names: tuple[str, ...] = ()
+    charmlibs_count: int = 0
+    charmlibs_names: tuple[str, ...] = ()
     provides_own_library: bool = False
     has_terraform_module: bool = False
     tooling: tuple[str, ...] = ()
@@ -132,6 +152,8 @@ class CharmMeta:
             "min_juju_version": self.min_juju_version,
             "library_count": self.library_count,
             "library_names": list(self.library_names),
+            "charmlibs_count": self.charmlibs_count,
+            "charmlibs_names": list(self.charmlibs_names),
             "provides_own_library": self.provides_own_library,
             "has_terraform_module": self.has_terraform_module,
             "tooling": list(self.tooling),
@@ -165,6 +187,8 @@ class CharmMeta:
             min_juju_version=raw.get("min_juju_version"),
             library_count=int(raw.get("library_count", 0)),
             library_names=tuple(raw.get("library_names") or []),
+            charmlibs_count=int(raw.get("charmlibs_count", 0)),
+            charmlibs_names=tuple(raw.get("charmlibs_names") or []),
             provides_own_library=bool(raw.get("provides_own_library")),
             has_terraform_module=bool(raw.get("has_terraform_module")),
             tooling=tuple(raw.get("tooling") or []),
@@ -311,6 +335,106 @@ def _has_pebble_layer_evidence(charm_root: Path) -> bool:
     return False
 
 
+def _charmlibs_names(charm_root: Path) -> list[str]:
+    """Return the distinct `charmlibs` packages this charm uses, sorted.
+
+    Two signals, unioned:
+      * an import of the `charmlibs` namespace package in any Python file
+        under the charm root (`from charmlibs import pathops`,
+        `from charmlibs.interfaces.tls import ...`, `import charmlibs.apt`);
+      * a `charmlibs-*` / `charmlibs_*` requirement in a requirements file,
+        `pyproject.toml`, or `charmcraft.yaml`.
+
+    Names are normalised to the dotted sub-path under `charmlibs`, with the
+    `interfaces` namespace keeping its second segment (`interfaces.tls`) so
+    two different interface libs don't collapse into one. A requirement
+    spelling is normalised the same way: `charmlibs-interfaces-tls` →
+    `interfaces.tls`.
+
+    Text-matched rather than AST-walked: this runs inside `read()`, before
+    the scan builds its shared `CharmSource`, and a second full parse of
+    every charm just to count imports is not worth the seconds.
+    """
+    names: set[str] = set()
+
+    for py in _walk_python(charm_root):
+        try:
+            text = py.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        if "charmlibs" not in text:
+            continue  # cheap pre-filter: the regexes are the expensive part
+        for sub, imported in _CHARMLIBS_FROM.findall(text):
+            if sub:
+                names.add(_normalise_charmlib(sub.lstrip(".")))
+                continue
+            # `from charmlibs import pathops, apt as _apt` — every name in
+            # the import list is itself a charmlibs package.
+            for part in imported.strip("()").split(","):
+                symbol = part.strip().split(" as ")[0].strip()
+                if symbol and symbol.isidentifier():
+                    names.add(symbol)
+        for sub in _CHARMLIBS_IMPORT.findall(text):
+            names.add(_normalise_charmlib(sub))
+
+    for rel in ("pyproject.toml", "charmcraft.yaml", "requirements.txt"):
+        path = charm_root / rel
+        if path.is_file():
+            names.update(_charmlibs_requirements(path))
+    for req in charm_root.glob("requirements*.txt"):
+        names.update(_charmlibs_requirements(req))
+
+    return sorted(names)
+
+
+def _normalise_charmlib(dotted: str) -> str:
+    """Collapse a dotted sub-path to the package it identifies.
+
+    `pathops.core` → `pathops`; `interfaces.tls.v1` → `interfaces.tls`. The
+    `interfaces` namespace keeps two segments because its first segment is
+    shared by every interface library.
+    """
+    parts = [p for p in dotted.split(".") if p]
+    if not parts:
+        return ""
+    if parts[0] == "interfaces" and len(parts) > 1:
+        return f"interfaces.{parts[1]}"
+    return parts[0]
+
+
+def _charmlibs_requirements(path: Path) -> set[str]:
+    """Extract `charmlibs-*` distribution names declared in a dependency file."""
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return set()
+    if "charmlibs" not in text:
+        return set()
+    out: set[str] = set()
+    for raw in _CHARMLIBS_REQUIREMENT.findall(text):
+        # Strip any version specifier the regex's trailing class swallowed,
+        # then read the distribution suffix as a dotted package path.
+        dist = re.split(r"[<>=!~\[]", raw)[0].strip().rstrip("-_.")
+        normalised = _normalise_charmlib(dist.replace("-", ".").replace("_", "."))
+        if normalised:
+            out.add(normalised)
+    return out
+
+
+def _walk_python(charm_root: Path) -> Iterator[Path]:
+    """Yield the charm's own Python files, skipping vendored / build trees.
+
+    `lib/` is skipped along with the usual build dirs: vendored Charmhub
+    libraries are other people's code, and their imports say nothing about
+    what this charm adopted.
+    """
+    for path in charm_root.rglob("*.py"):
+        rel = path.relative_to(charm_root).parts
+        if any(part in _SKIP_WALK_DIRS for part in rel[:-1]):
+            continue
+        yield path
+
+
 def _extract_relations(data: dict) -> list[Relation]:
     out: list[Relation] = []
     for role in ("provides", "requires", "peers"):
@@ -431,6 +555,11 @@ def read(charm_root: Path) -> CharmMeta:
     if lib_root.is_dir():
         library_names.extend(entry.name for entry in lib_root.iterdir() if entry.is_dir())
     library_count = len(library_names)
+
+    # PyPI `charmlibs` namespace packages — the replacement for the vendored
+    # libs above, and the numerator of the adoption dashboard's charmlibs share.
+    charmlibs_names = _charmlibs_names(charm_root)
+
     provides_own_library = bool(charm_name and (lib_root / charm_name.replace("-", "_")).is_dir())
 
     # Workload-less classification: a principal charm that drives
@@ -478,6 +607,8 @@ def read(charm_root: Path) -> CharmMeta:
         min_juju_version=min_juju,
         library_count=library_count,
         library_names=tuple(library_names),
+        charmlibs_count=len(charmlibs_names),
+        charmlibs_names=tuple(charmlibs_names),
         provides_own_library=provides_own_library,
         has_terraform_module=has_terraform_module,
         tooling=tuple(tooling),

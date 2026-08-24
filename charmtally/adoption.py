@@ -1,0 +1,389 @@
+"""Charm-tech adoption metrics: a handful of headline numbers, over time.
+
+Where `trend.py` answers "what changed between two scans" across the whole
+feature catalogue, this module answers a much narrower question: **is the
+tooling charm-tech ships actually being picked up?** It is deliberately
+small — three to six metrics, each a single number per snapshot date, each
+with a breakdown a reader can drill into. Adding a fifth metric is cheap;
+adding a fiftieth would defeat the point of the page.
+
+Metrics are computed from the same dated `snapshots/scored-*.json` files the
+history page reads, so a metric is only as old as the data behind it:
+
+  - **Feature-drift guard.** A metric whose inputs weren't scanned at a given
+    date yields *no point* for that date, rather than a misleading zero.
+    `ops.typed-relation` and `jubilant.integration-tests` have been in the
+    catalogue since the first snapshot, so those series run the full history;
+    `testing.pytest-operator` and `__meta__.charmlibs_count` were added later
+    and their series start at the first scan that carries them.
+  - **Eligibility.** Reactive and legacy-classic charms pre-date ops entirely
+    (see `scoring.score_absent`, which scores every ops feature
+    `not-applicable` for them). Counting them in a denominator would make
+    adoption look permanently stuck, so they are excluded — `eligible_charms`
+    is the denominator for every metric here.
+
+A metric's `compute` returns None when its inputs are missing; the series
+simply skips that date.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from .trend import Snapshot
+
+# Metric keys are stable identifiers: they key the JSON emitted by
+# `charmtally adoption --emit-json` and any dashboard bookmark, so renaming
+# one breaks links and downstream consumers the same way renaming a feature
+# breaks snapshots. Add rather than rename.
+TYPED_RELATION = "typed-relation"
+INTEGRATION_TESTING = "integration-testing"
+CHARMLIBS_SHARE = "charmlibs-share"
+PEBBLE = "pebble"
+
+
+@dataclass(frozen=True)
+class Metric:
+    """One headline number, tracked over time.
+
+    `compute` maps a snapshot to a point dict (`value`, `numerator`,
+    `denominator`, `breakdown`) or None when that snapshot lacks the inputs.
+    A metric with `compute=None` is *declared but not yet defined* — it
+    renders as a placeholder card so the page shows the intended shape of
+    the scorecard rather than silently omitting a metric still being agreed.
+    """
+
+    key: str
+    title: str
+    question: str
+    unit: str  # "percent"
+    compute: Callable[[Snapshot], dict | None] | None = None
+    # Breakdown keys, in the order they should stack in the chart. The last
+    # one is conventionally the "not adopted" bucket.
+    breakdown_keys: tuple[str, ...] = ()
+    detail: str = ""
+    scope: str = "charms"  # "charms" | "rocks" | "charms+rocks"
+    pending: str = ""  # why this metric has no data yet, if it has none
+    caveats: tuple[str, ...] = field(default_factory=tuple)
+
+
+# ── shared helpers ──────────────────────────────────────────────────────────
+
+
+def _meta(charm: dict) -> dict:
+    meta = charm.get("features", {}).get("__meta__")
+    return meta if isinstance(meta, dict) else {}
+
+
+def eligible_charms(snapshot: Snapshot) -> dict[str, dict]:
+    """Charms a charm-tech adoption number can fairly be measured against.
+
+    Excludes reactive and legacy-classic charms: neither can adopt an ops
+    API, so leaving them in the denominator would cap every metric below
+    100% for reasons no amount of adoption work could shift.
+    """
+    return {
+        slug: charm
+        for slug, charm in snapshot.charms.items()
+        if not _meta(charm).get("is_reactive") and not _meta(charm).get("is_legacy_classic")
+    }
+
+
+def _present(charm: dict, feature: str) -> bool:
+    rec = charm.get("features", {}).get(feature)
+    return bool(rec and rec.get("present"))
+
+
+def _point(
+    snapshot: Snapshot,
+    *,
+    value: float,
+    numerator: int,
+    denominator: int,
+    breakdown: dict[str, float] | None = None,
+    counts: dict[str, int] | None = None,
+    partial: str = "",
+) -> dict:
+    """Assemble one series point. `partial` names an input that wasn't scanned."""
+    return {
+        "date": snapshot.date,
+        "value": round(value, 1),
+        "numerator": numerator,
+        "denominator": denominator,
+        "breakdown": {k: round(v, 1) for k, v in (breakdown or {}).items()},
+        "counts": counts or {},
+        "partial": partial,
+    }
+
+
+def _percent(numerator: int, denominator: int) -> float:
+    return 100 * numerator / denominator if denominator else 0.0
+
+
+# ── metric: typed relation data ─────────────────────────────────────────────
+
+
+def compute_typed_relation(snapshot: Snapshot) -> dict | None:
+    """Share of eligible charms using `Relation.load` / `Relation.save`."""
+    if "ops.typed-relation" not in snapshot.feature_names:
+        return None
+    charms = eligible_charms(snapshot)
+    if not charms:
+        return None
+    users = sum(1 for c in charms.values() if _present(c, "ops.typed-relation"))
+    return _point(
+        snapshot,
+        value=_percent(users, len(charms)),
+        numerator=users,
+        denominator=len(charms),
+        breakdown={
+            "typed": _percent(users, len(charms)),
+            "untyped": _percent(len(charms) - users, len(charms)),
+        },
+        counts={"typed": users, "untyped": len(charms) - users},
+    )
+
+
+# ── metric: integration testing ─────────────────────────────────────────────
+
+_JUBILANT = "jubilant"
+_PYTEST_OPERATOR = "pytest-operator"
+_OTHER_TESTS = "other-integration-tests"
+_NO_TESTS = "no-integration-tests"
+
+
+def compute_integration_testing(snapshot: Snapshot) -> dict | None:
+    """How eligible charms drive their integration tests, as four shares.
+
+    A charm mid-migration can hit both framework detectors; jubilant is
+    counted first, so a part-migrated charm reads as adopted rather than as
+    a pytest-operator holdout.
+
+    `other-integration-tests` is charms with a `tests/integration/` directory
+    where neither framework was detected — a bespoke harness, or a detector
+    miss. It is reported rather than folded into either framework bucket.
+    When `testing.pytest-operator` wasn't in the catalogue at this date, its
+    charms land in that bucket and the point is flagged `partial`.
+    """
+    if "jubilant.integration-tests" not in snapshot.feature_names:
+        return None
+    charms = eligible_charms(snapshot)
+    if not charms:
+        return None
+    scanned_pytest_operator = "testing.pytest-operator" in snapshot.feature_names
+
+    counts = {_JUBILANT: 0, _PYTEST_OPERATOR: 0, _OTHER_TESTS: 0, _NO_TESTS: 0}
+    for charm in charms.values():
+        if _present(charm, "jubilant.integration-tests"):
+            counts[_JUBILANT] += 1
+        elif scanned_pytest_operator and _present(charm, "testing.pytest-operator"):
+            counts[_PYTEST_OPERATOR] += 1
+        elif _meta(charm).get("has_integration_tests"):
+            counts[_OTHER_TESTS] += 1
+        else:
+            counts[_NO_TESTS] += 1
+
+    total = len(charms)
+    if not scanned_pytest_operator:
+        # Drop the bucket entirely rather than reporting it as 0%: at these
+        # dates pytest-operator charms are sitting in `other-integration-tests`,
+        # and a 0% column reads as "nobody uses it".
+        del counts[_PYTEST_OPERATOR]
+    return _point(
+        snapshot,
+        value=_percent(counts[_JUBILANT], total),
+        numerator=counts[_JUBILANT],
+        denominator=total,
+        breakdown={k: _percent(v, total) for k, v in counts.items()},
+        counts=counts,
+        partial="" if scanned_pytest_operator else "testing.pytest-operator not yet scanned",
+    )
+
+
+# ── metric: charmlibs share ─────────────────────────────────────────────────
+
+_NO_LIBS = "no-libraries"
+
+
+def _has_charmlibs_data(snapshot: Snapshot) -> bool:
+    """Report whether this snapshot's `__meta__` carries charmlibs counts at all.
+
+    Checked by key presence, not by value: `CharmMeta.from_dict` defaults a
+    missing `charmlibs_count` to 0, so a value of 0 can't be told apart from
+    "this scan didn't look" without asking the raw dict.
+    """
+    return any("charmlibs_count" in _meta(charm) for charm in snapshot.charms.values())
+
+
+def compute_charmlibs_share(snapshot: Snapshot) -> dict | None:
+    """Mean per-charm share of libraries that come from `charmlibs`.
+
+    Per charm: `charmlibs / (charmlibs + vendored Charmhub libs)`. The
+    headline is the mean of that ratio over charms that use at least one
+    library either way — an unweighted mean, so a charm with two libraries
+    counts as much as one with twenty. That is the intent: this tracks how
+    far each charm has moved, not how many library *imports* across the
+    corpus happen to be charmlibs.
+
+    Charms using no libraries at all have no ratio to contribute and are
+    excluded from the mean; their share of the corpus is reported separately
+    as the `no-libraries` breakdown rather than being quietly dropped.
+    """
+    if not _has_charmlibs_data(snapshot):
+        return None
+    charms = eligible_charms(snapshot)
+    if not charms:
+        return None
+
+    ratios: list[float] = []
+    with_any_charmlib = 0
+    no_libs = 0
+    for charm in charms.values():
+        meta = _meta(charm)
+        charmlibs = int(meta.get("charmlibs_count") or 0)
+        charmhub = int(meta.get("library_count") or 0)
+        total = charmlibs + charmhub
+        if total == 0:
+            no_libs += 1
+            continue
+        ratios.append(charmlibs / total)
+        if charmlibs:
+            with_any_charmlib += 1
+
+    if not ratios:
+        return None
+    mean_share = 100 * sum(ratios) / len(ratios)
+    return _point(
+        snapshot,
+        value=mean_share,
+        numerator=with_any_charmlib,
+        denominator=len(ratios),
+        breakdown={
+            "charmlibs": mean_share,
+            "charmhub-libs": 100 - mean_share,
+            _NO_LIBS: _percent(no_libs, len(charms)),
+        },
+        counts={
+            "charms-with-libraries": len(ratios),
+            "charms-using-any-charmlib": with_any_charmlib,
+            _NO_LIBS: no_libs,
+        },
+    )
+
+
+# ── the scorecard ───────────────────────────────────────────────────────────
+
+METRICS: tuple[Metric, ...] = (
+    Metric(
+        key=TYPED_RELATION,
+        title="Typed relation data",
+        question="Are charms reading and writing relation data through the typed API?",
+        unit="percent",
+        compute=compute_typed_relation,
+        breakdown_keys=("typed", "untyped"),
+        detail=(
+            "Percent of eligible charms calling <code>Relation.load</code> or "
+            "<code>Relation.save</code> (either counts). Backed by the "
+            "<code>ops.typed-relation</code> feature."
+        ),
+    ),
+    Metric(
+        key=INTEGRATION_TESTING,
+        title="Jubilant adoption",
+        question="What do charms use to drive their integration tests?",
+        unit="percent",
+        compute=compute_integration_testing,
+        breakdown_keys=(_JUBILANT, _PYTEST_OPERATOR, _OTHER_TESTS, _NO_TESTS),
+        detail=(
+            "Percent of eligible charms whose integration tests import "
+            "<code>jubilant</code>, split against pytest-operator, other "
+            "harnesses, and charms with no integration tests found at all."
+        ),
+        caveats=(
+            "A charm hitting both framework detectors is counted as jubilant — "
+            "part-migrated reads as adopted.",
+        ),
+    ),
+    Metric(
+        key=CHARMLIBS_SHARE,
+        title="charmlibs share",
+        question="How much of a charm's library surface comes from charmlibs?",
+        unit="percent",
+        compute=compute_charmlibs_share,
+        breakdown_keys=("charmlibs", "charmhub-libs", _NO_LIBS),
+        detail=(
+            "Mean over charms of <code>charmlibs / (charmlibs + vendored "
+            "Charmhub libs)</code>. Charms using no libraries at all are "
+            "excluded from the mean and tracked separately."
+        ),
+        caveats=(
+            "Unweighted mean of per-charm ratios: every charm counts once, "
+            "regardless of how many libraries it pulls in.",
+            "charmlibs counts were added to the scan on 2026-08-24, so this "
+            "series starts at the first scan after that date.",
+        ),
+    ),
+    Metric(
+        key=PEBBLE,
+        title="Pebble (to be confirmed)",
+        question="Are workloads driven through Pebble the way we intend?",
+        unit="percent",
+        compute=None,
+        scope="charms+rocks",
+        detail=(
+            "Placeholder. Two candidate definitions, both spanning charms and "
+            "rocks: <strong>health checks</strong> (charm side already "
+            "detectable via <code>pebble.checks</code>; rock side is "
+            "<code>checks:</code> in rockcraft.yaml) or <strong>custom "
+            "notices</strong> (charm side <code>ops.pebble-custom-notice</code>; "
+            "rock side is whatever emits them). Either way the rocks half needs "
+            "a scan pipeline over <code>rocks.csv</code>, which does not exist "
+            "yet — only the corpus CSV does."
+        ),
+        pending="definition still to be confirmed: health checks or custom notices",
+    ),
+)
+
+
+def metric_by_key(key: str) -> Metric | None:
+    """Look up a declared metric, or None if `key` names no metric."""
+    return next((m for m in METRICS if m.key == key), None)
+
+
+def compute_series(snapshots: list[Snapshot], *, only: str | None = None) -> dict[str, list[dict]]:
+    """Per-metric time series, one point per snapshot the metric can be read from.
+
+    Dates a metric can't be computed for are absent from its list rather than
+    present with a null — a consumer plotting the series sees a gap, not a
+    dip to zero. A declared-but-undefined metric (`compute=None`) maps to an
+    empty list, so the page can still render its card.
+    """
+    out: dict[str, list[dict]] = {}
+    for metric in METRICS:
+        if only and metric.key != only:
+            continue
+        if metric.compute is None:
+            out[metric.key] = []
+            continue
+        points = [metric.compute(s) for s in snapshots]
+        out[metric.key] = [p for p in points if p is not None]
+    return out
+
+
+def latest_and_delta(series: list[dict]) -> tuple[dict | None, float | None]:
+    """Return the most recent point, and its change since the previous one.
+
+    Returns `(None, None)` for an empty series and `(point, None)` when there
+    is only one point — a single reading has nothing to be a delta from, and
+    rendering 0.0 there would read as "no movement" rather than "no history".
+    """
+    if not series:
+        return None, None
+    latest = series[-1]
+    if len(series) < 2:
+        return latest, None
+    return latest, round(latest["value"] - series[-2]["value"], 1)

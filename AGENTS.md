@@ -39,7 +39,9 @@ corpus CSV ─┬─► scan ─► results.json ─► score ─► scored.json
 overrides ──┘                       (optional) llm-score ─────┤
                                                pairs ─► pairs.json
                                                               │
-                    snapshots/scored-*.json ─► trend ─► trend.html
+                    snapshots/scored-*.json ─┬─► trend ─► trend.html
+                                             │                │
+                                             └─► adoption ─► adoption.html
                                                               │
                                           dashboard ─► dashboard.html
 ```
@@ -56,11 +58,18 @@ overrides ──┘                       (optional) llm-score ─────�
   Reach for it via `catalogue.default_path()`, never `__file__` arithmetic.
 - `corpus-overrides.yaml` — per-charm exclusions and feature-skip rules
   (silences shim-charm FPs, etc.). Loaded by `charmtally/corpus.py`.
+- `charmtally/adoption.py` — the charm-tech adoption scorecard: a
+  deliberately tiny set (3–6) of headline metrics over the same dated
+  snapshots `trend` reads. Distinct from `trend.py`, which covers the whole
+  catalogue and answers "what changed". Every metric shares one denominator
+  — `eligible_charms`, the corpus minus reactive and legacy-classic charms —
+  and returns `None` for a snapshot whose inputs weren't scanned yet, so a
+  newly added metric shows a short series rather than a fake run of zeros.
 
 ## Generated artefacts — do NOT hand-edit
 
-`results.json`, `dashboard.html`, `trend.html` and `snapshots/scored-*.json`
-are rewritten by the weekly `scan` workflow
+`results.json`, `dashboard.html`, `trend.html`, `adoption.html` and
+`snapshots/scored-*.json` are rewritten by the weekly `scan` workflow
 (`.github/workflows/scan.yaml`). Treat them as build output that happens to
 live in git (the dashboard is served via GitHub Pages from `main`). Don't
 revert their contents when rebasing; rebase your work *onto* the latest
@@ -154,6 +163,9 @@ ecosystem convention).
   user-facing; if you change a rule, update the rationale too.
 - `charmtally/features.yaml` — adding a feature is fine; renaming or removing
   one breaks every downstream snapshot. Prefer additive changes.
+- `adoption.METRICS` — the point of the scorecard is that it is short and
+  stable. Adding a metric is a product decision, not a refactor; metric keys
+  are also bookmark/JSON identifiers, so rename nothing.
 - The LLM prompt or model in `charmtally/llm_score.py` — both feed
   `prompt_version()`, so editing either invalidates every cached verdict
   and the next run re-spends against the budget.
