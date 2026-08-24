@@ -1600,6 +1600,42 @@ def _kratos_info(self):
     assert detect_feature(tmp_path, _catalogue_feature("ops.typed-relation")) == []
 
 
+def test_typed_config_fires_on_load_config(tmp_path: Path) -> None:
+    _write_charm(
+        tmp_path,
+        """
+def __init__(self, framework):
+    self.config_ = self.load_config(MyConfig)
+""",
+    )
+    assert len(detect_feature(tmp_path, _catalogue_feature("ops.typed-config"))) == 1
+
+
+def test_typed_config_fires_on_load_params(tmp_path: Path) -> None:
+    _write_charm(
+        tmp_path,
+        """
+def _on_backup(self, event):
+    params = event.load_params(BackupParams)
+""",
+    )
+    assert len(detect_feature(tmp_path, _catalogue_feature("ops.typed-config"))) == 1
+
+
+def test_typed_config_ignores_a_same_named_helper(tmp_path: Path) -> None:
+    """A capitalised first argument is what marks the ops call: a helper
+    handed a path or a dict is somebody else's `load_config`."""
+    _write_charm(
+        tmp_path,
+        """
+def _setup(self):
+    self.settings = load_config("/etc/workload/config.yaml")
+    self.more = load_params(self.config)
+""",
+    )
+    assert detect_feature(tmp_path, _catalogue_feature("ops.typed-config")) == []
+
+
 # ── CharmSource (shared parse cache) ─────────────────────────────────────────
 
 
