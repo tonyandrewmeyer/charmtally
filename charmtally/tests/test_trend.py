@@ -93,6 +93,35 @@ def test_load_snapshots_excludes_skipped_key(tmp_path: Path) -> None:
     assert list(snapshots[0].charms) == ["a"]
 
 
+def test_load_snapshots_reads_the_rocks_block(tmp_path: Path) -> None:
+    _write_snapshot(
+        tmp_path,
+        "2026-06-11",
+        {
+            "a": _charm(present={"f": True}),
+            trend.ROCKS_KEY: {
+                "rocks": {"c/r:rockcraft.yaml": {"readable": True, "run_user": None}}
+            },
+        },
+    )
+
+    snapshot = trend.load_snapshots(tmp_path)[0]
+
+    assert list(snapshot.charms) == ["a"]
+    assert snapshot.rocks_scanned is True
+    assert list(snapshot.rocks) == ["c/r:rockcraft.yaml"]
+
+
+def test_snapshot_without_a_rocks_block_is_not_scanned(tmp_path: Path) -> None:
+    """Absent rocks means "this scan didn't look", not "there are no rocks"."""
+    _write_snapshot(tmp_path, "2026-06-11", {"a": _charm(present={"f": True})})
+
+    snapshot = trend.load_snapshots(tmp_path)[0]
+
+    assert snapshot.rocks_scanned is False
+    assert snapshot.rocks == {}
+
+
 # --- adoption ----------------------------------------------------------------
 
 

@@ -35,10 +35,11 @@ Pipeline (also the order of the CLI subcommands in `charmtally/cli.py`):
 
 ```
 corpus CSV ─┬─► scan ─► results.json ─► score ─► scored.json ─┐
-            │                                                 │
+            │                                     ▲           │
 overrides ──┘                       (optional) llm-score ─────┤
                                                pairs ─► pairs.json
-                                                              │
+rocks.csv ─────────────────► scan-rocks ─────────┘            │
+                             (__rocks__ block)                │
                     snapshots/scored-*.json ─┬─► trend ─► trend.html
                                              │                │
                                              └─► adoption ─► adoption.html
@@ -58,13 +59,28 @@ overrides ──┘                       (optional) llm-score ─────�
   Reach for it via `catalogue.default_path()`, never `__file__` arithmetic.
 - `corpus-overrides.yaml` — per-charm exclusions and feature-skip rules
   (silences shim-charm FPs, etc.). Loaded by `charmtally/corpus.py`.
+- `charmtally/rocks.py` — the rocks half of the scan. Reads `rocks.csv` and
+  fetches each row's `rockcraft.yaml` from `raw.githubusercontent.com`;
+  rocks are **not cloned**, because every fact the scorecard wants of a rock
+  is in that one file and the CSV already records its path. Archived repos
+  and forks are dropped. `scan-rocks --into scored.json` parks the result in
+  a `__rocks__` block, so the weekly dated snapshot carries it and a
+  rocks-backed metric gets history without a second snapshot series. Every
+  consumer of a scored file already skips `__`-prefixed keys, which is why
+  the block can live there. Reach for the charm-side clone machinery only
+  when a metric needs to see the rest of a rock's tree.
 - `charmtally/adoption.py` — the charm-tech adoption scorecard: a
   deliberately tiny set (3–6) of headline metrics over the same dated
   snapshots `trend` reads. Distinct from `trend.py`, which covers the whole
-  catalogue and answers "what changed". Every metric shares one denominator
-  — `eligible_charms`, the corpus minus reactive and legacy-classic charms —
-  and returns `None` for a snapshot whose inputs weren't scanned yet, so a
-  newly added metric shows a short series rather than a fake run of zeros.
+  catalogue and answers "what changed". A metric returns `None` for a
+  snapshot whose inputs weren't scanned yet, so a newly added metric shows a
+  short series rather than a fake run of zeros. The default denominator is
+  `eligible_charms` — the corpus minus reactive and legacy-classic charms —
+  but it is a default, not a law: it excludes charms that could never adopt
+  an *ops-era API*, so a metric about tooling that works whatever the charm
+  is built on (jubilant) or about a population that isn't charms at all
+  (rootless, which spans rocks + k8s charms) sets its own denominator and
+  names it in `Metric.denominator_note`, which the card renders.
 
 ## Generated artefacts — do NOT hand-edit
 
@@ -147,8 +163,8 @@ freely; the sweep will not clobber them.
   `scan.yaml` this proposes rather than pushes, because the CSV is source data
   that wants review.
 - `scan.yaml` — weekly cron + `workflow_dispatch`. Runs
-  scan → score → (optional llm-score) → pairs → dashboard → snapshot →
-  trend, then pushes refreshed artefacts back to `main` via an explicit
+  scan → score → (optional llm-score) → scan-rocks → pairs → dashboard →
+  snapshot → trend, then pushes refreshed artefacts back to `main` via an explicit
   token-in-URL remote. The charm workdir is cached between runs and
   `ensure_clone` refreshes each clone, so a cached charm is re-scanned at
   the current commit rather than the one it was first cloned at.

@@ -96,6 +96,16 @@ jobs:
             --cache-dir /tmp/charm-workdir/.llm-verdicts \
             --out llm-scored.json
 
+      # The rocks half of the adoption scorecard's rootless metric. Written
+      # into the scored file (not a separate artefact) so the dated snapshot
+      # below carries it and the metric gets history for free. Rocks are
+      # fetched, not cloned: rockcraft.yaml is all this reads.
+      - name: Scan rocks
+        run: |
+          SCORED=scored.json
+          if [ -f llm-scored.json ]; then SCORED=llm-scored.json; fi
+          uv run charmtally scan-rocks --rocks rocks.csv --into "$SCORED"
+
       # Feeds the dashboard's Pairs view. Without this the view rendered
       # empty on every published dashboard, because nothing ever produced
       # pairs.json and the dashboard step never passed --pairs.

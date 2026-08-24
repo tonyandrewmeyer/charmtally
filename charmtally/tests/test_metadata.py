@@ -189,6 +189,21 @@ def test_library_count(tmp_path: Path) -> None:
     assert meta.library_count == 3
 
 
+def test_library_count_excludes_the_charms_own_published_lib(tmp_path: Path) -> None:
+    """`lib/charms/<own_name>/` is a lib this charm PUBLISHES, not one it uses."""
+    (tmp_path / "charmcraft.yaml").write_text("type: charm\nname: my-charm\n")
+    for lib in ("my_charm", "grafana_k8s"):
+        d = tmp_path / "lib" / "charms" / lib / "v0"
+        d.mkdir(parents=True)
+        (d / f"{lib}.py").write_text("# lib\n")
+
+    meta = read(tmp_path)
+
+    assert meta.library_names == ("grafana_k8s",)
+    assert meta.library_count == 1
+    assert meta.provides_own_library is True
+
+
 def test_provides_own_library_true(tmp_path: Path) -> None:
     (tmp_path / "charmcraft.yaml").write_text("type: charm\nname: my-charm\n")
     own = tmp_path / "lib" / "charms" / "my_charm" / "v0"
@@ -203,6 +218,21 @@ def test_provides_own_library_false(tmp_path: Path) -> None:
     other.mkdir(parents=True)
     (other / "x.py").write_text("# consumer lib\n")
     assert read(tmp_path).provides_own_library is False
+
+
+def test_charm_user_is_read_from_charmcraft_yaml(tmp_path: Path) -> None:
+    (tmp_path / "charmcraft.yaml").write_text(
+        "type: charm\nname: my-charm\ncharm-user: non-root\n"
+    )
+
+    assert read(tmp_path).charm_user == "non-root"
+
+
+def test_charm_user_is_none_when_unset(tmp_path: Path) -> None:
+    """Unset is Juju's default (root) — recorded as None, not as "root"."""
+    _ops_charm(tmp_path)
+
+    assert read(tmp_path).charm_user is None
 
 
 def test_has_terraform_module(tmp_path: Path) -> None:

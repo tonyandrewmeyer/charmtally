@@ -27,7 +27,11 @@ Sub-metrics (v1)
 * `shares_charmlib` — either member's `library_names` (the `lib/charms/<n>/`
   vendored set, surfaced via `__meta__`) contains a name normalised
   to the other side's name root. Strong signal that a shared
-  charmlib mediates between the two.
+  charmlib mediates between the two. `library_names` excludes the
+  charm's own published library, so a charm that merely publishes
+  `lib/charms/<own_name>/` no longer matches its pair partner's root
+  on the strength of publishing alone — the chip means one side
+  actually vendors the other's lib.
 
 Deferred to v2 (out of scope here)
 
