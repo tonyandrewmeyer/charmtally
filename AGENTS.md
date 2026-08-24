@@ -132,6 +132,16 @@ negative test in `tests/test_detectors.py`.
 Not part of the pipeline; each is run with `uv run python -m charmtally.tools.X`.
 
 - `audit.py` — calibration sampling over `scored.json`.
+- `backfill.py` — recomputes `snapshots/scored-<date>.json` for weeks that
+  were never scanned, by full-cloning each corpus repo and checking it out at
+  its last commit before each date's 02:00 UTC cutoff. Separate workdir from
+  the weekly scan's on purpose: that one is shallow, and a shallow clone
+  cannot be checked out at a past commit. Snapshots it writes carry a
+  `__backfill__` provenance block and no `__rocks__` block (rocks are fetched
+  raw, not cloned, so they don't time-travel); the corpus list only goes back
+  to hyrum's first `charms.csv` (2026-06-03), before which it falls back to
+  that earliest copy and says so in the block. Existing snapshots are left
+  alone unless `--force`.
 - `rockfind.py` — builds a rocks corpus CSV from GitHub code search
   (`filename:rockcraft.yaml`). The REST search endpoint speaks the *legacy*
   query language: `path:` matches a directory there, so only `filename:`

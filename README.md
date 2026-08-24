@@ -63,6 +63,50 @@ back to `main`.
 `scored.json`, `llm-scored.json` and `pairs.json` are intermediates and are
 not committed.
 
+## Backfilling snapshots
+
+The trend and adoption pages read `snapshots/scored-<date>.json`, and the
+series only starts where this project did. Because a scan is a pure function
+of a charm's checked-out tree, missing weeks can be *recomputed* rather than
+left blank:
+
+```sh
+# Dry run first: prints the dates, the corpus list used for each, and the
+# repo count, then stops.
+uv run python -m charmtally.tools.backfill \
+    --start 2026-01-01 --workdir /tmp/charmtally-backfill \
+    --overrides corpus-overrides.yaml --dry-run
+
+# For real. --end defaults to the day before the earliest existing snapshot.
+uv run python -m charmtally.tools.backfill \
+    --start 2026-01-01 --workdir /tmp/charmtally-backfill \
+    --overrides corpus-overrides.yaml
+```
+
+It clones every corpus repo with full history (keep `--workdir` separate from
+the weekly scan's shallow one; expect a few GiB), then for each Monday checks
+each repo out at its last commit before 02:00 UTC — the cron's hour — and
+scans that tree. Existing snapshots are never overwritten without `--force`,
+so an interrupted run resumes by re-running the same command.
+
+Backfilled points are not identical to points that were scanned at the time,
+and the differences are worth knowing before reading a chart:
+
+- The feature catalogue and scoring rules applied are today's, so the series
+  answers "how much of today's catalogue was in use then".
+- hyrum's `charms.csv` only goes back to 2026-06-03. Earlier dates fall back
+  to the earliest copy of it, so their corpus *membership* is from later than
+  their code; `--corpus-mode pinned --corpus <csv>` pins one list instead.
+- Rocks are not backfilled — `rockcraft.yaml` is fetched raw, not cloned — so
+  the rootless metric stays blank for those dates rather than reading a
+  missing scan as "everything runs as root".
+- A repo with no commit before the cutoff is recorded as skipped, but a repo
+  deleted or made private since is missing from every backfilled date.
+
+Each backfilled snapshot carries a `__backfill__` block recording its cutoff,
+which corpus list it used and the catalogue digest, so a recomputed point can
+always be told from a scanned one.
+
 ## Building a rock corpus
 
 There is no curated list of repos that build rocks the way canonical/hyrum
