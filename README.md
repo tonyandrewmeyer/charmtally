@@ -63,6 +63,65 @@ back to `main`.
 `scored.json`, `llm-scored.json` and `pairs.json` are intermediates and are
 not committed.
 
+## Backfilling snapshots
+
+The trend and adoption pages read `snapshots/scored-<date>.json`, and the
+series only starts where this project did. Because a scan is a pure function
+of a charm's checked-out tree, missing weeks can be *recomputed* rather than
+left blank:
+
+```sh
+# Dry run first: prints the dates, the corpus list and the repo count, then
+# stops.
+uv run python -m charmtally.tools.backfill \
+    --start 2026-01-01 --workdir /tmp/charmtally-backfill \
+    --overrides corpus-overrides.yaml --dry-run
+
+# For real. --end defaults to the day before the earliest existing snapshot.
+uv run python -m charmtally.tools.backfill \
+    --start 2026-01-01 --workdir /tmp/charmtally-backfill \
+    --overrides corpus-overrides.yaml
+```
+
+It clones every corpus repo with full history (keep `--workdir` separate from
+the weekly scan's shallow one; expect a few GiB), then for each Monday checks
+each repo out at its last commit before 02:00 UTC — the cron's hour — and
+scans that tree. Existing snapshots are never overwritten without `--force`,
+so an interrupted run resumes by re-running the same command.
+
+**The corpus does not time-travel; the readings do.** Every date is replayed
+against one list — today's, or whatever `--corpus` pins — as though we had
+known about every charm all along. hyrum's `charms.csv` records when someone
+got round to listing a charm, not when the charm appeared, so replaying
+membership would mistake curation lag for adoption and put a step in every
+metric on the week a batch of rows landed.
+
+Knowing about a charm all along is not the same as it having existed all
+along, so the two are told apart per repo, per date:
+
+- **Listed later, already there** — commits before the cutoff, so it is
+  scanned like any other charm. This is the case the fixed list exists to
+  catch.
+- **Actually new** — the repo's history starts after the cutoff. Recorded in
+  `__skipped__` as not yet created, with its first-commit date, and counted in
+  nothing: a charm that did not exist cannot have adopted anything, and must
+  not sit in a denominator as though it had declined to.
+- **Repo older than its charm** — history, but no `charmcraft.yaml` /
+  `metadata.yaml` in it yet. Skipped with its own reason, for the same reason.
+
+Each snapshot's `__backfill__` block records the cutoff, the corpus origin, the
+catalogue digest and a tally of those outcomes, so a recomputed point can be
+told from a scanned one and a jump in a metric can be checked against a jump in
+the population underneath it.
+
+Two things stay unfaithful by construction: the feature catalogue, scoring
+rules and `corpus-overrides.yaml` applied are today's (so the series answers
+"how much of today's catalogue was in use then"), and rocks are not backfilled
+— `rockcraft.yaml` is fetched raw, not cloned — so the rootless metric stays
+blank for those dates rather than reading a missing scan as "everything runs as
+root". A charm that has since left the corpus is missing from every backfilled
+date too: a fixed list cures curation lag, not survivorship.
+
 ## Building a rock corpus
 
 There is no curated list of repos that build rocks the way canonical/hyrum
