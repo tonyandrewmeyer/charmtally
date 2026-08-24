@@ -59,6 +59,41 @@ every Monday and commits the refreshed `results.json`, `dashboard.html` and
 `scored.json`, `llm-scored.json` and `pairs.json` are intermediates and are
 not committed.
 
+## Building a rock corpus
+
+There is no curated list of repos that build rocks the way canonical/hyrum
+curates the charm list, so `rockfind` bootstraps one from GitHub code search:
+
+```sh
+export GITHUB_TOKEN=...          # any token; no scopes needed for public repos
+uv run python -m charmtally.tools.rockfind search --out rocks.csv
+
+# Refresh later without losing hand-curated Team / Notes columns.
+uv run python -m charmtally.tools.rockfind search --out rocks.csv --merge rocks.csv
+```
+
+Code search returns whatever your token can see, **including private and
+internal repos you have access to**, and the legacy query language this
+endpoint speaks ignores `is:public`. Non-public repos are therefore filtered
+out client-side, unconditionally, before anything is written; a token with no
+`repo` scope keeps them out of the results to begin with.
+
+Code search caps every query at 1000 results, so the search is partitioned by
+file size and each over-cap bucket is split again. Forks and archived repos
+are dropped unless `--include-forks` / `--include-archived` are passed, and
+`--names` reads the declared `name:` out of each `rockcraft.yaml` (one extra
+request per rock) instead of guessing it from the path. The output is a
+starting point for curation, not a census: code search only indexes the
+default branch of public repos.
+
+`rocks.csv` is committed as source data and is meant to be curated by hand.
+The weekly [`rocks` workflow](.github/workflows/rocks.yaml) re-runs the sweep
+every Tuesday and opens a pull request with the diff rather than pushing to
+`main` — new rows are unreviewed, and a code-search sweep turns up test
+fixtures and abandoned experiments alongside real rocks. `--merge` keeps the
+`Team` and `Notes` columns you edit, so curation survives the refresh. The
+workflow needs a `ROCKS_TOKEN` secret; see the comment at the top of it.
+
 ## Development
 
 ```sh
