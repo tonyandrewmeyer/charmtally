@@ -530,11 +530,12 @@ def render_adoption(
     carry its inputs — still gets a card, so the page shows the full
     scorecard rather than silently dropping a metric.
 
-    The template renders `metric.detail` with `|safe`: those strings are
-    authored in `adoption.py` and carry deliberate `<code>` markup. Nothing
-    else on this page comes from a charm repository — the metrics are
-    aggregates, so unlike the dashboard there is no third-party text to
-    escape — but keep any new field that *does* carry charm data escaped.
+    The template renders `metric.detail`, `metric.denominator_note` and each
+    `metric.caveats` entry with `|safe`: those strings are authored in
+    `adoption.py` and carry deliberate `<code>` markup. Nothing else on this
+    page comes from a charm repository — the metrics are aggregates, so
+    unlike the dashboard there is no third-party text to escape — but keep
+    any new field that *does* carry charm data escaped.
     """
     env = _environment()
     tmpl = env.get_template("adoption.html.j2")

@@ -389,6 +389,21 @@ def test_render_adoption_includes_cards_for_pending_metrics() -> None:
     assert charmlibs.pending in html
 
 
+def test_render_adoption_does_not_escape_authored_markup() -> None:
+    """detail / denominator_note / caveats carry deliberate <code> markup."""
+    # A jubilant point, so the card renders its denominator_note too — the
+    # note only appears alongside a headline value.
+    snap = _snapshot({"jub": _testing_charm(jubilant=True, pytest_operator=False, has_tests=True)})
+    series = adoption.compute_series([snap])
+
+    html = render_adoption(list(adoption.METRICS), series)
+
+    assert "&lt;code&gt;" not in html
+    assert "<code>run-user</code>" in html  # a rootless caveat
+    assert "<em>all</em> scanned charms" in html  # the jubilant detail
+    assert "not just eligible charms" in html  # the jubilant denominator_note
+
+
 def test_cli_adoption_writes_html_and_json(tmp_path: Path) -> None:
     snapshots = tmp_path / "snapshots"
     snapshots.mkdir()

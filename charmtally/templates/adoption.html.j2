@@ -80,7 +80,7 @@
       {{ card.latest.numerator }} / {{ card.latest.denominator }} charms,
       {{ card.latest.date }}
       {% if card.metric.denominator_note %}
-      <br><span class="denom">Denominator: {{ card.metric.denominator_note }}.</span>
+      <br><span class="denom">Denominator: {{ card.metric.denominator_note|safe }}.</span>
       {% endif %}
     </p>
     {% else %}
@@ -138,7 +138,7 @@
 
   {% if card.metric.caveats %}
   <ul class="caveats">
-    {% for c in card.metric.caveats %}<li>{{ c }}</li>{% endfor %}
+    {% for c in card.metric.caveats %}<li>{{ c|safe }}</li>{% endfor %}
   </ul>
   {% endif %}
 </section>
