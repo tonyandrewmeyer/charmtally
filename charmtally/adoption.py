@@ -14,8 +14,11 @@ history page reads, so a metric is only as old as the data behind it:
     date yields *no point* for that date, rather than a misleading zero.
     `ops.typed-relation` and `jubilant.integration-tests` have been in the
     catalogue since the first snapshot, so those series run the full history;
-    `testing.pytest-operator` and `__meta__.charmlibs_count` were added later
-    and their series start at the first scan that carries them.
+    `testing.pytest-operator`, `ops.typed-config` and
+    `__meta__.charmlibs_count` were added later. A metric with *several*
+    inputs, only some of which are that old, keeps its history and marks the
+    thin points `partial` instead — see `compute_integration_testing` and
+    `compute_typed_relation`.
   - **Eligibility.** Reactive and legacy-classic charms pre-date ops entirely
     (see `scoring.score_absent`, which scores every ops feature
     `not-applicable` for them). Counting them in a denominator would make
@@ -138,13 +141,29 @@ def _percent(numerator: int, denominator: int) -> float:
 
 
 def compute_typed_relation(snapshot: Snapshot) -> dict | None:
-    """Share of eligible charms using `Relation.load` / `Relation.save`."""
+    """Share of eligible charms using any of the typed-data APIs.
+
+    Any one of `Relation.load`, `Relation.save`, `load_config` or
+    `load_params` counts: they are one story — "this charm parses Juju data
+    into a declared model instead of poking at dicts" — and a charm that has
+    typed its config has adopted it as surely as one that has typed a
+    relation.
+
+    `ops.typed-config` joined the catalogue after `ops.typed-relation`, so
+    snapshots predating it are computed from the relation half alone and
+    flagged `partial` rather than dropped; the alternative is truncating the
+    history of the oldest metric on the page.
+    """
     if "ops.typed-relation" not in snapshot.feature_names:
         return None
     charms = eligible_charms(snapshot)
     if not charms:
         return None
-    users = sum(1 for c in charms.values() if _present(c, "ops.typed-relation"))
+    scanned_config = "ops.typed-config" in snapshot.feature_names
+    features = (
+        ("ops.typed-relation", "ops.typed-config") if scanned_config else ("ops.typed-relation",)
+    )
+    users = sum(1 for c in charms.values() if any(_present(c, f) for f in features))
     return _point(
         snapshot,
         value=_percent(users, len(charms)),
@@ -155,6 +174,7 @@ def compute_typed_relation(snapshot: Snapshot) -> dict | None:
             "untyped": _percent(len(charms) - users, len(charms)),
         },
         counts={"typed": users, "untyped": len(charms) - users},
+        partial="" if scanned_config else "ops.typed-config not yet scanned",
     )
 
 
@@ -386,15 +406,22 @@ def compute_rootless(snapshot: Snapshot) -> dict | None:
 METRICS: tuple[Metric, ...] = (
     Metric(
         key=TYPED_RELATION,
-        title="Typed relation data",
-        question="Are charms reading and writing relation data through the typed API?",
+        title="Typed Juju data",
+        question="Are charms reading Juju data through the typed APIs?",
         unit="percent",
         compute=compute_typed_relation,
         breakdown_keys=("typed", "untyped"),
         detail=(
-            "Percent of eligible charms calling <code>Relation.load</code> or "
-            "<code>Relation.save</code> (either counts). Backed by the "
-            "<code>ops.typed-relation</code> feature."
+            "Percent of eligible charms calling any of <code>load_config</code>, "
+            "<code>load_params</code>, <code>Relation.load</code> or "
+            "<code>Relation.save</code> — any one counts. Backed by the "
+            "<code>ops.typed-relation</code> and <code>ops.typed-config</code> "
+            "features."
+        ),
+        caveats=(
+            "<code>ops.typed-config</code> (load_config / load_params) was added "
+            "to the scan on 2026-08-24; earlier points in this series count the "
+            "<code>Relation.load</code> / <code>.save</code> half only.",
         ),
     ),
     Metric(

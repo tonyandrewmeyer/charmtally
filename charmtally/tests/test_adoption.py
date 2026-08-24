@@ -84,6 +84,36 @@ def test_typed_relation_percent_and_breakdown() -> None:
     assert point["breakdown"] == {"typed": 25.0, "untyped": 75.0}
 
 
+def test_typed_config_counts_towards_typed_juju_data() -> None:
+    """load_config / load_params adopters count, relation API or not."""
+    snap = _snapshot({
+        "a": _charm(features={"ops.typed-relation": True, "ops.typed-config": False}),
+        "b": _charm(features={"ops.typed-relation": False, "ops.typed-config": True}),
+        "c": _charm(features={"ops.typed-relation": True, "ops.typed-config": True}),
+        "d": _charm(features={"ops.typed-relation": False, "ops.typed-config": False}),
+    })
+
+    point = adoption.compute_typed_relation(snap)
+
+    assert point is not None
+    assert point["value"] == 75.0
+    assert point["partial"] == ""
+
+
+def test_typed_relation_alone_when_typed_config_not_yet_scanned() -> None:
+    """Snapshots predating `ops.typed-config` keep their point, flagged partial."""
+    snap = _snapshot({
+        "a": _charm(features={"ops.typed-relation": True}),
+        "b": _charm(features={"ops.typed-relation": False}),
+    })
+
+    point = adoption.compute_typed_relation(snap)
+
+    assert point is not None
+    assert point["value"] == 50.0
+    assert point["partial"] == "ops.typed-config not yet scanned"
+
+
 def test_typed_relation_absent_from_catalogue_yields_no_point() -> None:
     """Feature-drift guard: a snapshot predating the feature has no data point."""
     snap = _snapshot({"a": _charm(features={"ops.collect-status": True})})

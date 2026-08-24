@@ -585,6 +585,29 @@ features:
     verified: []
     negative: []
 
+  - name: ops.typed-config
+    library: ops
+    summary: Charm uses ops load_config / load_params typed-data API.
+    scope: src
+    detect:
+      - kind: regex
+        pattern: '\bload_config\s*\(\s*[A-Z]\w+'
+      - kind: regex
+        pattern: '\bload_params\s*\(\s*[A-Z]\w+'
+    notes: |
+      The config half of the same typed-data story as `ops.typed-relation`:
+      `self.load_config(MyConfig)` on the charm, and
+      `event.load_params(MyParams)` on an action event. Both take the data
+      class as their first argument, so — as with `Relation.load` — requiring
+      a capitalised first argument is what separates a real call from a
+      same-named helper that takes a path or a dict.
+
+      Deliberately one feature covering both calls: a charm that types its
+      config but not its action parameters has still adopted the API, and the
+      adoption scorecard asks the OR of the two anyway.
+    verified: []
+    negative: []
+
   # ── database integrations (metadata: requires:) ────────────────────────────
   #
   # Descriptive facts derived from the charm's `requires:` block in
