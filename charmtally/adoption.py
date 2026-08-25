@@ -489,10 +489,6 @@ METRICS: tuple[Metric, ...] = (
             "<code>run-user</code> is a rock key and <code>charm-user</code> "
             "only affects k8s charms, so machine charms can adopt neither"
         ),
-        pending=(
-            "charm-user and the rocks scan were both added on 2026-08-24, so "
-            "this series starts at the first scan after that date"
-        ),
         caveats=(
             "The two halves are not the same process: <code>run-user</code> is "
             "the rock's OCI user (the workload), <code>charm-user</code> is the "
