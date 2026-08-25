@@ -261,3 +261,133 @@ class TestPlannedRange:
     def test_an_empty_snapshots_dir_no_longer_needs_an_explicit_end(self, tmp_path: Path, capsys):
         lines = self._plan(tmp_path, capsys, [])
         assert "2026-01-05" in lines
+
+
+def _rock_repo(root: Path) -> Path:
+    """A repo whose rockcraft.yaml appears part-way through its history."""
+    root.mkdir(parents=True)
+    _git(["init", "-q", "-b", "main"], root)
+    _git(["config", "user.email", "t@example.com"], root)
+    _git(["config", "user.name", "T"], root)
+    (root / "README.md").write_text("hello\n")
+    _git(["add", "-A"], root)
+    _git(
+        ["-c", "commit.gpgsign=false", "commit", "-q", "-m", "first"],
+        root,
+        when="2026-02-01T00:00:00Z",
+    )
+    (root / "rockcraft.yaml").write_text("name: demo\nrun-user: _daemon_\n")
+    _git(["add", "-A"], root)
+    _git(
+        ["-c", "commit.gpgsign=false", "commit", "-q", "-m", "rock"],
+        root,
+        when="2026-04-01T00:00:00Z",
+    )
+    return root
+
+
+def _rock_ref(path: str = "rockcraft.yaml", *, branch: str = ""):
+    return backfill._rocks.RockRef(
+        name="demo", repo_url="https://github.com/x/y", path=path, branch=branch, team="t"
+    )
+
+
+class TestGroupRocks:
+    def test_groups_by_repo_and_branch(self):
+        a = _rock_ref("a/rockcraft.yaml")
+        b = _rock_ref("b/rockcraft.yaml")
+        other = _rock_ref("c/rockcraft.yaml", branch="dev")
+        grouped = backfill.group_rocks([a, b, other])
+        # One clone-and-walk for the two rocks on the default branch, and a
+        # separate one for the branch — `commit_asof` answers per ref.
+        assert grouped["https://github.com/x/y", ""] == [a, b]
+        assert grouped["https://github.com/x/y", "dev"] == [other]
+
+
+class TestRocksForDate:
+    """The rocks replay, against one real repo (as the charm half does)."""
+
+    def _clones(self, tmp_path: Path) -> Path:
+        src = _rock_repo(tmp_path / "src")
+        clones = tmp_path / "work" / "rocks"
+        dest = backfill.rock_dest("https://github.com/x/y", clones)
+        dest.parent.mkdir(parents=True)
+        subprocess.run(
+            ["git", "clone", "-q", str(src), str(dest)], check=True, capture_output=True
+        )
+        return clones
+
+    def _run(self, tmp_path: Path, date: str, ref=None):
+        ref = ref or _rock_ref()
+        return backfill.rocks_for_date(
+            dt.date.fromisoformat(date), backfill.group_rocks([ref]), self._clones(tmp_path)
+        )
+
+    def test_reads_run_user_at_a_date_the_rock_existed(self, tmp_path: Path):
+        outcome = self._run(tmp_path, "2026-05-04")
+        record = outcome.records["x/y:rockcraft.yaml"]
+        assert record["readable"] is True
+        assert record["run_user"] == "_daemon_"
+        assert outcome.tally[backfill.SCANNED] == 1
+
+    def test_repo_newer_than_the_date_is_not_yet_created(self, tmp_path: Path):
+        outcome = self._run(tmp_path, "2026-01-05")
+        assert outcome.tally[backfill.NOT_YET_CREATED] == 1
+        # Absent, not unreadable: a rock that did not exist was never there to
+        # look at, and `readable: False` would put it in the "we tried" bucket.
+        assert outcome.records == {}
+        assert "did not exist" in outcome.skipped["x/y:rockcraft.yaml"]
+
+    def test_repo_older_than_its_rock_is_no_rock_yet(self, tmp_path: Path):
+        outcome = self._run(tmp_path, "2026-03-02")
+        assert outcome.tally[backfill.NO_ROCK_YET] == 1
+        assert outcome.records == {}
+        assert "has no rockcraft.yaml" in outcome.skipped["x/y:rockcraft.yaml"]
+
+    def test_a_path_that_never_existed_is_no_rock_yet(self, tmp_path: Path):
+        outcome = self._run(tmp_path, "2026-05-04", ref=_rock_ref("nope/rockcraft.yaml"))
+        assert outcome.tally[backfill.NO_ROCK_YET] == 1
+
+    def test_a_missing_clone_is_unreadable(self, tmp_path: Path):
+        outcome = backfill.rocks_for_date(
+            dt.date(2026, 5, 4), backfill.group_rocks([_rock_ref()]), tmp_path / "empty"
+        )
+        assert outcome.tally[backfill.UNREADABLE] == 1
+        assert outcome.records == {}
+
+
+class TestMergeRocksBlock:
+    def test_merges_without_disturbing_the_charm_half(self, tmp_path: Path):
+        path = _written(
+            tmp_path,
+            {
+                "canonical/foo": {"name": "foo", "features": {"ops.x": {"present": True}}},
+                "__backfill__": {"rocks": "not scanned (backfill cannot time-travel)"},
+            },
+        )
+        outcome = backfill.RocksOutcome(
+            records={"x/y:rockcraft.yaml": {"readable": True, "run_user": "_daemon_"}},
+            skipped={"a/b:rockcraft.yaml": "repo did not exist on 2026-05-04"},
+        )
+        block = backfill.rocks_block(dt.date(2026, 5, 4), outcome, tmp_path / "rocks.csv")
+        backfill.merge_rocks_block(path, block)
+
+        snap = json.loads(path.read_text())
+        assert snap["canonical/foo"]["name"] == "foo"
+        assert snap["__backfill__"]["rocks"] == "backfilled (see __rocks__.backfill)"
+        # `trend` has to read a replayed block exactly as it reads a scanned
+        # one, or the rootless metric stays blank for every backfilled date.
+        snapshot = trend._load_one(path, "2026-05-04")
+        assert snapshot.rocks_scanned is True
+        assert snapshot.rocks["x/y:rockcraft.yaml"]["run_user"] == "_daemon_"
+
+    def test_has_rocks_block_gates_a_rerun(self, tmp_path: Path):
+        path = _written(tmp_path, {"canonical/foo": {"name": "foo"}})
+        assert backfill.has_rocks_block(path) is False
+        backfill.merge_rocks_block(
+            path,
+            backfill.rocks_block(
+                dt.date(2026, 5, 4), backfill.RocksOutcome(), tmp_path / "rocks.csv"
+            ),
+        )
+        assert backfill.has_rocks_block(path) is True

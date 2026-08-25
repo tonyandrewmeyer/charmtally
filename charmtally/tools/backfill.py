@@ -77,17 +77,42 @@ Not faithful, by construction:
   list is today's, so a repo deleted, made private, or dropped from
   `charms.csv` is absent even from dates when it was alive and listed. Fixing
   the list cures curation lag, not survivorship.
-* **Rocks are omitted.** The `__rocks__` block needs a `rockcraft.yaml` per
-  rock as of the date, which the raw-fetch path cannot express, and `rocks.csv`
-  is curated now anyway. Backfilled snapshots carry no rocks block, which
-  `trend.Snapshot.rocks_scanned` already reports as "not scanned" — so the
-  rootless metric shows a short series rather than a fake collapse to root.
 * **`corpus-overrides.yaml` is today's.** Exclusions written for a charm's
   current shape are applied to its historical shape.
 * **The cutoff reads committer dates.** A branch rebased or squashed since the
   date carries the *rewrite's* dates, so such a charm is replayed at whatever
   its rewritten history says was current — usually a later tree than the one
   that really existed that week.
+
+Rocks
+-----
+`--rocks` replays the other half. The weekly scan reads each `rockcraft.yaml`
+straight off `raw.githubusercontent.com` at HEAD, which has no date in it, so
+this mode clones instead — `git show <sha>:<path>` off one commit resolved per
+repo, which is cheap even for a monorepo holding dozens of rocks::
+
+    uv run python -m charmtally.tools.backfill --rocks \\
+        --start 2026-01-01 --workdir /tmp/charmtally-backfill
+
+It **merges** into snapshots that already exist rather than writing new ones:
+the rocks half lives in the charm snapshot's `__rocks__` block, in the shape
+`scan-rocks --into` writes, so `trend` and `adoption` cannot tell a replayed
+block from a scanned one. Dates without a snapshot are skipped — there is
+nothing to merge into — and dates that already have a `__rocks__` block are
+left alone unless `--force`.
+
+Absence splits three ways here too, and for the same reason: `NOT_YET_CREATED`
+(the repo's history starts after the cutoff), `NO_ROCK_YET` (the repo was
+there, this rockcraft.yaml was not), and `UNREADABLE`. The first two are left
+out of `__rocks__` entirely rather than written as `readable: false`, which
+means "we looked and failed" — a rock that did not exist was never there to
+look at, and the rootless metric excludes both anyway.
+
+Not faithful, by construction, on this side: `rocks.csv`'s membership is fixed
+across dates like the charm corpus (it comes from a code search, so replaying
+it would read indexing lag as adoption), its `Archived` / `Fork` columns are
+today's and are applied to every date, and `git show` does not follow renames —
+a rockcraft.yaml that has since moved reads as `NO_ROCK_YET` before the move.
 
 Cost, at ~350 corpus repos: the prepare phase is the long pole (full clones,
 minutes to tens of minutes and a few GiB), and each replayed date then costs
@@ -113,12 +138,15 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from .. import catalogue, corpus, scan
+from .. import rocks as _rocks
+from .. import trend as _trend
 from ..cli import _apply_feature_excludes
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from ..corpus import CharmRef
+    from ..rocks import RockRef
 
 #: Time of day the cutoff lands on, mirroring `scan.yaml`'s 02:00 UTC cron so
 #: a backfilled Monday sees what that Monday's run would have seen.
@@ -137,6 +165,13 @@ NOT_YET_CREATED = "not-yet-created"
 NO_CHARM_YET = "no-charm-yet"
 UNREADABLE = "unreadable"
 EXCLUDED = "excluded"
+
+#: The rocks-side sibling of `NO_CHARM_YET`: the repo was there on the date,
+#: but this rockcraft.yaml was not in it yet.
+NO_ROCK_YET = "no-rock-yet"
+
+#: Default `rocks.csv`, matching what the weekly `scan-rocks` reads.
+DEFAULT_ROCKS_CSV = Path("rocks.csv")
 
 
 # ── dates ───────────────────────────────────────────────────────────────────
@@ -168,11 +203,11 @@ def cutoff(date: dt.date) -> str:
 # ── git plumbing ────────────────────────────────────────────────────────────
 
 
-def _git_out(args: list[str], cwd: Path | None = None, timeout: int = 300) -> str | None:
-    """Run a git command and return its stdout stripped, or None on failure.
+def _git_raw(args: list[str], cwd: Path | None = None, timeout: int = 300) -> str | None:
+    """Run a git command and return its stdout verbatim, or None on failure.
 
-    `scan._git` answers only pass/fail, and every call here wants the output
-    (a SHA, a ref name) — so this is a sibling of it, not a replacement.
+    Verbatim because `git show <sha>:<path>` returns a *file*, and stripping
+    it would quietly edit the bytes the parser sees.
     """
     try:
         proc = subprocess.run(
@@ -185,7 +220,17 @@ def _git_out(args: list[str], cwd: Path | None = None, timeout: int = 300) -> st
         )
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):
         return None
-    return proc.stdout.strip()
+    return proc.stdout
+
+
+def _git_out(args: list[str], cwd: Path | None = None, timeout: int = 300) -> str | None:
+    """Run a git command and return its stdout stripped, or None on failure.
+
+    `scan._git` answers only pass/fail, and every call here wants the output
+    (a SHA, a ref name) — so this is a sibling of it, not a replacement.
+    """
+    out = _git_raw(args, cwd, timeout)
+    return None if out is None else out.strip()
 
 
 def ensure_full_clone(repo_url: str, dest: Path, *, branch: str | None = None) -> Path | None:
@@ -461,7 +506,7 @@ def snapshot_for_date(
         "corpus_fixed_across_dates": True,
         "catalogue_digest": catalogue_digest(features_path),
         "outcomes": tally,
-        "rocks": "not scanned (backfill cannot time-travel rockcraft.yaml)",
+        "rocks": "not scanned by this pass (see --rocks)",
         "tool": "charmtally.tools.backfill",
     }
     return out
@@ -494,6 +539,262 @@ def prepare_clones(refs: list[CharmRef], workdir: Path, *, jobs: int = DEFAULT_J
             elif done % 25 == 0:
                 print(f"  [{done}/{total}] cloned", file=sys.stderr)
     return failures
+
+
+# ── rocks: the same replay, over rockcraft.yaml ─────────────────────────────
+
+
+def rock_dest(repo_url: str, clones: Path) -> Path:
+    """Clone directory for one rock's repo.
+
+    Keyed by `owner/repo`, not by `RockRef.slug`: the slug carries the
+    rockcraft path, and a monorepo defines dozens of rocks that all live in
+    one repo. Cloning per slug would clone kubeflow forty times.
+    """
+    return clones / _rocks.repo_path(repo_url)
+
+
+def file_at_commit(dest: Path, sha: str, path: str) -> str | None:
+    """Contents of `path` in the tree at `sha`, or None if it isn't there.
+
+    `git show` rather than a checkout, because the rocks replay reads one
+    small file per rock off a commit resolved once per repo — where a
+    checkout would rewrite the whole working tree for every date.
+
+    Renames are not followed: this addresses a path in a tree, so a
+    rockcraft.yaml that has since moved reads as absent at dates before the
+    move, and lands in the tally as `NO_ROCK_YET`.
+    """
+    return _git_raw(["show", f"{sha}:{path.lstrip('/')}"], dest)
+
+
+def group_rocks(refs: Iterable[RockRef]) -> dict[tuple[str, str], list[RockRef]]:
+    """Group rocks by the (repo, branch) whose history has to be walked once.
+
+    The branch is part of the key because two rows in `rocks.csv` may name
+    the same repo at different branches, and `commit_asof` answers per ref.
+    """
+    grouped: dict[tuple[str, str], list[RockRef]] = {}
+    for ref in refs:
+        grouped.setdefault((ref.repo_url, ref.branch), []).append(ref)
+    return grouped
+
+
+@dataclass
+class RocksOutcome:
+    """Every rock's reading for one date, plus why the absent ones are absent."""
+
+    records: dict[str, dict] = field(default_factory=dict)
+    skipped: dict[str, str] = field(default_factory=dict)
+    tally: dict[str, int] = field(
+        default_factory=lambda: dict.fromkeys(
+            (SCANNED, NOT_YET_CREATED, NO_ROCK_YET, UNREADABLE), 0
+        )
+    )
+
+    def note(self, ref: RockRef, kind: str, reason: str) -> None:
+        """Record a rock that produced no reading for this date."""
+        self.skipped[ref.slug] = reason
+        self.tally[kind] += 1
+
+
+def rocks_for_date(
+    date: dt.date, grouped: dict[tuple[str, str], list[RockRef]], clones: Path
+) -> RocksOutcome:
+    """Read every rock's `rockcraft.yaml` as it stood on `date`.
+
+    Absence is split the same three ways as on the charm side, because the
+    rootless metric divides by the rocks it can see: a rock whose repo did
+    not exist yet (`NOT_YET_CREATED`), one whose repo existed without this
+    rockcraft.yaml in it (`NO_ROCK_YET`), and one we simply could not read
+    (`UNREADABLE`). The first two are left out of `__rocks__` entirely rather
+    than recorded as unreadable — `readable: False` means "we looked and
+    failed", and a rock that did not exist was never there to look at.
+    """
+    outcome = RocksOutcome()
+    for (repo_url, branch), refs in grouped.items():
+        dest = rock_dest(repo_url, clones)
+        if not (dest / ".git").exists():
+            for ref in refs:
+                outcome.note(ref, UNREADABLE, "no local clone (prepare phase failed?)")
+            continue
+        track = tracking_ref(dest, branch or None)
+        if track is None:
+            for ref in refs:
+                outcome.note(ref, UNREADABLE, "no remote-tracking branch to replay")
+            continue
+        sha = commit_asof(dest, track, date)
+        if sha is None:
+            born = first_commit_date(dest, track)
+            detail = f"first commit {born}" if born else "no commit history readable"
+            for ref in refs:
+                outcome.note(
+                    ref,
+                    NOT_YET_CREATED,
+                    f"repo did not exist on {date.isoformat()} ({detail})",
+                )
+            continue
+        for ref in refs:
+            text = file_at_commit(dest, sha, ref.path)
+            if text is None:
+                outcome.note(
+                    ref,
+                    NO_ROCK_YET,
+                    f"repo exists but has no {ref.path} at {date.isoformat()}",
+                )
+                continue
+            facts = _rocks.facts_from_rockcraft(text)
+            record = {
+                "name": ref.name,
+                "repo_url": ref.repo_url,
+                "path": ref.path,
+                "team": ref.team,
+                "readable": facts is not None,
+                "run_user": facts["run_user"] if facts is not None else None,
+            }
+            outcome.records[ref.slug] = record
+            outcome.tally[SCANNED if facts is not None else UNREADABLE] += 1
+    return outcome
+
+
+def rocks_block(date: dt.date, outcome: RocksOutcome, source: Path) -> dict:
+    """Build the `__rocks__` block, in the shape `scan-rocks --into` writes.
+
+    Same keys, so `trend.Snapshot` reads a replayed block and a scanned one
+    identically; the extra `backfill` key rides along as provenance the way
+    `__backfill__` does for the charm half.
+    """
+    readable = sum(1 for r in outcome.records.values() if r.get("readable"))
+    return {
+        "scanned": len(outcome.records),
+        "readable": readable,
+        "rocks": outcome.records,
+        "backfill": {
+            "cutoff": cutoff(date),
+            "rocks_source": str(source),
+            "corpus_fixed_across_dates": True,
+            "outcomes": outcome.tally,
+            "skipped": outcome.skipped,
+            "tool": "charmtally.tools.backfill --rocks",
+        },
+    }
+
+
+def merge_rocks_block(path: Path, block: dict) -> None:
+    """Write `block` into an existing snapshot as `__rocks__`, leaving the rest alone.
+
+    A merge, not a rewrite: the charm half of these snapshots is expensive to
+    recompute and already correct, and the rocks half is the only thing this
+    mode has an opinion about.
+    """
+    snap: dict = json.loads(path.read_text())
+    snap[_trend.ROCKS_KEY] = block
+    provenance = snap.get("__backfill__")
+    if isinstance(provenance, dict):
+        provenance["rocks"] = "backfilled (see __rocks__.backfill)"
+    path.write_text(json.dumps(snap, indent=2) + "\n")
+
+
+def prepare_rock_clones(repo_urls: list[str], clones: Path, *, jobs: int = DEFAULT_JOBS) -> int:
+    """Full-clone (or refresh) every rock repo. Returns the number that failed.
+
+    The charm prepare's sibling, over a different key space and a different
+    subdirectory of the same workdir. A repo that is both a charm and a rock
+    repo is cloned twice: the charm replay checks its clone out at each date,
+    and sharing one tree would leave the two halves fighting over it.
+    """
+    clones.mkdir(parents=True, exist_ok=True)
+    total = len(repo_urls)
+    done = 0
+
+    def one(repo_url: str) -> bool:
+        return ensure_full_clone(repo_url, rock_dest(repo_url, clones)) is not None
+
+    failures = 0
+    with ThreadPoolExecutor(max_workers=max(1, jobs)) as pool:
+        for repo_url, ok in zip(repo_urls, pool.map(one, repo_urls), strict=True):
+            done += 1
+            if not ok:
+                failures += 1
+                print(f"  [{done}/{total}] {repo_url}: clone failed", file=sys.stderr)
+            elif done % 25 == 0:
+                print(f"  [{done}/{total}] cloned", file=sys.stderr)
+    return failures
+
+
+def has_rocks_block(path: Path) -> bool:
+    """Whether this snapshot already carries a `__rocks__` block."""
+    try:
+        snap = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return False
+    return isinstance(snap.get(_trend.ROCKS_KEY), dict)
+
+
+def run_rocks(args: argparse.Namespace, dates: list[dt.date]) -> int:
+    """`--rocks` mode: fill the `__rocks__` block of snapshots that lack one.
+
+    Only dates that *already have* a snapshot are considered — the inverse of
+    the charm mode's filter, and for the same reason. The rocks half lives
+    inside the charm snapshot, so there is nothing to merge into for a date
+    the charm backfill has not written, and writing a rocks-only file would
+    put a snapshot with an empty corpus into the series.
+    """
+    try:
+        refs = _rocks.load_csv(args.rocks_csv)
+    except OSError as exc:
+        print(f"could not read {args.rocks_csv}: {exc}", file=sys.stderr)
+        return 1
+    if args.limit is not None:
+        refs = refs[: args.limit]
+    if not refs:
+        print(f"no scannable rows in {args.rocks_csv}", file=sys.stderr)
+        return 1
+
+    planned: list[tuple[dt.date, Path]] = []
+    for date in dates:
+        path = args.snapshots_dir / f"scored-{date.isoformat()}.json"
+        if not path.is_file():
+            print(f"  {date}: no snapshot to merge into, skipping", file=sys.stderr)
+            continue
+        if not args.force and has_rocks_block(path):
+            continue
+        planned.append((date, path))
+    if not planned:
+        print("nothing to do", file=sys.stderr)
+        return 0
+
+    grouped = group_rocks(refs)
+    repo_urls = sorted({repo_url for repo_url, _ in grouped})
+    print(
+        f"plan: {len(planned)} dates ({planned[0][0]} → {planned[-1][0]}), "
+        f"{len(refs)} rocks across {len(repo_urls)} repos, "
+        f"rocks list {args.rocks_csv} (fixed across dates)",
+        file=sys.stderr,
+    )
+    if args.dry_run:
+        for date, _ in planned:
+            print(f"  {date}", file=sys.stderr)
+        return 0
+
+    clones = args.workdir / "rocks"
+    if not args.skip_prepare:
+        print(f"… cloning {len(repo_urls)} rock repos with full history", file=sys.stderr)
+        failures = prepare_rock_clones(repo_urls, clones, jobs=args.jobs)
+        print(f"prepare done ({failures} failed)", file=sys.stderr)
+
+    for date, path in planned:
+        print(f"… replaying rocks for {date}", file=sys.stderr)
+        outcome = rocks_for_date(date, grouped, clones)
+        merge_rocks_block(path, rocks_block(date, outcome, args.rocks_csv))
+        tally = outcome.tally
+        print(
+            f"wrote __rocks__ into {path} ({tally[SCANNED]} read; not yet created: "
+            f"{tally[NOT_YET_CREATED]}, no rock yet: {tally[NO_ROCK_YET]}, "
+            f"unreadable: {tally[UNREADABLE]})",
+            file=sys.stderr,
+        )
+    return 0
 
 
 # ── CLI ─────────────────────────────────────────────────────────────────────
@@ -564,12 +865,28 @@ def build_parser() -> argparse.ArgumentParser:
         default=corpus.HYRUM_CHARMS_CSV_URL,
         help="URL of the corpus CSV (default: canonical/hyrum charm-list).",
     )
+    p.add_argument(
+        "--rocks",
+        action="store_true",
+        help="Backfill the rocks half instead of the charm half: replay each "
+        "rock's rockcraft.yaml at every date and merge the result into the "
+        "existing snapshot's __rocks__ block. Only dates that already have a "
+        "snapshot are touched.",
+    )
+    p.add_argument(
+        "--rocks-csv",
+        type=Path,
+        default=DEFAULT_ROCKS_CSV,
+        help=f"Rocks list to replay every date against (default: {DEFAULT_ROCKS_CSV}). "
+        "Fixed across dates, like the charm corpus.",
+    )
     p.add_argument("--jobs", type=int, default=DEFAULT_JOBS, help="Parallel clones in prepare.")
     p.add_argument(
         "--limit",
         type=int,
         default=None,
-        help="Only the first N corpus repos — for a smoke run, not a real backfill.",
+        help="Only the first N corpus repos (or rocks, with --rocks) — for a "
+        "smoke run, not a real backfill.",
     )
     p.add_argument(
         "--force",
@@ -612,6 +929,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"end not given; considering every date up to {end}", file=sys.stderr)
 
     dates = weekly_dates(args.start, end, args.weekday)
+    if args.rocks:
+        # The rocks half merges into snapshots that already exist, so it plans
+        # its own range rather than sharing the "skip dates already written"
+        # filter below — which would skip exactly the dates it needs.
+        args.workdir.mkdir(parents=True, exist_ok=True)
+        return run_rocks(args, dates)
     if not args.force:
         dates = [d for d in dates if d not in set(existing)]
     if not dates:
