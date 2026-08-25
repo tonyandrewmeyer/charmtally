@@ -135,6 +135,16 @@ negative test in `tests/test_detectors.py`.
 Not part of the pipeline; each is run with `uv run python -m charmtally.tools.X`.
 
 - `audit.py` — calibration sampling over `scored.json`.
+- `bindings.py` — dumps every shared-handler binding in a charm tree as JSON,
+  with the resolved event set, the relation endpoints the resolvable half
+  names, and the first cut that stops it. The `reconcile` detector only
+  *yields* the bindings that survive its three cuts, which is right for a scan
+  and wrong for auditing one, so calibration rounds kept writing throwaway
+  re-implementations of its accumulation logic — and a sweep that restates the
+  detector quietly stops agreeing with it. This imports `detectors.py`'s own
+  private helpers and re-runs `_detect_ast_observe_shared_handler`'s
+  accumulation verbatim instead. Keep it that way: if the detector's
+  accumulation changes, this must follow by importing, never by copying.
 - `backfill.py` — recomputes `snapshots/scored-<date>.json` for weeks that
   were never scanned, by full-cloning each corpus repo and checking it out at
   its last commit before each date's 02:00 UTC cutoff. Separate workdir from
