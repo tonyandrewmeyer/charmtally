@@ -68,7 +68,10 @@ rocks.csv ─────────────────► scan-rocks ─�
   rocks-backed metric gets history without a second snapshot series. Every
   consumer of a scored file already skips `__`-prefixed keys, which is why
   the block can live there. Reach for the charm-side clone machinery only
-  when a metric needs to see the rest of a rock's tree.
+  when a metric needs to see the rest of a rock's tree — or its history, the
+  one existing exception: `backfill.py --rocks` clones, because raw serves
+  HEAD and nothing else. It reuses `facts_from_rockcraft`, so a replayed
+  reading cannot drift from a scanned one.
 - `charmtally/adoption.py` — the charm-tech adoption scorecard: a
   deliberately tiny set (3–6) of headline metrics over the same dated
   snapshots `trend` reads. Distinct from `trend.py`, which covers the whole
@@ -144,9 +147,18 @@ Not part of the pipeline; each is run with `uv run python -m charmtally.tools.X`
   repo older than its charm; `UNREADABLE`), each landing in `__skipped__` with
   a reason naming the date, so a charm that did not exist never sits in a
   denominator. Snapshots carry a `__backfill__` provenance block (cutoff,
-  corpus origin, catalogue digest, outcome tally) and no `__rocks__` block:
-  rocks are fetched raw, not cloned, so they don't time-travel. Existing
-  snapshots are left alone unless `--force`.
+  corpus origin, catalogue digest, outcome tally). Existing snapshots are left
+  alone unless `--force`.
+  `--rocks` replays the other half: it clones each `rocks.csv` repo and reads
+  `rockcraft.yaml` with `git show <sha>:<path>` (one commit resolved per repo,
+  so a monorepo's dozens of rocks cost one walk), then **merges** a `__rocks__`
+  block into snapshots that already exist — the charm half is expensive and
+  already right, and a date with no snapshot has nothing to merge into.
+  Absence splits the same three ways, with `NO_ROCK_YET` in place of
+  `NO_CHARM_YET`; the first two are omitted from `__rocks__` rather than
+  written as `readable: false`, which means "we looked and failed". Fixed
+  membership applies here too, and `git show` does not follow renames, so a
+  rockcraft.yaml that has moved reads as absent before the move.
 - `rockfind.py` — builds a rocks corpus CSV from GitHub code search
   (`filename:rockcraft.yaml`). The REST search endpoint speaks the *legacy*
   query language: `path:` matches a directory there, so only `filename:`

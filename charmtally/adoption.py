@@ -149,10 +149,12 @@ def compute_typed_relation(snapshot: Snapshot) -> dict | None:
     typed its config has adopted it as surely as one that has typed a
     relation.
 
-    `ops.typed-config` joined the catalogue after `ops.typed-relation`, so
-    snapshots predating it are computed from the relation half alone and
-    flagged `partial` rather than dropped; the alternative is truncating the
-    history of the oldest metric on the page.
+    A snapshot scanned before `ops.typed-config` existed is computed from the
+    relation half alone and flagged `partial` rather than dropped; the
+    alternative is truncating the history of the oldest metric on the page.
+    No snapshot in the committed series is in that state — the backfill
+    replayed them all onto one catalogue — but the fallback stands for the
+    next feature that joins this metric.
     """
     if "ops.typed-relation" not in snapshot.feature_names:
         return None
@@ -418,11 +420,6 @@ METRICS: tuple[Metric, ...] = (
             "<code>ops.typed-relation</code> and <code>ops.typed-config</code> "
             "features."
         ),
-        caveats=(
-            "<code>ops.typed-config</code> (load_config / load_params) was added "
-            "to the scan on 2026-08-24; earlier points in this series count the "
-            "<code>Relation.load</code> / <code>.save</code> half only.",
-        ),
     ),
     Metric(
         key=INTEGRATION_TESTING,
@@ -453,7 +450,13 @@ METRICS: tuple[Metric, ...] = (
         question="How much of a charm's library surface comes from charmlibs?",
         unit="percent",
         compute=compute_charmlibs_share,
-        breakdown_keys=("charmlibs", "charmhub-libs", _NO_LIBS),
+        # `no-libraries` is deliberately not here: it is a share of *all*
+        # eligible charms, while the two ratios are shares of one charm's
+        # libraries averaged over charms that have any. Stacking it on top of
+        # a stack that already totals 100 pushed it off the pinned y-axis, so
+        # it drew as nothing. It stays in `breakdown` and `counts` for the
+        # fallback table and the JSON.
+        breakdown_keys=("charmlibs", "charmhub-libs"),
         detail=(
             "Mean over charms of <code>charmlibs / (charmlibs + vendored "
             "Charmhub libs)</code>. Charms using no libraries at all are "
@@ -462,8 +465,6 @@ METRICS: tuple[Metric, ...] = (
         caveats=(
             "Unweighted mean of per-charm ratios: every charm counts once, "
             "regardless of how many libraries it pulls in.",
-            "charmlibs counts were added to the scan on 2026-08-24, so this "
-            "series starts at the first scan after that date.",
         ),
     ),
     Metric(
@@ -487,10 +488,6 @@ METRICS: tuple[Metric, ...] = (
             "rocks plus Kubernetes charms, not just eligible charms — "
             "<code>run-user</code> is a rock key and <code>charm-user</code> "
             "only affects k8s charms, so machine charms can adopt neither"
-        ),
-        pending=(
-            "charm-user and the rocks scan were both added on 2026-08-24, so "
-            "this series starts at the first scan after that date"
         ),
         caveats=(
             "The two halves are not the same process: <code>run-user</code> is "

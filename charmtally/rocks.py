@@ -1,11 +1,17 @@
 """Scan the rocks corpus for the handful of facts `rockcraft.yaml` carries.
 
-Rocks are **not cloned**. Everything the adoption scorecard asks of a rock
-today lives in one file whose path `rocks.csv` already records, so a scan is
-a few hundred `raw.githubusercontent.com` GETs rather than a few hundred
-clones — seconds, no workdir, no cache to invalidate. If a future metric
-needs to see the rest of a rock's tree, that is the point to reach for the
-charm-side clone machinery; until then this is deliberately the cheap path.
+Rocks are **not cloned by this scan**. Everything the adoption scorecard asks
+of a rock today lives in one file whose path `rocks.csv` already records, so a
+scan is a few hundred `raw.githubusercontent.com` GETs rather than a few
+hundred clones — seconds, no workdir, no cache to invalidate. If a future
+metric needs to see the rest of a rock's tree, that is the point to reach for
+the charm-side clone machinery; until then this is deliberately the cheap path.
+
+The one existing exception is history, not tree: `raw.githubusercontent.com`
+serves HEAD and nothing else, so `tools/backfill.py --rocks` clones in order to
+read a `rockcraft.yaml` as it stood on a past date. It reuses
+`facts_from_rockcraft` below, so the facts a replayed date reports cannot drift
+from the ones this scan reports.
 
 `rocks.csv` is source data curated by hand (see `tools/rockfind.py`), and
 carries `Archived` / `Fork` columns. Both are dropped here: a fork's
@@ -60,11 +66,16 @@ class RockRef:
         rocks and the rock *name* alone collides across repos (a dozen forks
         of katib all define `file-metrics-collector`).
         """
-        return f"{_repo_path(self.repo_url)}:{self.path}"
+        return f"{repo_path(self.repo_url)}:{self.path}"
 
 
-def _repo_path(repo_url: str) -> str:
-    """`https://github.com/canonical/foo.git` → `canonical/foo`."""
+def repo_path(repo_url: str) -> str:
+    """`https://github.com/canonical/foo.git` → `canonical/foo`.
+
+    Public because the backfill keys its clone tree by it: rocks share repos,
+    so a clone has to be per repo, and `RockRef.slug` carries the rockcraft
+    path as well.
+    """
     trimmed = repo_url.strip().rstrip("/")
     if trimmed.endswith(".git"):
         trimmed = trimmed[: -len(".git")]
@@ -111,7 +122,7 @@ def raw_url(ref: RockRef) -> str:
     repo's default branch, so the scan doesn't need an API call per row just
     to learn whether the default is `main` or `master`.
     """
-    return f"{RAW_BASE}/{_repo_path(ref.repo_url)}/{ref.branch or 'HEAD'}/{ref.path.lstrip('/')}"
+    return f"{RAW_BASE}/{repo_path(ref.repo_url)}/{ref.branch or 'HEAD'}/{ref.path.lstrip('/')}"
 
 
 def fetch_text(url: str, *, timeout: float = 30.0) -> str | None:
