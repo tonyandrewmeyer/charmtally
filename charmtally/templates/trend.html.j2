@@ -135,11 +135,13 @@
     <input type="search" id="timeline-search" placeholder="filter by charm…" autocomplete="off">
   </div>
   <p class="meta">
-    Static fallback shows charms with at least one change between
+    Static fallback shows the charm/feature pairs that changed between
     {{ diff.base_date }} and {{ diff.latest_date }}{% if feature_filter %} for
     <strong>{{ feature_filter }}</strong>{% endif %}. Use the feature dropdown
-    above (requires JS) to browse any feature across the full corpus.
+    above (requires JS) to browse any feature across the full corpus; it loads
+    <code>{{ timeline_url }}</code> on first use.
   </p>
+  <p class="meta" id="timeline-status" hidden></p>
   <table id="timeline-table">
     <thead>
       <tr>
@@ -162,8 +164,7 @@
   </table>
 </div>
 
-<script type="application/json" id="timeline-data">{{ timeline_condensed|tojson }}</script>
-<script type="application/json" id="timeline-dates-data">{{ timeline_dates|tojson }}</script>
+<script type="application/json" id="timeline-features-data">{{ timeline_features|tojson }}</script>
 <script type="application/json" id="adoption-data">{{ adoption|tojson }}</script>
 <script type="application/json" id="adoption-dates-data">{{ adoption_dates|tojson }}</script>
 
@@ -183,18 +184,21 @@
   show('diff');
 })();
 
-// Timeline feature dropdown + charm search, backed by the embedded JSON blob.
+// Timeline feature dropdown + charm search. The matrix behind it is one
+// (charms x features x snapshots) grid, so it lives in a separate document
+// fetched on first use rather than inline — see render_trend's docstring.
+// Until it arrives (and forever, over file://, where fetch is blocked) the
+// static table rendered above stands.
 (function () {
-  const dataEl = document.getElementById('timeline-data');
-  if (!dataEl) return;
-  const rows = JSON.parse(dataEl.textContent);
-  const dates = JSON.parse(document.getElementById('timeline-dates-data').textContent);
+  const featuresEl = document.getElementById('timeline-features-data');
   const featureSel = document.getElementById('timeline-feature');
   const searchEl = document.getElementById('timeline-search');
+  const statusEl = document.getElementById('timeline-status');
   const table = document.getElementById('timeline-table');
-  if (!featureSel || !rows.length) return;
+  if (!featuresEl || !featureSel) return;
 
-  const features = Array.from(new Set(rows.map(r => r.feature))).sort();
+  const features = JSON.parse(featuresEl.textContent);
+  if (!features.length) return;
   features.forEach(f => {
     const opt = document.createElement('option');
     opt.value = f;
@@ -204,25 +208,61 @@
   const preferred = {{ (feature_filter or "")|tojson }};
   featureSel.value = features.includes(preferred) ? preferred : features[0];
 
-  function render() {
-    const feature = featureSel.value;
-    const q = (searchEl.value || '').trim().toLowerCase();
-    const filtered = rows.filter(r => r.feature === feature && (!q || r.charm.toLowerCase().includes(q)));
+  let data = null;
+  let loading = null;
 
-    const thead = table.tHead;
-    thead.innerHTML = '<tr><th>Charm</th><th>Feature</th>' + dates.map(d => `<th>${d}</th>`).join('') + '</tr>';
-
-    const tbody = table.tBodies[0];
-    tbody.innerHTML = filtered.map(r =>
-      '<tr><td>' + r.charm + '</td><td>' + r.feature + '</td>' +
-      r.states.map(s => `<td class="cell-${s}">${s}</td>`).join('') +
-      '</tr>'
-    ).join('');
+  function status(msg) {
+    statusEl.textContent = msg;
+    statusEl.hidden = !msg;
   }
 
-  featureSel.addEventListener('change', render);
+  // "c30p3" -> 30 not-in-corpus cells then 3 present ones. A group is one
+  // legend code followed by its run length, the length omitted when it is 1.
+  function expand(encoded, legend) {
+    const states = [];
+    for (const [, code, count] of encoded.matchAll(/([A-Za-z?])(\d*)/g)) {
+      const state = legend[code] || 'not-scanned';
+      for (let i = count ? parseInt(count, 10) : 1; i > 0; i--) states.push(state);
+    }
+    return states;
+  }
+
+  function render() {
+    if (!data) return;
+    const feature = featureSel.value;
+    const fi = data.features.indexOf(feature);
+    const q = (searchEl.value || '').trim().toLowerCase();
+    const matches = fi < 0 ? [] : data.rows.filter(r =>
+      r[1] === fi && (!q || data.charms[r[0]].toLowerCase().includes(q)));
+
+    table.tHead.innerHTML = '<tr><th>Charm</th><th>Feature</th>' +
+      data.dates.map(d => `<th>${d}</th>`).join('') + '</tr>';
+    table.tBodies[0].innerHTML = matches.map(r =>
+      '<tr><td>' + data.charms[r[0]] + '</td><td>' + feature + '</td>' +
+      expand(r[2], data.legend).map(s => `<td class="cell-${s}">${s}</td>`).join('') +
+      '</tr>'
+    ).join('');
+    status(matches.length ? '' : 'No charms match.');
+  }
+
+  function load() {
+    if (loading) return loading;
+    status('Loading timeline…');
+    loading = fetch({{ timeline_url|tojson }})
+      .then(r => { if (!r.ok) throw new Error(r.status + ' ' + r.statusText); return r.json(); })
+      .then(payload => { data = payload; status(''); render(); })
+      .catch(err => {
+        loading = null;  // a transient failure should not wedge the tab
+        status('Could not load {{ timeline_url }} (' + err.message + '). ' +
+               'The table above still shows what changed in this diff.');
+      });
+    return loading;
+  }
+
+  featureSel.addEventListener('change', () => { load(); render(); });
   searchEl.addEventListener('input', render);
-  render();
+  const tabBtn = document.querySelector('[data-tabbar="history"] [data-tab="timeline"]');
+  if (tabBtn) tabBtn.addEventListener('click', load);
 })();
 </script>
 
