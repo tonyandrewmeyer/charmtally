@@ -47,6 +47,12 @@ Usage:
         its facts. `--into` parks them in scored.json's `__rocks__` block so
         the weekly snapshot carries them; `--out` writes them standalone.
 
+    charmtally snapshot scored.json [--snapshots-dir snapshots] [--date DATE]
+                                    [--out PATH]
+        Write the dated snapshot the trend and adoption pages read, thinned
+        to the readings (evidence and rationale are dropped — see
+        charmtally/snapshot.py).
+
     charmtally llm-score scored.json [--dry-run] [--out llm-scored.json]
         Optional LLM pass over `worth-considering` records. Needs
         OPENROUTER_API_KEY; capped by --max-llm-calls and a spend budget.
@@ -59,6 +65,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 import sys
 from dataclasses import asdict
@@ -70,6 +77,7 @@ from . import metadata as _metadata
 from . import pairs as _pairs
 from . import rocks as _rocks
 from . import scoring as _scoring
+from . import snapshot as _snapshot
 from . import trend as _trend
 
 DEFAULT_CATALOGUE = catalogue.default_path()
@@ -327,6 +335,26 @@ def cmd_scan_rocks(args: argparse.Namespace) -> int:
     if args.out is None and args.into is None:
         print("nothing written: pass --out and/or --into", file=sys.stderr)
         return 2
+    return 0
+
+
+def cmd_snapshot(args: argparse.Namespace) -> int:
+    """Write a dated, thinned snapshot from scored.json.
+
+    The dated snapshots are the entire history and cannot be regenerated, so
+    this writes only the readings, not the evidence behind them; see
+    `charmtally/snapshot.py` for what is dropped and why.
+    """
+    scored: dict = json.loads(args.scored.read_text())
+    out = args.out
+    if out is None:
+        date = args.date or dt.datetime.now(dt.timezone.utc).date().isoformat()
+        args.snapshots_dir.mkdir(parents=True, exist_ok=True)
+        out = args.snapshots_dir / f"scored-{date}.json"
+    thinned = _snapshot.thin(scored)
+    out.write_text(json.dumps(thinned, indent=2) + "\n")
+    records = sum(1 for k in thinned if not k.startswith("__"))
+    print(f"wrote {out} ({records} records, thinned)", file=sys.stderr)
     return 0
 
 
@@ -663,6 +691,30 @@ def main(argv: list[str] | None = None) -> int:
         help=f"Parallel fetches (default: {_rocks.DEFAULT_WORKERS}).",
     )
     p_rocks.set_defaults(func=cmd_scan_rocks)
+
+    p_snap = sub.add_parser(
+        "snapshot", help="Write the dated, thinned snapshot the trend pages read."
+    )
+    p_snap.add_argument("scored", type=Path, help="Path to scored.json.")
+    p_snap.add_argument(
+        "--snapshots-dir",
+        type=Path,
+        default=Path("snapshots"),
+        dest="snapshots_dir",
+        help="Directory to write scored-YYYY-MM-DD.json into (default: snapshots/).",
+    )
+    p_snap.add_argument(
+        "--date",
+        default=None,
+        help="ISO date for the snapshot filename (default: today, UTC).",
+    )
+    p_snap.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help="Write to this exact path instead, ignoring --snapshots-dir/--date.",
+    )
+    p_snap.set_defaults(func=cmd_snapshot)
 
     p_dash = sub.add_parser("dashboard", help="Render results.json/scored.json → dashboard.html.")
     p_dash.add_argument("results", type=Path, help="Path to results/scored JSON.")

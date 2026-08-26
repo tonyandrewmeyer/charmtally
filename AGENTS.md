@@ -39,7 +39,7 @@ corpus CSV ─┬─► scan ─► results.json ─► score ─► scored.json
 overrides ──┘                       (optional) llm-score ─────┤
                                                pairs ─► pairs.json
 rocks.csv ─────────────────► scan-rocks ─────────┘            │
-                             (__rocks__ block)                │
+                             (__rocks__ block)   snapshot     │
                     snapshots/scored-*.json ─┬─► trend ─► trend.html
                                              │         + trend.timeline.json
                                              │                │
@@ -85,6 +85,21 @@ rocks.csv ─────────────────► scan-rocks ─�
   is built on (jubilant) or about a population that isn't charms at all
   (rootless, which spans rocks + k8s charms) sets its own denominator and
   names it in `Metric.denominator_note`, which the card renders.
+- `charmtally/snapshot.py` — thins a scored file into the dated snapshot the
+  trend and adoption pages read. The snapshots are the entire history and
+  cannot be regenerated, so what goes in stays in git forever; `evidence` and
+  `rationale` do not, being 45% of the bytes, read by nothing downstream, and
+  regenerable from a fresh scan of the same commit. Feature records are an
+  **allowlist** (`present`, `score`) because there are only four keys; the
+  per-charm `__meta__` block is kept **whole**, because an allowlist there
+  would bet that no future metric wants a field today's metrics ignore — a bet
+  already lost once, when `adoption.py` grew `charm_user` and `charmlibs_count`
+  readers and could only backfill them because the fat snapshots had kept
+  them. Key *presence* is preserved rather than defaulted: several callers
+  read a missing key as "this scan didn't look". Thinning is shape-preserving,
+  so `trend.load_snapshots` reads thin and fat snapshots out of one directory
+  without knowing which is which — which it must, since the already-committed
+  fat ones are the whole history.
 
 ## Generated artefacts — do NOT hand-edit
 
@@ -107,8 +122,13 @@ since fetch is blocked there.
 
 `scored.json`, `llm-scored.json` and `pairs.json` are intermediates: the
 workflow produces them but does not commit them, and they're gitignored.
-Snapshots stay uncompressed — near-identical text deltas to tens of KiB in
-git, whereas gzipped snapshots would each be an undeltifiable blob.
+Snapshots are thinned (`charmtally snapshot`, see above) but stay
+uncompressed — near-identical text deltas well in git, whereas gzipped
+snapshots would each be an undeltifiable blob. Thinning and compression
+answer different questions: *which* bytes to keep, and *how* to store the
+ones that are kept. Do not re-thin the existing snapshots to shrink the
+working tree — git keeps every blob it has already seen, so rewriting them
+adds bytes rather than removing any.
 
 ## Test conventions
 
@@ -170,6 +190,8 @@ Not part of the pipeline; each is run with `uv run python -m charmtally.tools.X`
   denominator. Snapshots carry a `__backfill__` provenance block (cutoff,
   corpus origin, catalogue digest, outcome tally). Existing snapshots are left
   alone unless `--force`.
+  Replayed snapshots are thinned like the weekly one, so this is not the one
+  place fat snapshots keep being created.
   `--rocks` replays the other half: it clones each `rocks.csv` repo and reads
   `rockcraft.yaml` with `git show <sha>:<path>` (one commit resolved per repo,
   so a monorepo's dozens of rocks cost one walk), then **merges** a `__rocks__`

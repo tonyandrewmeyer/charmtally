@@ -10,10 +10,12 @@
 #     locally-controlled axis).
 #   - Runs the full pipeline: scan -> score -> dashboard + adoption.
 #   - Writes a dated snapshot to snapshots/scored-YYYY-MM-DD.json for
-#     the trend code. Snapshots stay uncompressed on purpose: consecutive
-#     scans are near-identical text, which git deltas down to tens of KiB,
-#     whereas gzipped snapshots would each be an opaque blob that cannot
-#     delta at all.
+#     the trend code. It is thinned to the readings -- evidence and
+#     rationale are dropped, being regenerable from a fresh scan of the
+#     same commit and read by nothing downstream. What is left stays
+#     uncompressed on purpose: consecutive scans are near-identical text,
+#     which git deltas well, whereas gzipped snapshots would each be an
+#     opaque blob that cannot delta at all.
 #   - Commits the refreshed artefacts back to main if any changed.
 #     scored.json / llm-scored.json / pairs.json are build intermediates
 #     and deliberately not committed -- see .gitignore.
@@ -124,10 +126,9 @@ jobs:
 
       - name: Write dated snapshot
         run: |
-          mkdir -p snapshots
           SCORED=scored.json
           if [ -f llm-scored.json ]; then SCORED=llm-scored.json; fi
-          cp "$SCORED" "snapshots/scored-$(date -u +%Y-%m-%d).json"
+          uv run charmtally snapshot "$SCORED" --snapshots-dir snapshots
 
       - name: Render trend (History page)
         run: |

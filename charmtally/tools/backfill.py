@@ -139,6 +139,7 @@ from typing import TYPE_CHECKING
 
 from .. import catalogue, corpus, scan
 from .. import rocks as _rocks
+from .. import snapshot as _snapshot
 from .. import trend as _trend
 from ..cli import _apply_feature_excludes
 
@@ -982,7 +983,10 @@ def main(argv: list[str] | None = None) -> int:
             date, refs, args.workdir, feats, pats, overrides, args.features, source
         )
         out = args.snapshots_dir / f"scored-{date.isoformat()}.json"
-        out.write_text(json.dumps(snap, indent=2) + "\n")
+        # Thinned like the weekly snapshot: a replayed date is written once
+        # and kept forever, so it should not be the one place fat snapshots
+        # keep being created.
+        out.write_text(json.dumps(_snapshot.thin(snap), indent=2) + "\n")
         records = sum(1 for k in snap if not k.startswith("__"))
         tally = snap["__backfill__"]["outcomes"]  # type: ignore[index]
         print(
