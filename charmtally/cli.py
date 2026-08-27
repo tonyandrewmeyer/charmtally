@@ -460,7 +460,21 @@ def cmd_trend(args: argparse.Namespace) -> int:
     adoption = _trend.compute_adoption(ranged, feature=args.feature)
     timeline = _trend.compute_timeline(ranged, feature=args.feature)
 
-    html = dashboard.render_trend(diff, adoption, timeline, feature_filter=args.feature)
+    # The timeline matrix rides in its own document next to the page, fetched
+    # on demand — inline it was tens of MB and grew with every snapshot. The
+    # name is derived from --out so the two travel together, and the URL is
+    # relative because both are published to Pages from the same directory.
+    timeline_path = args.out.with_suffix(".timeline.json")
+    timeline_path.write_text(json.dumps(_trend.encode_timeline(timeline)) + "\n")
+    print(f"wrote {timeline_path}", file=sys.stderr)
+
+    html = dashboard.render_trend(
+        diff,
+        adoption,
+        timeline,
+        feature_filter=args.feature,
+        timeline_url=timeline_path.name,
+    )
     args.out.write_text(html)
     print(f"wrote {args.out}", file=sys.stderr)
 

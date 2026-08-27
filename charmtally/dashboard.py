@@ -462,12 +462,21 @@ def render_trend(
     timeline: list[dict],
     *,
     feature_filter: str | None = None,
+    timeline_url: str = "trend.timeline.json",
 ) -> str:
-    """Render the `trend` subcommand's output — a standalone History page.
+    """Render the `trend` subcommand's output — the History page.
 
     with a diff list (default view), an adoption-over-time chart, and a
     per-(charm, feature) timeline. See trend.py for how these are computed
     and the corpus/feature-drift guards applied along the way.
+
+    The page is no longer standalone: the timeline browser fetches
+    `timeline_url` (relative to the page) the first time its tab is opened,
+    rather than carrying the whole (charms x features x snapshots) matrix
+    inline. The caller is responsible for writing that file —
+    `trend.encode_timeline` produces its contents. Everything below the fetch
+    degrades to the static tables, which is also what happens when the page
+    is opened over `file://`, where fetch is blocked.
     """
     env = _environment()
     tmpl = env.get_template("trend.html.j2")
@@ -475,11 +484,17 @@ def render_trend(
     regressions = [f for f in diff["flips"] if f["kind"] == "regression"]
     adoptions = [f for f in diff["flips"] if f["kind"] == "adoption"]
 
-    interesting_charms = {f["charm"] for f in diff["flips"]}
+    # The static fallback is keyed on the pairs that actually flipped, not on
+    # every feature of any charm that flipped something: the latter multiplied
+    # one flip into a full row of the catalogue, and at 30-odd snapshots it
+    # was the single largest thing on the page.
+    flipped_pairs = {(f["charm"], f["feature"]) for f in diff["flips"]}
     if feature_filter:
         static_timeline_rows = timeline
     else:
-        static_timeline_rows = [row for row in timeline if row["charm"] in interesting_charms]
+        static_timeline_rows = [
+            row for row in timeline if (row["charm"], row["feature"]) in flipped_pairs
+        ]
 
     adoption_dates: list[str] = sorted({
         point["date"] for series in adoption.values() for point in series
@@ -489,19 +504,9 @@ def render_trend(
         for fname, series in adoption.items()
     }
 
-    # Condensed embed for the JS-powered timeline browser: every row shares the
-    # same date axis, so drop the per-cell date repetition (dates + per-row
-    # state list only) rather than the full [{date, state}, ...] shape —
-    # meaningfully smaller once the corpus runs into the hundreds of charms.
-    timeline_dates = [c["date"] for c in timeline[0]["cells"]] if timeline else []
-    timeline_condensed = [
-        {
-            "charm": row["charm"],
-            "feature": row["feature"],
-            "states": [c["state"] for c in row["cells"]],
-        }
-        for row in timeline
-    ]
+    # The feature dropdown has to be populated before the payload arrives, so
+    # the names — 65 strings, not the 50k-row matrix behind them — stay inline.
+    timeline_features = sorted({row["feature"] for row in timeline})
 
     return tmpl.render(
         diff=diff,
@@ -511,8 +516,8 @@ def render_trend(
         adoption_table=adoption_table,
         adoption_dates=adoption_dates,
         static_timeline_rows=static_timeline_rows,
-        timeline_dates=timeline_dates,
-        timeline_condensed=timeline_condensed,
+        timeline_features=timeline_features,
+        timeline_url=timeline_url,
         feature_filter=feature_filter,
         generated_at=dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
     )

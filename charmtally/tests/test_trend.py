@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import re
 from pathlib import Path
 
 from .. import cli, trend
@@ -517,3 +518,161 @@ def test_cli_trend_errors_without_snapshots(tmp_path: Path) -> None:
     ])
 
     assert rc == 1
+
+
+# --- trend.encode_timeline ---------------------------------------------------
+
+
+def _decode(payload: dict) -> list[dict]:
+    """Mirror of the History page's `expand()`, so the encoding is tested.
+
+    against the grammar the browser actually parses rather than against the
+    encoder's own internals.
+    """
+    rows: list[dict] = []
+    for charm_idx, feature_idx, encoded in payload["rows"]:
+        states: list[str] = []
+        for code, count in re.findall(r"([A-Za-z?])(\d*)", encoded):
+            states.extend([payload["legend"][code]] * (int(count) if count else 1))
+        rows.append({
+            "charm": payload["charms"][charm_idx],
+            "feature": payload["features"][feature_idx],
+            "states": states,
+        })
+    return rows
+
+
+def _timeline_row(charm: str, feature: str, states: list[str]) -> dict:
+    return {
+        "charm": charm,
+        "feature": feature,
+        "cells": [{"date": f"2026-06-{i + 1:02d}", "state": s} for i, s in enumerate(states)],
+    }
+
+
+def test_encode_timeline_round_trips_through_the_page_decoder() -> None:
+    timeline = [
+        _timeline_row("a", "f", ["not-in-corpus", "not-in-corpus", "clear-gap", "present"]),
+        _timeline_row("b", "f", ["present", "present", "present", "present"]),
+        _timeline_row("a", "g", ["not-scanned", "worth-considering", "not-applicable", "present"]),
+    ]
+
+    payload = trend.encode_timeline(timeline)
+
+    assert payload["dates"] == ["2026-06-01", "2026-06-02", "2026-06-03", "2026-06-04"]
+    assert _decode(payload) == [
+        {"charm": "a", "feature": "f", "states": [c["state"] for c in timeline[0]["cells"]]},
+        {"charm": "b", "feature": "f", "states": [c["state"] for c in timeline[1]["cells"]]},
+        {"charm": "a", "feature": "g", "states": [c["state"] for c in timeline[2]["cells"]]},
+    ]
+
+
+def test_encode_timeline_collapses_runs_and_interns_names() -> None:
+    """The whole point is that a row costs its changes, not its dates."""
+    timeline = [
+        _timeline_row("a", "f", ["not-in-corpus"] * 30 + ["present"] * 3),
+        _timeline_row("a", "g", ["not-in-corpus"] * 30 + ["present"] * 3),
+    ]
+
+    payload = trend.encode_timeline(timeline)
+
+    assert [row[2] for row in payload["rows"]] == ["c30p3", "c30p3"]
+    # "a" is stored once and referenced twice.
+    assert payload["charms"] == ["a"]
+    assert payload["features"] == ["f", "g"]
+    assert [row[:2] for row in payload["rows"]] == [[0, 0], [0, 1]]
+
+
+def test_encode_timeline_keeps_a_state_the_code_table_has_never_seen() -> None:
+    """A score string added to scoring.py later must not silently vanish."""
+    timeline = [_timeline_row("a", "f", ["present", "brand-new-score"])]
+
+    payload = trend.encode_timeline(timeline)
+
+    assert _decode(payload)[0]["states"] == ["present", "brand-new-score"]
+
+
+def test_encode_timeline_handles_an_empty_timeline() -> None:
+    assert trend.encode_timeline([]) == {
+        "dates": [],
+        "legend": {},
+        "charms": [],
+        "features": [],
+        "rows": [],
+    }
+
+
+# --- History page payload split ----------------------------------------------
+
+
+def _page(timeline: list[dict], diff: dict | None = None) -> str:
+    return render_trend(
+        diff or {"base_date": "", "latest_date": "", "flips": [], "possible_renames": []},
+        {},
+        timeline,
+    )
+
+
+def test_trend_page_does_not_embed_the_timeline_matrix() -> None:
+    """The matrix grows with charms x features x snapshots; inline it made the
+    published page tens of MB. It must be fetched, not embedded."""
+    timeline = [_timeline_row("charm-alpha", "f", ["present"] * 30)]
+
+    html = _page(timeline)
+
+    assert 'id="timeline-data"' not in html
+    assert "charm-alpha" not in html  # not in the fetched-payload sense, and not flipped
+    assert 'fetch("trend.timeline.json")' in html
+    # The dropdown still needs the feature names, which are few.
+    assert 'id="timeline-features-data"' in html
+    assert '"f"' in html
+
+
+def test_static_timeline_fallback_only_lists_pairs_that_flipped() -> None:
+    """One flip used to pull in every feature of that charm — a full row of
+    the catalogue per flip, which was the largest thing on the page."""
+    diff = {
+        "base_date": "2026-06-01",
+        "latest_date": "2026-06-04",
+        "flips": [{"charm": "a", "feature": "f", "from": False, "to": True, "kind": "adoption"}],
+        "possible_renames": [],
+    }
+    timeline = [
+        _timeline_row("a", "f", ["clear-gap", "present"]),
+        _timeline_row("a", "quiet-feature", ["present", "present"]),
+        _timeline_row("b", "f", ["present", "present"]),
+    ]
+
+    html = _page(timeline, diff)
+
+    start = html.index('id="timeline-table"')
+    table = html[start : html.index("</table>", start)]
+    assert "quiet-feature" not in table
+    assert ">a</td>" in table
+
+
+def test_cli_trend_writes_the_timeline_payload_beside_the_page(tmp_path: Path) -> None:
+    snapshots_dir = tmp_path / "snapshots"
+    snapshots_dir.mkdir()
+    _write_snapshot(snapshots_dir, "2026-06-11", {"a": _charm(present={"f": False})})
+    _write_snapshot(snapshots_dir, "2026-06-22", {"a": _charm(present={"f": True})})
+    out = tmp_path / "trend.html"
+
+    rc = cli.main([
+        "trend",
+        "--snapshots-dir",
+        str(snapshots_dir),
+        "--live",
+        str(tmp_path / "does-not-exist.json"),
+        "--out",
+        str(out),
+    ])
+
+    assert rc == 0
+    sidecar = tmp_path / "trend.timeline.json"
+    assert sidecar.is_file()
+    payload = json.loads(sidecar.read_text())
+    assert payload["dates"] == ["2026-06-11", "2026-06-22"]
+    assert _decode(payload) == [{"charm": "a", "feature": "f", "states": ["clear-gap", "present"]}]
+    # The page points at it by relative name, so both publish from one directory.
+    assert 'fetch("trend.timeline.json")' in out.read_text()

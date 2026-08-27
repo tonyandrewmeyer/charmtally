@@ -154,7 +154,7 @@ jobs:
         run: |
           git config user.name  "charmtally-bot"
           git config user.email "charmtally-bot@aotearoa.dev"
-          git add results.json dashboard.html trend.html adoption.html snapshots/
+          git add results.json dashboard.html trend.html trend.timeline.json adoption.html snapshots/
           if git diff --cached --quiet; then
             echo "no changes to commit"
             exit 0

@@ -41,6 +41,7 @@ overrides ──┘                       (optional) llm-score ─────�
 rocks.csv ─────────────────► scan-rocks ─────────┘            │
                              (__rocks__ block)                │
                     snapshots/scored-*.json ─┬─► trend ─► trend.html
+                                             │         + trend.timeline.json
                                              │                │
                                              └─► adoption ─► adoption.html
                                                               │
@@ -87,12 +88,22 @@ rocks.csv ─────────────────► scan-rocks ─�
 
 ## Generated artefacts — do NOT hand-edit
 
-`results.json`, `dashboard.html`, `trend.html`, `adoption.html` and
-`snapshots/scored-*.json` are rewritten by the weekly `scan` workflow
+`results.json`, `dashboard.html`, `trend.html`, `trend.timeline.json`,
+`adoption.html` and `snapshots/scored-*.json` are rewritten by the weekly
+`scan` workflow
 (`.github/workflows/scan.yaml`). Treat them as build output that happens to
 live in git (the dashboard is served via GitHub Pages from `main`). Don't
 revert their contents when rebasing; rebase your work *onto* the latest
 scan commit instead.
+
+`trend.timeline.json` is the History page's timeline matrix, split out of
+`trend.html` and fetched by it on demand. It is one (charms × features ×
+snapshots) grid, so inline it dominated the page and grew with every
+snapshot; it is run-length-encoded per row with the state names interned
+(`trend.encode_timeline`, decoded by `expand()` in `trend.html.j2` — the two
+are one format and must change together). The page must keep working without
+it: the static tables are the fallback, and are what a `file://` reader sees,
+since fetch is blocked there.
 
 `scored.json`, `llm-scored.json` and `pairs.json` are intermediates: the
 workflow produces them but does not commit them, and they're gitignored.

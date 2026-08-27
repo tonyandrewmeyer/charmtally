@@ -286,3 +286,95 @@ def select_base(snapshots: list[Snapshot], since: str | None) -> Snapshot | None
     if not candidates:
         return None
     return candidates[0]
+
+
+#: Single-character code per timeline cell state, for the run-length encoding
+#: below. The legend travels with the payload, so these are an implementation
+#: detail rather than a format promise — but keeping them fixed and additive
+#: keeps a generated `trend.timeline.json` diffable between weekly runs.
+_STATE_CODES: dict[str, str] = {
+    "present": "p",
+    "clear-gap": "g",
+    "worth-considering": "w",
+    "not-applicable": "a",
+    _STATE_NOT_IN_CORPUS: "c",
+    _STATE_NOT_SCANNED: "s",
+}
+#: Codes handed out to any state not in `_STATE_CODES` — a score string the
+#: scoring rules grew after this table was written. Encoding must not lose a
+#: cell just because its state is new here.
+_SPARE_CODES = "bdefhijklmnoqrtuvxyz"
+
+
+def encode_timeline(timeline: list[dict]) -> dict:
+    """Run-length-encode `compute_timeline` output for the History page.
+
+    Every row shares one date axis and is overwhelmingly runs of a single
+    state — a charm that was not in the corpus for the first thirty weeks, a
+    feature that has been present throughout. Materialising one state string
+    per cell made the payload grow with (charms x features x snapshots); this
+    drops the per-cell date, maps each state to one character, and collapses
+    runs, so a row costs roughly its number of *changes* rather than its
+    number of dates.
+
+    Charm and feature names are interned into their own lists and referenced
+    by index, because there are two orders of magnitude more rows than there
+    are distinct names and repeating them was the bulk of what was left after
+    the runs collapsed.
+
+    Returns ``{"dates", "legend", "charms", "features", "rows"}``, where
+    ``legend`` maps code to state name and each row is
+    ``[charm_index, feature_index, states]``. ``states`` is a string of
+    ``<code><count>`` groups, the count omitted when it is 1 (``"c30p3"`` is
+    thirty not-in-corpus cells then three present ones).
+    """
+    if not timeline:
+        return {"dates": [], "legend": {}, "charms": [], "features": [], "rows": []}
+
+    dates = [cell["date"] for cell in timeline[0]["cells"]]
+    codes = dict(_STATE_CODES)
+    spare = iter(_SPARE_CODES)
+
+    def code_for(state: str) -> str:
+        code = codes.get(state)
+        if code is None:
+            code = codes[state] = next(spare, "?")
+        return code
+
+    charms: dict[str, int] = {}
+    features: dict[str, int] = {}
+
+    def index_of(pool: dict[str, int], name: str) -> int:
+        idx = pool.get(name)
+        if idx is None:
+            idx = pool[name] = len(pool)
+        return idx
+
+    rows: list[list] = []
+    for row in timeline:
+        parts: list[str] = []
+        run_code = ""
+        run_len = 0
+        for cell in row["cells"]:
+            code = code_for(cell["state"])
+            if code == run_code:
+                run_len += 1
+                continue
+            if run_code:
+                parts.append(run_code if run_len == 1 else f"{run_code}{run_len}")
+            run_code, run_len = code, 1
+        if run_code:
+            parts.append(run_code if run_len == 1 else f"{run_code}{run_len}")
+        rows.append([
+            index_of(charms, row["charm"]),
+            index_of(features, row["feature"]),
+            "".join(parts),
+        ])
+
+    return {
+        "dates": dates,
+        "legend": {c: s for s, c in codes.items()},
+        "charms": list(charms),
+        "features": list(features),
+        "rows": rows,
+    }
