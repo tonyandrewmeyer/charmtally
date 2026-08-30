@@ -1085,10 +1085,18 @@ architecture:
   - name: component-graph
     summary: |
       Charm uses a framework that wires pebble/status/relations into a
-      declarative component graph rather than per-event handlers. Three
+      declarative component graph rather than per-event handlers. Four
       known frameworks: charmed_kubeflow_chisme.components (Kubeflow),
       ops_sunbeam.* (OpenStack sunbeam), coordinated_workers.* (Observability
-      CCA — tempo, parca-coordinator, mimir, loki).
+      CCA — tempo, parca-coordinator, mimir, loki), and paas_charm.* (the
+      12-factor-app charm framework — Flask/Django/Go/ExpressJS/FastAPI and
+      whatever language module the PaaS team adds next). The first three are
+      detected by import; paas_charm is detected by base class instead,
+      resolved through each file's own import table against the `paas_charm`
+      root itself rather than an enumerated list of its language modules —
+      CALIBRATION #42 sized this corpus-wide (37 slugs, 5 modules) before the
+      decision to fold it in here as a fourth member of this pattern rather
+      than a pattern of its own.
     scope: src
     detect:
       - kind: import
@@ -1097,3 +1105,5 @@ architecture:
         module: ops_sunbeam
       - kind: import
         module: coordinated_workers
+      - kind: ast-subclass-module
+        module: paas_charm
