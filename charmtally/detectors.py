@@ -8,10 +8,13 @@ Four kinds run per Python file in scope:
                      dropping trailing 'Event')
     regex          — raw multiline regex over file contents
 
-Three more run per Python file and back the architecture axis:
+Four more run per Python file and back the architecture axis:
     ast-init-call               — a `self.X(...)` call inside `__init__`
     ast-observe-shared-handler  — one handler bound to N distinct events
     ast-shared-method           — N `_on_*` handlers delegating to one method
+    ast-subclass-module         — a ClassDef base resolves, through the file's
+                                   own import table, to a dotted path under a
+                                   configured module root
 
 Four are file-independent: they read the charm root directly rather than the
 Python files `_select_files` returns.
@@ -805,6 +808,86 @@ def _detect_ast_shared_method(tree: ast.Module, cfg: dict) -> Iterator[ast.Call]
             yield from callers
 
 
+# ── AST: base-class-through-import-table detector (component-graph axis) ───
+
+
+def _resolve_import_table(tree: ast.Module) -> dict[str, str]:
+    """Map each name this file binds via import to its full dotted source path.
+
+    `import a.b.c` binds the name `a` (not `a.b.c`, unless aliased) to `a`
+    itself — the root package, which a later `a.b.c.X` attribute chain walks
+    from. `import a.b.c as x` binds `x` -> `a.b.c`. `from a.b import c` binds
+    `c` -> `a.b.c`; `from a.b import c as x` binds `x` -> `a.b.c`. A relative
+    import (`from . import c`, `from .x import c`) has no absolute dotted
+    path to record and is skipped.
+    """
+    table: dict[str, str] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.asname:
+                    table[alias.asname] = alias.name
+                else:
+                    table[alias.name.split(".")[0]] = alias.name.split(".")[0]
+        elif isinstance(node, ast.ImportFrom):
+            if not node.module or node.level:
+                continue
+            for alias in node.names:
+                table[alias.asname or alias.name] = f"{node.module}.{alias.name}"
+    return table
+
+
+def _resolve_base_dotted_path(node: ast.expr, import_table: dict[str, str]) -> str | None:
+    """Resolve a class base expression to its fully-dotted source path.
+
+    `chain[0]` — the base's own leading Name — is looked up in the file's
+    import table; the rest of the attribute chain is appended onto whatever
+    that name resolves to. Returns None when the base isn't a Name/Attribute
+    chain at all, or its leading name isn't one this file imports.
+    """
+    chain = _attr_chain(node)
+    if not chain:
+        return None
+    head = import_table.get(chain[0])
+    if head is None:
+        return None
+    return head if len(chain) == 1 else f"{head}.{'.'.join(chain[1:])}"
+
+
+def _detect_ast_subclass_of(tree: ast.Module, cfg: dict) -> Iterator[ast.ClassDef]:
+    """Match a ClassDef with a base that resolves to a dotted path under `cfg["module"]`.
+
+    Signal for `component-graph`'s `paas_charm.*` member (CALIBRATION #42):
+    the PaaS framework ships one `Charm` subclass per language module
+    (`paas_charm.flask.Charm`, `paas_charm.go.Charm`, ...) and the module
+    list keeps growing upstream, so matching against an enumerated list of
+    modules needs maintaining forever. Matching against the `paas_charm`
+    root itself, resolved through each file's own import table rather than
+    string-matching the base's source text, does not — whichever submodule
+    a charm subclasses, its base resolves to a dotted path under the
+    configured root and this fires once, exactly the method #42's
+    corpus-wide sweep used and validated.
+
+    Yields the ClassDef once per matching base, not once per class — a
+    class with two bases both resolving under the root (CALIBRATION #42's
+    `open-graph-images-generator/charm`, which subclasses both
+    `paas_charm.go.Charm` and `paas_charm.app.App`) still only makes the
+    pattern present, since presence is a boolean over all evidence.
+    """
+    module = cfg["module"]
+    import_table = _resolve_import_table(tree)
+    if not import_table:
+        return
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ClassDef):
+            continue
+        for base in node.bases:
+            resolved = _resolve_base_dotted_path(base, import_table)
+            if resolved is not None and (resolved == module or resolved.startswith(module + ".")):
+                yield node
+                break
+
+
 # ── public entry point ─────────────────────────────────────────────────────────
 
 
@@ -1108,6 +1191,7 @@ def detect_feature(
         "ast-init-call": _detect_ast_init_call,
         "ast-observe-shared-handler": _detect_ast_observe_shared_handler,
         "ast-shared-method": _detect_ast_shared_method,
+        "ast-subclass-module": _detect_ast_subclass_of,
     }
 
     for src in source.files(feature.scope):

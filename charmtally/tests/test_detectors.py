@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..catalogue import Detector, Feature, default_path
+from ..catalogue import Detector, Feature, Pattern, default_path
 from ..catalogue import load as catalogue_load
 from ..detectors import detect_feature
 
@@ -1697,3 +1697,148 @@ def test_source_file_line_is_bounds_safe(tmp_path: Path) -> None:
     assert src.line(2) == "b = 2"
     assert src.line(0) == ""
     assert src.line(99) == ""
+
+
+# ── ast-subclass-module (component-graph: paas_charm) ───────────────────────
+
+
+def _catalogue_pattern(name: str) -> Pattern:
+    from ..catalogue import load_patterns
+
+    return next(p for p in load_patterns(default_path()) if p.name == name)
+
+
+def test_ast_subclass_module_fires_on_dotted_import(tmp_path: Path) -> None:
+    """`import paas_charm.flask` binds the root name; the base's attribute
+    chain walks from there to `paas_charm.flask.Charm`."""
+    _write_charm(
+        tmp_path,
+        """
+import paas_charm.flask
+
+class MyCharm(paas_charm.flask.Charm):
+    pass
+""",
+    )
+    ev = detect_feature(tmp_path, _feature("ast-subclass-module", module="paas_charm"))
+    assert len(ev) == 1
+    assert ev[0].detector_kind == "ast-subclass-module"
+    assert "MyCharm" in ev[0].snippet
+
+
+def test_ast_subclass_module_fires_on_from_import_of_submodule(tmp_path: Path) -> None:
+    _write_charm(
+        tmp_path,
+        """
+from paas_charm import django
+
+class MyCharm(django.Charm):
+    pass
+""",
+    )
+    ev = detect_feature(tmp_path, _feature("ast-subclass-module", module="paas_charm"))
+    assert len(ev) == 1
+
+
+def test_ast_subclass_module_fires_on_from_import_of_class(tmp_path: Path) -> None:
+    _write_charm(
+        tmp_path,
+        """
+from paas_charm.go import Charm
+
+class MyCharm(Charm):
+    pass
+""",
+    )
+    ev = detect_feature(tmp_path, _feature("ast-subclass-module", module="paas_charm"))
+    assert len(ev) == 1
+
+
+def test_ast_subclass_module_fires_on_aliased_import(tmp_path: Path) -> None:
+    _write_charm(
+        tmp_path,
+        """
+import paas_charm.go as pcgo
+
+class MyCharm(pcgo.Charm):
+    pass
+""",
+    )
+    ev = detect_feature(tmp_path, _feature("ast-subclass-module", module="paas_charm"))
+    assert len(ev) == 1
+
+
+def test_ast_subclass_module_no_match_on_unrelated_base(tmp_path: Path) -> None:
+    _write_charm(
+        tmp_path,
+        """
+import ops
+
+class MyCharm(ops.CharmBase):
+    pass
+""",
+    )
+    assert detect_feature(tmp_path, _feature("ast-subclass-module", module="paas_charm")) == []
+
+
+def test_ast_subclass_module_no_match_on_vendored_copy_under_lib(tmp_path: Path) -> None:
+    """A `paas_charm`-shaped base living under the standard vendored-lib path
+    (`lib/charms/<pkg>/...`) is outside the `src` scope's file selection
+    entirely — not read, so not matched, same as every other per-file
+    detector kind."""
+    _write_lib_charm(
+        tmp_path,
+        charm_name="some-charm",
+        vendored="paas_charm_shim",
+        code="import ops\n\nclass MyCharm(ops.CharmBase):\n    pass\n",
+    )
+    vendored = tmp_path / "lib" / "charms" / "paas_charm_shim" / "v0"
+    (vendored / "shim.py").write_text(
+        "import paas_charm.flask\n\nclass VendoredCharm(paas_charm.flask.Charm):\n    pass\n"
+    )
+    assert detect_feature(tmp_path, _feature("ast-subclass-module", module="paas_charm")) == []
+
+
+def test_ast_subclass_module_handles_two_qualifying_bases_without_double_counting(
+    tmp_path: Path,
+) -> None:
+    """CALIBRATION #42's `open-graph-images-generator/charm`: one class
+    subclasses `paas_charm.go.Charm`, a second subclasses `paas_charm.app.App`
+    to override `gen_environment`. Both are evidence, but presence stays a
+    plain boolean — two qualifying classes don't produce a different label
+    than one would."""
+    _write_charm(
+        tmp_path,
+        """
+import paas_charm.go
+import paas_charm.app
+
+class MyCharm(paas_charm.go.Charm):
+    pass
+
+class MyEnv(paas_charm.app.App):
+    def gen_environment(self):
+        return {}
+""",
+    )
+    feature = _feature("ast-subclass-module", module="paas_charm")
+    ev = detect_feature(tmp_path, feature)
+    assert len(ev) == 2
+    assert bool(ev) is True
+
+
+def test_component_graph_pattern_fires_on_paas_charm_subclass(tmp_path: Path) -> None:
+    """End-to-end against the shipped `features.yaml` pattern, not just the
+    bare detector kind — confirms the catalogue wiring, not only the AST
+    walker."""
+    _write_charm(
+        tmp_path,
+        """
+import paas_charm.flask
+
+class MyCharm(paas_charm.flask.Charm):
+    pass
+""",
+    )
+    ev = detect_feature(tmp_path, _catalogue_pattern("component-graph"))
+    assert len(ev) == 1

@@ -77,8 +77,8 @@ def score_absent(
         if "component-graph" in architecture:
             return Score(
                 SCORE_NOT_APPLICABLE,
-                "component-graph charm (chisme / ops_sunbeam / coordinated_workers) — framework "
-                "handles this",
+                "component-graph charm (chisme / ops_sunbeam / coordinated_workers / paas_charm) "
+                "— framework handles this",
             )
         if "reconcile-all" in architecture:
             return Score(
