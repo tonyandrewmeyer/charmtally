@@ -224,10 +224,15 @@ def count(client: HttpClient, query: str) -> int:
 
 
 def search_pages(client: HttpClient, query: str) -> Iterator[dict]:
-    """Yield every code-search item for ``query``, stopping at the 1000 cap."""
+    """Yield every code-search item for ``query``, stopping at the 1000 cap.
+
+    The cap is on the *offset*, not on the items seen: a page can come back
+    short (deduped hits, repos the token cannot see) and ``total_count`` is
+    only an estimate, so counting items would leave the loop asking for the
+    page past the window — which GitHub answers with 422, not an empty page.
+    """
     seen = 0
-    page = 1
-    while seen < SEARCH_CAP:
+    for page in range(1, SEARCH_CAP // PER_PAGE + 1):
         data = client.get_json("/search/code", {"q": query, "per_page": PER_PAGE, "page": page})
         items = data.get("items") or []
         if not items:
@@ -236,7 +241,6 @@ def search_pages(client: HttpClient, query: str) -> Iterator[dict]:
         seen += len(items)
         if seen >= int(data.get("total_count") or 0):
             return
-        page += 1
 
 
 def search_partitioned(

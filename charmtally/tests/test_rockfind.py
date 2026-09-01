@@ -73,6 +73,37 @@ def test_search_pages_stops_at_cap():
     assert len(list(rockfind.search_pages(client, query))) == rockfind.SEARCH_CAP
 
 
+def test_search_pages_stops_at_the_offset_cap_when_pages_come_back_short():
+    """A short page must not push the loop past the 1000-result window.
+
+    ``total_count`` is an estimate and GitHub may return fewer items than
+    ``per_page``, so counting items would ask for page 11 — which is a 422,
+    not an empty page.
+    """
+
+    class ShortPageClient:
+        """Returns 95 items a page against an over-stated total_count."""
+
+        def __init__(self):
+            self.pages = []
+
+        def get_json(self, path, params=None):
+            page = int(params["page"])
+            self.pages.append(page)
+            if page > rockfind.SEARCH_CAP // rockfind.PER_PAGE:
+                raise urllib.error.HTTPError(path, 422, "Unprocessable Entity", None, None)
+            start = (page - 1) * 95
+            return {
+                "total_count": 990,
+                "items": [item(f"o/r{i}", "rockcraft.yaml") for i in range(start, start + 95)],
+            }
+
+    client = ShortPageClient()
+    got = list(rockfind.search_pages(client, "q"))
+    assert client.pages == list(range(1, rockfind.SEARCH_CAP // rockfind.PER_PAGE + 1))
+    assert len(got) == 95 * len(client.pages)
+
+
 def test_search_partitioned_covers_both_buckets():
     base = "path:rockcraft.yaml"
     small = rockfind._size_query(base, 0, rockfind.INITIAL_MAX_SIZE)
