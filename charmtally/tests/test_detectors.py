@@ -1636,6 +1636,71 @@ def _setup(self):
     assert detect_feature(tmp_path, _catalogue_feature("ops.typed-config")) == []
 
 
+def test_handled_errors_fires_on_load_config_blocked(tmp_path: Path) -> None:
+    _write_charm(
+        tmp_path,
+        """
+def __init__(self, framework):
+    self.config_ = self.load_config(MyConfig, errors="blocked")
+""",
+    )
+    feature = _catalogue_feature("ops.typed-config.handled-errors")
+    assert len(detect_feature(tmp_path, feature)) == 1
+
+
+def test_handled_errors_fires_on_load_params_fail(tmp_path: Path) -> None:
+    """The action half spells the same choice `errors='fail'`."""
+    _write_charm(
+        tmp_path,
+        """
+def _on_backup(self, event):
+    params = event.load_params(BackupParams, errors="fail")
+""",
+    )
+    feature = _catalogue_feature("ops.typed-config.handled-errors")
+    assert len(detect_feature(tmp_path, feature)) == 1
+
+
+def test_handled_errors_absent_on_the_default(tmp_path: Path) -> None:
+    """The default is `errors='raise'`, which is the thing being counted against."""
+    _write_charm(
+        tmp_path,
+        """
+def __init__(self, framework):
+    self.config_ = self.load_config(MyConfig)
+    self.other = self.load_config(MyConfig, errors="raise")
+""",
+    )
+    feature = _catalogue_feature("ops.typed-config.handled-errors")
+    assert detect_feature(tmp_path, feature) == []
+
+
+def test_handled_errors_absent_when_the_value_is_not_a_literal(tmp_path: Path) -> None:
+    """A value a scan can't see is counted as unknown, not as either answer."""
+    _write_charm(
+        tmp_path,
+        """
+def __init__(self, framework):
+    self.config_ = self.load_config(MyConfig, errors=self._errors)
+    self.other = self.load_config(MyConfig, **self._kwargs)
+""",
+    )
+    feature = _catalogue_feature("ops.typed-config.handled-errors")
+    assert detect_feature(tmp_path, feature) == []
+
+
+def test_handled_errors_ignores_the_wrong_keyword(tmp_path: Path) -> None:
+    _write_charm(
+        tmp_path,
+        """
+def __init__(self, framework):
+    self.config_ = self.load_config(MyConfig, on_error="blocked")
+""",
+    )
+    feature = _catalogue_feature("ops.typed-config.handled-errors")
+    assert detect_feature(tmp_path, feature) == []
+
+
 # ── CharmSource (shared parse cache) ─────────────────────────────────────────
 
 

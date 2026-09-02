@@ -196,6 +196,19 @@ def score_absent(
             )
         return Score(SCORE_NOT_APPLICABLE, "no integration tests present")
 
+    if feature_name == "ops.typed-config.handled-errors":
+        # Only meaningful for a charm that calls the typed-data API at all;
+        # for anything else the absence is `ops.typed-config`'s finding, not
+        # a second one.
+        if _is_present(features, "ops.typed-config"):
+            return Score(
+                SCORE_WORTH_CONSIDERING,
+                "typed config/params loaded with the default `errors='raise'` — a bad value puts "
+                "the unit in error and blocks every later hook; pass errors='blocked' "
+                "(or 'fail' for actions) to report it as a status instead",
+            )
+        return Score(SCORE_NOT_APPLICABLE, "charm does not use the typed config/params API")
+
     if feature_name == "ops.stored-state":
         # Special case: presence is a flag for *migration away from*. Absence
         # is the desired state.

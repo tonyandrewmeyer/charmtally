@@ -143,7 +143,8 @@ adds bytes rather than removing any.
 
 All triggered from `features.yaml`, in three groups.
 
-Per Python file in scope: `import` · `call` · `observe-event` · `regex`.
+Per Python file in scope: `import` · `call` · `call-kwarg` · `observe-event` ·
+`regex`.
 
 Per Python file, backing the architecture axis: `ast-init-call` ·
 `ast-observe-shared-handler` · `ast-shared-method`.
