@@ -3,11 +3,13 @@ architecture patterns (part-reconcile / unconditional-init)."""
 
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 
+from .. import detectors, metadata
 from ..catalogue import Detector, Feature, Pattern, default_path
 from ..catalogue import load as catalogue_load
-from ..detectors import detect_feature
+from ..detectors import CharmSource, detect_feature
 
 
 def _feature(detector_kind: str, **cfg) -> Feature:
@@ -1842,3 +1844,71 @@ class MyCharm(paas_charm.flask.Charm):
     )
     ev = detect_feature(tmp_path, _catalogue_pattern("component-graph"))
     assert len(ev) == 1
+
+
+# ── per-charm caches (SourceFile.nodes / CharmSource) ────────────────────────
+
+
+def test_source_file_nodes_are_returned_in_walk_order(tmp_path: Path) -> None:
+    """Merging two node types back together matches one filtered walk.
+
+    Evidence order is part of the scan's output, so the bucketed index has
+    to hand back what `ast.walk` would have, not the buckets end to end.
+    """
+    _write_charm(
+        tmp_path,
+        """
+import ops
+from ops import CharmBase
+import yaml
+""",
+    )
+    src = CharmSource(tmp_path).files("src")[0]
+    assert src.tree is not None
+    walked = [n for n in ast.walk(src.tree) if isinstance(n, (ast.Import, ast.ImportFrom))]
+    assert src.nodes(ast.Import, ast.ImportFrom) == walked
+    assert src.nodes(ast.Import) == [n for n in walked if isinstance(n, ast.Import)]
+
+
+def test_source_file_nodes_are_empty_for_an_unparseable_file(tmp_path: Path) -> None:
+    _write_charm(tmp_path, "def broken(:\n")
+    src = CharmSource(tmp_path).files("src")[0]
+    assert src.tree is None
+    assert src.nodes(ast.Call) == []
+    assert src.observe_context().parent_map == {}
+    assert src.import_table() == {}
+
+
+def test_charm_source_parses_each_yaml_file_once(tmp_path: Path, monkeypatch) -> None:
+    """Two yaml-key detectors over the same charm cost one parse, not two."""
+    _write_charm(tmp_path, "x = 1\n")
+    (tmp_path / "rockcraft.yaml").write_text("name: r\nchecks:\n  up:\n    override: replace\n")
+    calls: list[int] = []
+    real = detectors._yaml_documents
+    monkeypatch.setattr(
+        detectors, "_yaml_documents", lambda text: (calls.append(1), real(text))[1]
+    )
+    source = CharmSource(tmp_path)
+    for _ in range(2):
+        assert detect_feature(tmp_path, _feature("yaml-key", key="checks"), source)
+    # charmcraft.yaml + rockcraft.yaml, parsed on the first pass only.
+    assert len(calls) == 2
+
+
+def test_charm_source_reads_the_metadata_once(tmp_path: Path, monkeypatch) -> None:
+    """The metadata glob and parse are shared across the detectors that want them."""
+    _write_charm(tmp_path, "x = 1\n")
+    (tmp_path / "charmcraft.yaml").write_text(
+        "type: charm\nname: t\nrequires:\n  db:\n    interface: postgresql_client\n"
+    )
+    globs: list[int] = []
+    real = metadata._find_metadata_files
+    monkeypatch.setattr(
+        metadata, "_find_metadata_files", lambda root: (globs.append(1), real(root))[1]
+    )
+    source = CharmSource(tmp_path)
+    assert detect_feature(
+        tmp_path, _feature("requires-interface", interfaces=["postgresql_client"]), source
+    )
+    assert detect_feature(tmp_path, _feature("relation-count", role="requires", min=1), source)
+    assert len(globs) == 1

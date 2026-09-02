@@ -42,7 +42,6 @@ from pathlib import Path
 from ..detectors import (
     _LOOP_ACTION_SUFFIX,
     CharmSource,
-    _build_parent_map,
     _enclosing_class,
     _enclosing_for_with_target,
     _enclosing_function,
@@ -51,8 +50,7 @@ from ..detectors import (
     _is_relation_scoped_binding,
     _is_symmetric_resource_fanout,
     _relation_prefix,
-    _resolve_observe_aliases,
-    _resolve_relation_names,
+    build_observe_context,
 )
 
 _DEFAULT_MIN_EVENTS = 3
@@ -68,33 +66,11 @@ def bindings_in_tree(
     half: direct `observe()` calls, calls through a local alias of
     `self.framework.observe`, and loop variables bound over a literal event
     list (inline or one hop through a same-function variable). Kept in step
-    with the detector by importing its helpers rather than restating them.
+    with the detector by importing its helpers rather than restating them —
+    the resolution tables come from `build_observe_context`, the same call
+    the detector makes.
     """
-    parent_map = _build_parent_map(tree)
-    aliases = _resolve_observe_aliases(tree, parent_map)
-    relation_names_by_class = _resolve_relation_names(tree)
-
-    list_assigns: dict[tuple[int, str], ast.List | ast.Tuple] = {}
-    for node in ast.walk(tree):
-        if (
-            isinstance(node, ast.Assign)
-            and len(node.targets) == 1
-            and isinstance(node.targets[0], ast.Name)
-            and isinstance(node.value, (ast.List, ast.Tuple))
-        ):
-            func = _enclosing_function(node, parent_map)
-            list_assigns[id(func), node.targets[0].id] = node.value
-
-    loop_elements: dict[int, list[ast.expr]] = {}
-    for node in ast.walk(tree):
-        if not (isinstance(node, ast.For) and isinstance(node.target, ast.Name)):
-            continue
-        iter_node: ast.expr | None = node.iter
-        if isinstance(iter_node, ast.Name):
-            func = _enclosing_function(node, parent_map)
-            iter_node = list_assigns.get((id(func), iter_node.id))
-        if isinstance(iter_node, (ast.List, ast.Tuple)):
-            loop_elements[id(node)] = list(iter_node.elts)
+    parent_map, aliases, relation_names_by_class, loop_elements = build_observe_context(tree)
 
     out: dict[str, dict] = {}
 

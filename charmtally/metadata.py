@@ -208,9 +208,17 @@ class CharmMeta:
         )
 
 
+# libyaml's C loader where the wheel carries it, the pure-Python one where it
+# doesn't. Same YAML 1.1 semantics, about 12x faster on a charm's metadata.
+_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+
+
 def _load_yaml(path: Path) -> dict | None:
     try:
-        data = yaml.safe_load(path.read_text(encoding="utf-8", errors="replace"))
+        text = path.read_text(encoding="utf-8", errors="replace")
+        # `unsafe-yaml-load` reads any explicit `Loader=` as unsafe; it can't see through
+        # the getattr above, which picks between two *safe* loaders.
+        data = yaml.load(text, Loader=_LOADER)  # ruff: ignore[unsafe-yaml-load]
     except (yaml.YAMLError, OSError):
         return None
     return data if isinstance(data, dict) else None
