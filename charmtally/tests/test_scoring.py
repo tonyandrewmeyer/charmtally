@@ -402,3 +402,18 @@ def test_secrets_none_typed_still_clear_gap():
     )
     s = score_absent("ops.secrets", {}, meta)
     assert s.label == SCORE_CLEAR_GAP
+
+
+# ── ops.typed-config.handled-errors ────────────────────────────────────────────
+
+
+def test_handled_errors_gap_only_for_a_typed_config_charm():
+    features = {"ops.typed-config": {"present": True}}
+    s = score_absent("ops.typed-config.handled-errors", features, _meta())
+    assert s.label == SCORE_WORTH_CONSIDERING
+    assert "errors='blocked'" in s.rationale
+
+
+def test_handled_errors_not_applicable_without_typed_config():
+    s = score_absent("ops.typed-config.handled-errors", {}, _meta())
+    assert s.label == SCORE_NOT_APPLICABLE
