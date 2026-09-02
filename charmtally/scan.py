@@ -41,14 +41,22 @@ def scan_charm(
     charm_root: Path,
     features: list[Feature],
     patterns: list[Pattern] | None = None,
+    *,
+    stale: bool = False,
 ) -> dict:
     """Return a dict of feature.name → {present, evidence, score, rationale}.
 
     Architecture patterns (if provided) are detected per-charm and surfaced
     in the per-charm ``__meta__`` block as ``architecture: [name, ...]``.
     The scoring layer uses these as inputs to per-feature gap rules.
+
+    ``stale`` records that the clone this root lives in could not be
+    refreshed, so the reading is of an older commit than the remote's tip.
+    Only the caller that did the cloning knows that, hence the argument.
     """
-    meta = dataclasses.replace(metadata.read(charm_root), repo_sha=head_sha(charm_root))
+    meta = dataclasses.replace(
+        metadata.read(charm_root), repo_sha=head_sha(charm_root), stale=stale
+    )
     # One read-and-parse pass over the charm's Python files, shared by every
     # feature and pattern below.
     source = CharmSource(charm_root)
@@ -221,20 +229,31 @@ def refresh_clone(dest: Path, ref: CharmRef) -> bool:
     return _git(["reset", "--hard", "FETCH_HEAD"], cwd=dest)
 
 
-def ensure_clone(ref: CharmRef, workdir: Path) -> Path | None:
-    """Shallow-clone `ref.repo_url` into workdir/<slug>, returning the path.
+@dataclasses.dataclass(frozen=True)
+class Clone:
+    """A usable checkout, and whether it is known to be behind the remote."""
+
+    path: Path
+    stale: bool = False
+
+
+def ensure_clone_status(ref: CharmRef, workdir: Path) -> Clone | None:
+    """Shallow-clone `ref.repo_url` into workdir/<slug>, returning the clone.
 
     An existing clone is refreshed rather than reused as-is: the scan workdir
     is cached between CI runs, so returning early here froze every charm at
     whatever commit it was first cloned at, and the trend page could never
     show a charm adopting a feature.
 
+    A failed refresh is not fatal — a week-old scan of a charm beats dropping
+    it from the corpus — but it is reported, as ``Clone.stale``, so a reading
+    taken at last week's commit isn't indistinguishable from a fresh one.
+
     Returns None on clone failure. Uses HTTPS (no SSH key needed).
     """
     dest = workdir / ref.slug
     if dest.exists():
-        refresh_clone(dest, ref)
-        return dest
+        return Clone(dest, stale=not refresh_clone(dest, ref))
     workdir.mkdir(parents=True, exist_ok=True)
     cmd = ["clone", "--depth", "1"]
     if ref.branch:
@@ -242,4 +261,10 @@ def ensure_clone(ref: CharmRef, workdir: Path) -> Path | None:
     cmd += [ref.repo_url, str(dest)]
     if not _git(cmd):
         return None
-    return dest
+    return Clone(dest)
+
+
+def ensure_clone(ref: CharmRef, workdir: Path) -> Path | None:
+    """`ensure_clone_status` for callers that don't care about staleness."""
+    clone = ensure_clone_status(ref, workdir)
+    return clone.path if clone else None
