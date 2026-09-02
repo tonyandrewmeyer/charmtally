@@ -132,7 +132,7 @@ class TestStale:
 
         results = _run(tmp_path, ["alpha", "beta"], jobs=1)
 
-        assert "stale" not in results["alpha"]["features"]["__meta__"]
+        assert results["alpha"]["features"]["__meta__"]["stale"] is False
         assert results["beta"]["features"]["__meta__"]["stale"] is True
 
 
