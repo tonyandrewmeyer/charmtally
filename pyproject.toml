@@ -42,6 +42,7 @@ dev = [
   "pytest>=9.1.1",
   "ruff>=0.16.1",
   "zizmor>=1.29.0",
+  "pytest-cov>=7.0",
 ]
 
 [build-system]
@@ -53,6 +54,18 @@ packages = ["charmtally"]
 
 [tool.pytest.ini_options]
 testpaths = ["charmtally/tests"]
+
+[tool.coverage.run]
+source = ["charmtally"]
+# Tests are ~half the lines and are 100% covered by construction; leaving them
+# in put the total 7 points above the package's real figure.
+omit = ["charmtally/tests/*"]
+
+[tool.coverage.report]
+exclude_also = ["if TYPE_CHECKING:", "raise NotImplementedError"]
+# The package sits at ~81%. The floor is a ratchet against erosion, not a
+# target: raise it when the real figure moves, don't chase it with tests.
+fail_under = 78
 
 [tool.codespell]
 ignore-words-list = "ths,re-uses"

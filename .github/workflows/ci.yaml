@@ -32,6 +32,24 @@ jobs:
       - run: uv sync
       - run: uv run pytest
 
+  coverage:
+    # Its own job rather than a step in the matrix: coverage triples the
+    # suite's runtime and the floor only needs measuring once, not per
+    # interpreter.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d  # v10.0.1
+        with:
+          enable-cache: true
+      - run: uv sync
+      - run: make coverage
+
   lint:
     runs-on: ubuntu-latest
     steps:
