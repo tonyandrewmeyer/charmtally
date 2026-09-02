@@ -157,11 +157,35 @@ fixtures and abandoned experiments alongside real rocks. `--merge` keeps the
 `Team` and `Notes` columns you edit, so curation survives the refresh. The
 workflow needs a `ROCKS_TOKEN` secret; see the comment at the top of it.
 
+## Tools
+
+`charmtally/tools/` holds four helpers that are deliberately *not* CLI
+subcommands: they are maintainer tools, run by hand a few times a year, and
+none of them belongs in the weekly pipeline. Each is invoked with
+`python -m`:
+
+```sh
+# Calibration sampling over scored.json — draws a stratified sample of
+# records and caches the verdicts, for checking the scoring rules by hand.
+uv run python -m charmtally.tools.audit --help
+
+# Recompute snapshots for weeks that were never scanned (see above).
+uv run python -m charmtally.tools.backfill --help
+
+# Dump every shared-handler binding in a charm tree as JSON, including the
+# ones the reconcile detector rejects and which cut stopped them.
+uv run python -m charmtally.tools.bindings --help
+
+# Build a rocks corpus CSV from GitHub code search (see above).
+uv run python -m charmtally.tools.rockfind --help
+```
+
 ## Development
 
 ```sh
 uv sync
 make unit          # pytest
+make coverage      # pytest with a coverage floor, as CI runs it
 make lint          # ruff + ty + codespell, exactly what CI runs
 make format        # ruff format + ruff check --fix
 make pre-commit    # every hook against every file

@@ -67,6 +67,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import os
 import sys
 from dataclasses import asdict
 from pathlib import Path
@@ -396,8 +397,6 @@ def cmd_llm_score(args: argparse.Namespace) -> int:
             print(f"  {feat}: {n}")
         return 0
 
-    import os
-
     api_key = os.environ.get("OPENROUTER_API_KEY", "")
     if not api_key:
         print(
@@ -430,8 +429,6 @@ def cmd_llm_calibrate(args: argparse.Namespace) -> int:
     cache_dir = args.cache_dir
     if cache_dir is None:
         cache_dir = args.results.parent / ".llm-verdicts"
-
-    import os
 
     api_key = os.environ.get("OPENROUTER_API_KEY", "")
     client = _llm_score.OpenRouterClient(api_key=api_key)
@@ -569,6 +566,11 @@ def cmd_adoption(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     """Run the charmtally command-line interface."""
     p = argparse.ArgumentParser(prog="charmtally")
+    p.add_argument(
+        "--version",
+        action="version",
+        version=f"charmtally {__version__}",
+    )
     p.add_argument(
         "--features",
         type=Path,

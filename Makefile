@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help lint format unit pre-commit clean
+.PHONY: help lint format unit coverage pre-commit clean
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
@@ -19,6 +19,11 @@ format:  ## Format and auto-fix with ruff
 
 unit:  ## Run the unit tests
 	uv run --group dev pytest
+
+# Not folded into `unit`: coverage triples the suite's runtime, and the point
+# of a 2-second suite is that you run it without thinking about it.
+coverage:  ## Run the unit tests with a coverage floor
+	uv run --group dev pytest --cov --cov-report=term-missing
 
 pre-commit:  ## Run all pre-commit hooks against every file
 	uv run --group dev pre-commit run --all-files
