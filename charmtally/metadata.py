@@ -34,6 +34,19 @@ Descriptive facts surfaced for the dashboard (no scoring rules attached):
                             charm, poetry, ...) — modern-stack signal
     bases                 — base/bases entries (e.g. ubuntu@22.04)
     min_juju_version      — Juju version asserted in `assumes:` (or None)
+    ops_requirement       — the `ops` dependency as the charm asks for it
+                            (">=2.15", "==2.4.1", "" for an unpinned `ops`),
+                            or None when nothing declares one. Empty string
+                            and None are different findings: the first is a
+                            charm that takes whatever `ops` it gets, the
+                            second is a charm we could not read a dependency
+                            out of at all
+    ops_requirement_source— which file it was read from (`requirements.txt`,
+                            `pyproject.toml`, `uv.lock`, ...), or None
+    ops_min_version       — the lower bound implied by that requirement, so a
+                            feature row can ask "could this charm even have
+                            this API?"; None for an unpinned or upper-bound-
+                            only requirement, which asserts no minimum
     charm_user            — `charm-user:` from charmcraft.yaml: root / sudoer
                             / non-root, or None when unset (Juju's default,
                             i.e. root). Only affects Kubernetes charms on
@@ -70,6 +83,8 @@ from typing import TYPE_CHECKING
 
 import yaml
 
+from ._toml import tomllib
+
 if TYPE_CHECKING:
     from collections.abc import Iterator
     from pathlib import Path
@@ -90,6 +105,15 @@ _CHARMLIBS_IMPORT = re.compile(r"^\s*import\s+charmlibs\.([\w.]+)", re.MULTILINE
 # `charmlibs-pathops`, `charmlibs_interfaces_tls_certificates`, ... as spelled
 # in a requirements file or a pyproject dependency list.
 _CHARMLIBS_REQUIREMENT = re.compile(r"\bcharmlibs[-_]([A-Za-z0-9][\w.-]*)")
+# `ops` as spelled in a requirements file or a PEP 508 dependency string:
+# the name, optional extras, then the specifier. The specifier group has to
+# start with an operator (or be empty) so `ops-scenario>=7` and `opslib-foo`
+# don't read as an `ops` requirement with a nonsense version.
+_OPS_REQUIREMENT = re.compile(r"^ops\s*(?:\[[^\]]*\])?\s*(([<>=!~^@].*)?)$", re.IGNORECASE)
+# Lower bounds inside a specifier set. `>` and `<` are deliberately absent:
+# `>2.14` asserts a minimum somewhere above 2.14, and recording 2.14 would
+# be a version the charm has excluded.
+_VERSION_LOWER_BOUND = re.compile(r"(?:>=|===|==|~=|\^)\s*v?(\d+(?:\.\d+)*)")
 # Directories a source walk must not descend into when looking for imports.
 _SKIP_WALK_DIRS = {".git", ".tox", ".venv", "venv", "node_modules", "build", "dist", "lib"}
 
@@ -123,6 +147,9 @@ class CharmMeta:
     charmcraft_plugins: tuple[str, ...] = ()
     bases: tuple[str, ...] = ()
     min_juju_version: str | None = None
+    ops_requirement: str | None = None
+    ops_requirement_source: str | None = None
+    ops_min_version: str | None = None
     charm_user: str | None = None
     library_count: int = 0
     library_names: tuple[str, ...] = ()
@@ -160,6 +187,9 @@ class CharmMeta:
             "charmcraft_plugins": list(self.charmcraft_plugins),
             "bases": list(self.bases),
             "min_juju_version": self.min_juju_version,
+            "ops_requirement": self.ops_requirement,
+            "ops_requirement_source": self.ops_requirement_source,
+            "ops_min_version": self.ops_min_version,
             "charm_user": self.charm_user,
             "library_count": self.library_count,
             "library_names": list(self.library_names),
@@ -196,6 +226,9 @@ class CharmMeta:
             charmcraft_plugins=tuple(raw.get("charmcraft_plugins") or []),
             bases=tuple(raw.get("bases") or []),
             min_juju_version=raw.get("min_juju_version"),
+            ops_requirement=raw.get("ops_requirement"),
+            ops_requirement_source=raw.get("ops_requirement_source"),
+            ops_min_version=raw.get("ops_min_version"),
             charm_user=raw.get("charm_user"),
             library_count=int(raw.get("library_count", 0)),
             library_names=tuple(raw.get("library_names") or []),
@@ -433,6 +466,132 @@ def _charmlibs_requirements(path: Path) -> set[str]:
     return out
 
 
+def _parse_ops_requirement(requirement: str) -> str | None:
+    """Return the specifier from a single `ops` requirement, or None if it isn't one.
+
+    An `ops` with no specifier returns `""` — the charm asks for `ops` and
+    takes whatever it gets, which is a finding rather than a missing value.
+    """
+    stripped = requirement.split(";", 1)[0].strip()  # drop any environment marker
+    m = _OPS_REQUIREMENT.match(stripped)
+    if not m:
+        return None
+    return m.group(1).strip()
+
+
+def _ops_from_requirements_text(text: str) -> str | None:
+    """Find an `ops` requirement in a pip requirements file's contents."""
+    for raw_line in text.splitlines():
+        line = raw_line.split("#", 1)[0].strip()
+        if not line or line.startswith("-"):
+            continue
+        spec = _parse_ops_requirement(line)
+        if spec is not None:
+            return spec
+    return None
+
+
+def _ops_from_pyproject(data: dict) -> str | None:
+    """Find an `ops` requirement in a parsed pyproject.toml.
+
+    Covers both the PEP 621 `project.dependencies` list and poetry's
+    `tool.poetry.dependencies` table, where the version is the value rather
+    than part of the string.
+    """
+    project = data.get("project")
+    if isinstance(project, dict):
+        deps = project.get("dependencies")
+        if isinstance(deps, list):
+            for dep in deps:
+                if isinstance(dep, str):
+                    spec = _parse_ops_requirement(dep)
+                    if spec is not None:
+                        return spec
+    poetry_deps = ((data.get("tool") or {}).get("poetry") or {}).get("dependencies")
+    if isinstance(poetry_deps, dict):
+        for name, body in poetry_deps.items():
+            if name.lower() != "ops":
+                continue
+            if isinstance(body, str):
+                return body.strip()
+            if isinstance(body, dict) and isinstance(body.get("version"), str):
+                return body["version"].strip()
+            return ""
+    return None
+
+
+def _ops_from_uv_lock(data: dict) -> str | None:
+    """Find the resolved `ops` version in a parsed uv.lock.
+
+    Returned as `==<version>` so a lockfile entry parses for a minimum the
+    same way a declared requirement does. It is what the charm *gets*, not
+    what it asks for, which is why it is only consulted when nothing
+    declares an `ops` dependency and why the source is recorded alongside.
+    """
+    packages = data.get("package")
+    if not isinstance(packages, list):
+        return None
+    for pkg in packages:
+        if not isinstance(pkg, dict) or str(pkg.get("name", "")).lower() != "ops":
+            continue
+        version = pkg.get("version")
+        return f"=={version}" if isinstance(version, str) and version else ""
+    return None
+
+
+def _read_ops_requirement(charm_root: Path) -> tuple[str, str] | None:
+    """Return (specifier, filename) for the charm's `ops` dependency, or None.
+
+    Declared requirements win over the lockfile: the question is what the
+    charm asks for, and `uv.lock` answers a different one. `requirements.txt`
+    is checked before any other `requirements*.txt` because the variants are
+    usually test/dev sets.
+    """
+    req_files = [charm_root / "requirements.txt"]
+    req_files += sorted(p for p in charm_root.glob("requirements*.txt") if p not in req_files)
+    for path in req_files:
+        text = _read_text(path)
+        if text is None:
+            continue
+        spec = _ops_from_requirements_text(text)
+        if spec is not None:
+            return spec, path.name
+
+    for name, extract in (("pyproject.toml", _ops_from_pyproject), ("uv.lock", _ops_from_uv_lock)):
+        path = charm_root / name
+        text = _read_text(path)
+        if text is None:
+            continue
+        try:
+            data = tomllib.loads(text)
+        except tomllib.TOMLDecodeError:
+            continue
+        spec = extract(data)
+        if spec is not None:
+            return spec, name
+    return None
+
+
+def _min_version(specifier: str) -> str | None:
+    """Return the highest lower bound asserted by a specifier set, or None.
+
+    None means the requirement asserts no minimum — it is unpinned, or has
+    only an upper bound — not that it could not be read.
+    """
+    bounds = _VERSION_LOWER_BOUND.findall(specifier)
+    if not bounds:
+        return None
+    return max(bounds, key=lambda v: tuple(int(p) for p in v.split(".")))
+
+
+def _read_text(path: Path) -> str | None:
+    """Return a file's contents, or None if it isn't a readable file."""
+    try:
+        return path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+
+
 def _walk_python(charm_root: Path) -> Iterator[Path]:
     """Yield the charm's own Python files, skipping vendored / build trees.
 
@@ -614,6 +773,13 @@ def read(charm_root: Path) -> CharmMeta:
     # the charm's published TF module. Some charms put .tf at root instead.
     has_terraform_module = (charm_root / "terraform").is_dir() or any(charm_root.glob("*.tf"))
 
+    # The `ops` the charm asks for. Feature rows that need a minimum `ops`
+    # can read `ops_min_version` to tell a charm that declined an API from
+    # one that is pinned below the release that has it.
+    ops_req = _read_ops_requirement(charm_root)
+    ops_requirement, ops_source = ops_req if ops_req else (None, None)
+    ops_min = _min_version(ops_requirement) if ops_requirement else None
+
     tooling: list[str] = []
     if (charm_root / "tox.ini").is_file():
         tooling.append("tox")
@@ -637,6 +803,9 @@ def read(charm_root: Path) -> CharmMeta:
         charmcraft_plugins=tuple(plugins),
         bases=tuple(bases),
         min_juju_version=min_juju,
+        ops_requirement=ops_requirement,
+        ops_requirement_source=ops_source,
+        ops_min_version=ops_min,
         charm_user=charm_user,
         library_count=library_count,
         library_names=tuple(library_names),

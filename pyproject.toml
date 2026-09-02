@@ -142,11 +142,11 @@ include = ["charmtally"]
 exclude = ["charmtally/tests"]
 
 [[tool.ty.overrides]]
-# detectors.py's tomllib/tomli shim needs a suppression on both imports, and
+# _toml.py's tomllib/tomli shim needs a suppression on both imports, and
 # whichever one the current interpreter *can* resolve then reports its
 # suppression as unused — 3.10 dev envs and CI's 3.12 lint job disagree about
 # which that is. See the comment on the try/except there.
-include = ["charmtally/detectors.py"]
+include = ["charmtally/_toml.py"]
 
 [tool.ty.overrides.rules]
 unused-ignore-comment = "ignore"

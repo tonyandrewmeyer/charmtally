@@ -33,26 +33,12 @@ import configparser
 import re
 import warnings
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import yaml
 
-# Cross-version shim: tomllib is stdlib from 3.11, tomli is a conditional
-# dependency below that. Exactly one of these resolves on any given
-# interpreter, so a type checker pinned to either version flags the other.
-# Which one is unresolved depends on the interpreter the checker is run
-# under — CI's 3.12 env has no tomli, a 3.10 dev env has no tomllib — so one
-# of these two suppressions is always the redundant one. `unused-ignore-
-# comment` is switched off for this file in pyproject.toml; it can't be done
-# inline, because the inline form is itself reported as unused on whichever
-# interpreter doesn't need it.
-try:
-    import tomllib  # ty: ignore[unresolved-import]
-except ModuleNotFoundError:  # pragma: no cover — exercised only on 3.10
-    import tomli as tomllib  # ty: ignore[unresolved-import]
-
-from typing import TYPE_CHECKING
-
 from . import metadata as _metadata
+from ._toml import tomllib
 
 if TYPE_CHECKING:
     from collections.abc import Iterator

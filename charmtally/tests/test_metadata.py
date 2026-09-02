@@ -497,3 +497,106 @@ def test_charmlibs_round_trips_through_meta_dict(tmp_path: Path) -> None:
     _src(tmp_path, "from charmlibs import pathops\n")
     meta = read(tmp_path)
     assert CharmMeta.from_dict(meta.to_dict()).charmlibs_names == ("pathops",)
+
+
+def test_ops_requirement_read_from_requirements_txt(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    (tmp_path / "requirements.txt").write_text("# deps\nops >= 2.15\npyyaml\n")
+    meta = read(tmp_path)
+    assert meta.ops_requirement == ">= 2.15"
+    assert meta.ops_requirement_source == "requirements.txt"
+    assert meta.ops_min_version == "2.15"
+
+
+def test_ops_requirement_with_extras_and_upper_bound(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    (tmp_path / "requirements.txt").write_text("ops[testing]>=2.17,<3\n")
+    meta = read(tmp_path)
+    assert meta.ops_requirement == ">=2.17,<3"
+    assert meta.ops_min_version == "2.17"
+
+
+def test_unpinned_ops_is_its_own_category(tmp_path: Path) -> None:
+    """A bare `ops` asks for something; a charm with no ops line does not."""
+    _ops_charm(tmp_path)
+    (tmp_path / "requirements.txt").write_text("ops\n")
+    meta = read(tmp_path)
+    assert meta.ops_requirement == ""
+    assert meta.ops_requirement_source == "requirements.txt"
+    assert meta.ops_min_version is None
+
+
+def test_no_ops_requirement_anywhere(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    (tmp_path / "requirements.txt").write_text("pyyaml\n")
+    meta = read(tmp_path)
+    assert meta.ops_requirement is None
+    assert meta.ops_requirement_source is None
+    assert meta.ops_min_version is None
+
+
+def test_ops_scenario_is_not_ops(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    (tmp_path / "requirements.txt").write_text("ops-scenario>=7\nopslib-openstack\n")
+    assert read(tmp_path).ops_requirement is None
+
+
+def test_ops_requirement_ignores_environment_markers_and_comments(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    (tmp_path / "requirements.txt").write_text(
+        "-r other.txt\nops~=2.4 ; python_version >= '3.10'  # the framework\n"
+    )
+    meta = read(tmp_path)
+    assert meta.ops_requirement == "~=2.4"
+    assert meta.ops_min_version == "2.4"
+
+
+def test_ops_requirement_from_pep621_pyproject(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "x"\ndependencies = ["pyyaml", "ops==2.4.1"]\n'
+    )
+    meta = read(tmp_path)
+    assert meta.ops_requirement == "==2.4.1"
+    assert meta.ops_requirement_source == "pyproject.toml"
+    assert meta.ops_min_version == "2.4.1"
+
+
+def test_ops_requirement_from_poetry_pyproject(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    (tmp_path / "pyproject.toml").write_text(
+        '[tool.poetry.dependencies]\npython = "^3.10"\nops = "^2.9"\n'
+    )
+    meta = read(tmp_path)
+    assert meta.ops_requirement == "^2.9"
+    assert meta.ops_min_version == "2.9"
+
+
+def test_uv_lock_is_the_last_resort(tmp_path: Path) -> None:
+    """A resolved version answers a different question, so it loses to a declared one."""
+    _ops_charm(tmp_path)
+    (tmp_path / "uv.lock").write_text('[[package]]\nname = "ops"\nversion = "2.20.0"\n')
+    meta = read(tmp_path)
+    assert meta.ops_requirement == "==2.20.0"
+    assert meta.ops_requirement_source == "uv.lock"
+    assert meta.ops_min_version == "2.20.0"
+
+    (tmp_path / "requirements.txt").write_text("ops>=2.15\n")
+    meta = read(tmp_path)
+    assert meta.ops_requirement == ">=2.15"
+    assert meta.ops_requirement_source == "requirements.txt"
+
+
+def test_unreadable_pyproject_does_not_break_the_read(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    (tmp_path / "pyproject.toml").write_text("this is not toml =\n")
+    assert read(tmp_path).ops_requirement is None
+
+
+def test_ops_requirement_round_trips_through_meta_dict(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    (tmp_path / "requirements.txt").write_text("ops\n")
+    meta = CharmMeta.from_dict(read(tmp_path).to_dict())
+    # Empty string must survive: "unpinned" is not "unknown".
+    assert meta.ops_requirement == ""
+    assert meta.ops_min_version is None

@@ -321,3 +321,28 @@ def test_evidence_link_drops_the_anchor_for_an_unlocated_line() -> None:
 
     assert "/blob/cafe/charmcraft.yaml" in html
     assert "#L0" not in html
+
+
+def test_ops_requirement_shown_in_the_stack_column() -> None:
+    feats = [_feature("thing")]
+    charm = _charm(
+        "c0",
+        present_features=set(),
+        all_features=["thing"],
+        meta={"ops_requirement": ">=2.15"},
+    )
+    html = render({charm["name"]: charm}, feats)
+    assert "ops&nbsp;&gt;=2.15" in html
+
+
+def test_unpinned_ops_is_shown_rather_than_omitted() -> None:
+    """An empty specifier means "any ops", which is not the same as unknown."""
+    feats = [_feature("thing")]
+    charm = _charm(
+        "c0", present_features=set(), all_features=["thing"], meta={"ops_requirement": ""}
+    )
+    html = render({charm["name"]: charm}, feats)
+    assert "ops&nbsp;*" in html
+
+    charm = _charm("c1", present_features=set(), all_features=["thing"])
+    assert "ops&nbsp;" not in render({charm["name"]: charm}, feats)
