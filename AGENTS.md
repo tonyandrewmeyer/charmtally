@@ -242,7 +242,10 @@ freely; the sweep will not clobber them.
   snapshot → trend, then pushes refreshed artefacts back to `main` via an explicit
   token-in-URL remote. The charm workdir is cached between runs and
   `ensure_clone` refreshes each clone, so a cached charm is re-scanned at
-  the current commit rather than the one it was first cloned at.
+  the current commit rather than the one it was first cloned at. A refresh
+  that fails is not fatal — a week-old reading beats dropping the charm — but
+  it is recorded as `__meta__.stale`, because a silently-frozen charm is
+  indistinguishable from one that simply has not changed.
 
 Pin third-party actions to a commit SHA with the version in a trailing
 comment. `actions/*` and `pypa/*` may ride a tag (matches the wider

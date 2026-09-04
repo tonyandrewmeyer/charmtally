@@ -7,6 +7,7 @@ local repos so the suite stays fast.
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 from typing import TYPE_CHECKING
 
@@ -78,9 +79,10 @@ class TestEnsureClone:
     def test_clones_when_absent(self, tmp_path: Path) -> None:
         origin = tmp_path / "origin"
         sha = _init_repo(origin)
-        dest = ensure_clone(_ref(origin), tmp_path / "work")
-        assert dest is not None
-        assert head_sha(dest) == sha
+        clone = ensure_clone(_ref(origin), tmp_path / "work")
+        assert clone.path is not None
+        assert clone.stale is False
+        assert head_sha(clone.path) == sha
 
     def test_refreshes_an_existing_clone(self, tmp_path: Path) -> None:
         """The scan workdir is cached across CI runs; a reused clone must
@@ -89,18 +91,37 @@ class TestEnsureClone:
         _init_repo(origin)
         work = tmp_path / "work"
         first = ensure_clone(_ref(origin), work)
-        assert first is not None
+        assert first.path is not None
 
         new_sha = _commit(origin, "src.py", "import ops\n")
 
         second = ensure_clone(_ref(origin), work)
-        assert second == first
-        assert head_sha(second) == new_sha
-        assert (second / "src.py").is_file()
+        assert second.path == first.path
+        assert second.stale is False
+        assert second.path is not None
+        assert head_sha(second.path) == new_sha
+        assert (second.path / "src.py").is_file()
 
-    def test_returns_none_when_clone_fails(self, tmp_path: Path) -> None:
+    def test_returns_no_path_when_clone_fails(self, tmp_path: Path) -> None:
         missing = tmp_path / "does-not-exist"
-        assert ensure_clone(_ref(missing), tmp_path / "work") is None
+        clone = ensure_clone(_ref(missing), tmp_path / "work")
+        assert clone.path is None
+        assert clone.stale is False
+
+    def test_reports_a_failed_refresh_as_stale(self, tmp_path: Path) -> None:
+        """A checkout we could not bring up to date is still scanned, but the
+        reading must say so rather than pass for a current one."""
+        origin = tmp_path / "origin"
+        _init_repo(origin)
+        work = tmp_path / "work"
+        first = ensure_clone(_ref(origin), work)
+        assert first.path is not None
+        # Break the remote: the refresh fetch now fails, the checkout survives.
+        shutil.rmtree(origin)
+
+        second = ensure_clone(_ref(origin), work)
+        assert second.path == first.path
+        assert second.stale is True
 
 
 class TestRefreshClone:
@@ -110,7 +131,7 @@ class TestRefreshClone:
         origin = tmp_path / "origin"
         _init_repo(origin)
         work = tmp_path / "work"
-        dest = ensure_clone(_ref(origin), work)
+        dest = ensure_clone(_ref(origin), work).path
         assert dest is not None
 
         _git(["checkout", "-qb", "release"], origin)
@@ -124,7 +145,7 @@ class TestRefreshClone:
         origin = tmp_path / "origin"
         _init_repo(origin)
         work = tmp_path / "work"
-        dest = ensure_clone(_ref(origin), work)
+        dest = ensure_clone(_ref(origin), work).path
         assert dest is not None
         stale = head_sha(dest)
 
