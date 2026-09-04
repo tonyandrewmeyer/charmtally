@@ -221,25 +221,41 @@ def refresh_clone(dest: Path, ref: CharmRef) -> bool:
     return _git(["reset", "--hard", "FETCH_HEAD"], cwd=dest)
 
 
-def ensure_clone(ref: CharmRef, workdir: Path) -> Path | None:
-    """Shallow-clone `ref.repo_url` into workdir/<slug>, returning the path.
+@dataclasses.dataclass(frozen=True)
+class CloneResult:
+    """Outcome of `ensure_clone`: where the checkout is, and whether it is current.
+
+    `stale` is True only in the one case where we keep using a checkout we
+    could not bring up to date — an existing clone whose refresh failed. A
+    fresh clone is never stale, and a failed clone has no path at all.
+    """
+
+    path: Path | None
+    stale: bool = False
+
+
+def ensure_clone(ref: CharmRef, workdir: Path) -> CloneResult:
+    """Shallow-clone `ref.repo_url` into workdir/<slug>.
 
     An existing clone is refreshed rather than reused as-is: the scan workdir
     is cached between CI runs, so returning early here froze every charm at
     whatever commit it was first cloned at, and the trend page could never
     show a charm adopting a feature.
 
-    Returns None on clone failure. Uses HTTPS (no SSH key needed).
+    A refresh that fails is not fatal — a week-old scan of a charm beats
+    dropping it from the corpus entirely — but it is reported, via
+    `CloneResult.stale`, so the reading can be marked rather than silently
+    passed off as current. `path` is None on clone failure. Uses HTTPS (no
+    SSH key needed).
     """
     dest = workdir / ref.slug
     if dest.exists():
-        refresh_clone(dest, ref)
-        return dest
+        return CloneResult(dest, stale=not refresh_clone(dest, ref))
     workdir.mkdir(parents=True, exist_ok=True)
     cmd = ["clone", "--depth", "1"]
     if ref.branch:
         cmd += ["--branch", ref.branch]
     cmd += [ref.repo_url, str(dest)]
     if not _git(cmd):
-        return None
-    return dest
+        return CloneResult(None)
+    return CloneResult(dest)
