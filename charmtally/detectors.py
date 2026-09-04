@@ -1024,7 +1024,7 @@ def _detect_ast_subclass_of(src: SourceFile, cfg: dict) -> Iterator[ast.ClassDef
                 break
 
 
-def _detect_call_kwarg(tree: ast.Module, cfg: dict) -> Iterator[ast.Call]:
+def _detect_call_kwarg(src: SourceFile, cfg: dict) -> Iterator[ast.Call]:
     """Match `call`-style calls that pass a keyword argument with a listed value.
 
     Config is `call`'s `attr`, plus `keyword` and `equals` (a list of
@@ -1041,7 +1041,7 @@ def _detect_call_kwarg(tree: ast.Module, cfg: dict) -> Iterator[ast.Call]:
     """
     keyword = cfg["keyword"]
     wanted = cfg["equals"]
-    for call in _detect_call(tree, cfg):
+    for call in _detect_call(src, cfg):
         for kw in call.keywords:
             if kw.arg != keyword or not isinstance(kw.value, ast.Constant):
                 continue
