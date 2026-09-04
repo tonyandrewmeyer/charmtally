@@ -14,10 +14,11 @@ Usage:
         Calibration tool: limited set, output to stdout.
 
     charmtally scan --workdir /tmp/charms \\
-                            [--team charm-tech] [--key-only] --out results.json
+                            [--team charm-tech] [--key-only] [--jobs N] \\
+                            --out results.json
         Full corpus scan: clones charms, detects + scores features, writes
-        results.json. Skipped slugs (clone failure / archived) recorded in
-        results["__skipped__"].
+        results.json. Skipped slugs (clone failure / archived / scan error)
+        recorded in results["__skipped__"].
 
     charmtally score results.json [--out scored.json]
         Re-apply rule-based scoring over an existing results.json.
@@ -65,12 +66,16 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import datetime as dt
+import functools
 import json
 import os
 import sys
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from dataclasses import asdict
 from pathlib import Path
+from typing import TYPE_CHECKING, TypeVar
 
 from . import __version__, adoption, catalogue, corpus, dashboard, scan
 from . import llm_score as _llm_score
@@ -80,6 +85,10 @@ from . import rocks as _rocks
 from . import scoring as _scoring
 from . import snapshot as _snapshot
 from . import trend as _trend
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable, Iterator
+    from concurrent.futures import Executor
 
 DEFAULT_CATALOGUE = catalogue.default_path()
 
@@ -164,13 +173,113 @@ def cmd_spike(args: argparse.Namespace) -> int:
     return 0
 
 
+@dataclasses.dataclass(frozen=True)
+class _ScanTask:
+    """One charm root to scan, plus the results.json record it belongs to."""
+
+    slug: str
+    root: Path
+    stale: bool
+    sub_path: str
+    record: dict
+
+
+@dataclasses.dataclass(frozen=True)
+class _ScanOutcome:
+    """A scanned feature dict, or the reason scanning that root failed."""
+
+    features: dict | None = None
+    error: str = ""
+
+
+# The catalogue is the same for every task and is read-only, so it is handed
+# to each worker process once at start-up rather than pickled per charm.
+_WORKER_FEATURES: list[catalogue.Feature] = []
+_WORKER_PATTERNS: list[catalogue.Pattern] = []
+
+
+def _init_scan_worker(feats: list[catalogue.Feature], pats: list[catalogue.Pattern]) -> None:
+    global _WORKER_FEATURES, _WORKER_PATTERNS
+    _WORKER_FEATURES, _WORKER_PATTERNS = feats, pats
+
+
+def _scan_task(task: _ScanTask) -> _ScanOutcome:
+    """Scan one charm root, turning any exception into a value.
+
+    Everything below the scan is already defensive — `_git` never raises,
+    `_yaml_documents` swallows even `RecursionError` — but an unguarded
+    charm here used to discard the whole run's work, since nothing is
+    written until every charm has been scanned. Errors come back as a value
+    rather than an exception because `Executor.map` abandons the rest of the
+    iteration on the first raise.
+    """
+    try:
+        return _ScanOutcome(
+            features=scan.scan_charm(
+                task.root, _WORKER_FEATURES, _WORKER_PATTERNS, stale=task.stale
+            )
+        )
+    except Exception as exc:  # one bad charm must not end the run
+        return _ScanOutcome(error=f"scan failed: {type(exc).__name__}: {exc}")
+
+
+_T = TypeVar("_T")
+_R = TypeVar("_R")
+
+
+def _ordered_map(
+    fn: Callable[[_T], _R],
+    items: Iterable[_T],
+    jobs: int,
+    pool: Callable[..., Executor],
+) -> Iterator[_R]:
+    """Apply `fn` to each item, yielding results in *input* order.
+
+    `jobs == 1` runs inline rather than through a one-worker pool, so the
+    serial run keeps its tracebacks and costs no spawn. Order is preserved
+    either way, which is what keeps the stderr progress log deterministic
+    however many workers there are.
+    """
+    items = list(items)
+    if jobs == 1 or not items:
+        yield from (fn(i) for i in items)
+        return
+    with pool(max_workers=jobs) as executor:
+        yield from executor.map(fn, items)
+
+
+def _clone_all(
+    refs: list[corpus.CharmRef],
+    workdir: Path,
+    jobs: int,
+) -> Iterator[tuple[corpus.CharmRef, scan.Clone | None]]:
+    """Clone (or refresh) every ref, yielding `(ref, clone)` in input order.
+
+    Clones are git subprocesses waiting on the network, so threads are
+    enough; the scanning half is CPU-bound and takes processes instead.
+    """
+
+    def clone(ref: corpus.CharmRef) -> scan.Clone | None:
+        try:
+            return scan.ensure_clone_status(ref, workdir)
+        except Exception:  # treated as a clone failure like any other
+            return None
+
+    yield from zip(refs, _ordered_map(clone, refs, jobs, ThreadPoolExecutor), strict=True)
+
+
 def cmd_scan(args: argparse.Namespace) -> int:
     """Full corpus scan — charm-tech slice + key_charm rows (or any --team filter).
 
     Monorepos fan out: one result per sub-charm, keyed ``<repo-slug>/<dir>``.
     Overrides (exclusions + branch swaps) loaded from
     ``--overrides corpus-overrides.yaml`` and applied per-row before clone.
-    Skipped rows recorded in ``results["__skipped__"]`` as ``{slug: reason}``.
+    Skipped rows recorded in ``results["__skipped__"]`` as ``{slug: reason}``
+    — including charms whose scan raised, so one pathological charm costs its
+    own row rather than the whole run.
+
+    Runs in two phases (clone, then scan) so each can use the concurrency
+    that suits it; ``--jobs 1`` restores the fully serial behaviour.
     """
     feats = _filter(catalogue.load(args.features), args.only)
     pats = catalogue.load_patterns(args.features)
@@ -178,6 +287,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
     overrides = (
         corpus.load_overrides(args.overrides) if args.overrides else corpus.CorpusOverrides.empty()
     )
+    jobs = max(1, args.jobs if args.jobs else (os.cpu_count() or 1))
 
     # Filter: union of team match and key_charm flag.
     # --team X --key-only → include rows in team X OR rows with key_charm=True.
@@ -200,59 +310,89 @@ def cmd_scan(args: argparse.Namespace) -> int:
 
     results: dict[str, object] = {}
     skipped: dict[str, str] = {}
+
+    # Phase 1: apply overrides, then clone what survives.
+    to_clone: list[corpus.CharmRef] = []
     for ref in unique_refs:
         adjusted, exclude_reason = overrides.apply(ref)
         if adjusted is None:
             print(f"… {ref.name} ({ref.repo_url}) — excluded: {exclude_reason}", file=sys.stderr)
             skipped[ref.slug] = exclude_reason or "excluded by corpus-overrides.yaml"
             continue
-        ref = adjusted
+        to_clone.append(adjusted)
 
+    tasks: list[_ScanTask] = []
+    for ref, clone in _clone_all(to_clone, args.workdir, jobs):
         print(
             f"… {ref.name} ({ref.repo_url})" + (f" [branch={ref.branch}]" if ref.branch else ""),
             file=sys.stderr,
         )
-        path = scan.ensure_clone(ref, args.workdir)
-        if path is None:
+        if clone is None:
             print("  clone failed; skipping", file=sys.stderr)
             skipped[ref.slug] = "clone failed"
             continue
+        if clone.stale:
+            print("  refresh failed; scanning the cached checkout", file=sys.stderr)
 
-        charm_roots = scan.find_charm_roots(path)
+        charm_roots = scan.find_charm_roots(clone.path)
         if not charm_roots:
             print("  no charm files found; skipping", file=sys.stderr)
             skipped[ref.slug] = "no charmcraft.yaml or metadata.yaml found"
             continue
 
-        if len(charm_roots) == 1 and charm_roots[0] == path:
-            charm_features = scan.scan_charm(path, feats, pats)
-            _apply_feature_excludes(charm_features, overrides, ref.repo_url, "")
-            results[ref.slug] = {
-                "name": ref.name,
-                "team": ref.team,
-                "repo_url": ref.repo_url,
-                "features": charm_features,
-            }
-        else:
-            # Monorepo fan-out: one entry per sub-charm.
-            print(f"  monorepo: {len(charm_roots)} sub-charms", file=sys.stderr)
-            for sub in charm_roots:
-                rel = sub.relative_to(path)
-                sub_slug = f"{ref.slug}/{rel}"
-                skip_sub = overrides.sub_charm_skip_reason(ref.repo_url, str(rel))
-                if skip_sub:
-                    print(f"  excluding sub-charm {rel}: {skip_sub}", file=sys.stderr)
-                    skipped[sub_slug] = skip_sub
-                    continue
-                charm_features = scan.scan_charm(sub, feats, pats)
-                _apply_feature_excludes(charm_features, overrides, ref.repo_url, str(rel))
-                results[sub_slug] = {
-                    "name": f"{ref.name}/{rel}",
-                    "team": ref.team,
-                    "repo_url": ref.repo_url,
-                    "subpath": str(rel),
-                    "features": charm_features,
-                }
+        if len(charm_roots) == 1 and charm_roots[0] == clone.path:
+            tasks.append(
+                _ScanTask(
+                    slug=ref.slug,
+                    root=clone.path,
+                    stale=clone.stale,
+                    sub_path="",
+                    record={"name": ref.name, "team": ref.team, "repo_url": ref.repo_url},
+                )
+            )
+            continue
+
+        # Monorepo fan-out: one entry per sub-charm.
+        print(f"  monorepo: {len(charm_roots)} sub-charms", file=sys.stderr)
+        for sub in charm_roots:
+            rel = sub.relative_to(clone.path)
+            sub_slug = f"{ref.slug}/{rel}"
+            skip_sub = overrides.sub_charm_skip_reason(ref.repo_url, str(rel))
+            if skip_sub:
+                print(f"  excluding sub-charm {rel}: {skip_sub}", file=sys.stderr)
+                skipped[sub_slug] = skip_sub
+                continue
+            tasks.append(
+                _ScanTask(
+                    slug=sub_slug,
+                    root=sub,
+                    stale=clone.stale,
+                    sub_path=str(rel),
+                    record={
+                        "name": f"{ref.name}/{rel}",
+                        "team": ref.team,
+                        "repo_url": ref.repo_url,
+                        "subpath": str(rel),
+                    },
+                )
+            )
+
+    # Phase 2: detection and scoring, one process per core. The override
+    # pass stays here rather than in the worker so the overrides file never
+    # has to cross a process boundary.
+    _init_scan_worker(feats, pats)
+    pool = functools.partial(
+        ProcessPoolExecutor, initializer=_init_scan_worker, initargs=(feats, pats)
+    )
+    for task, outcome in zip(tasks, _ordered_map(_scan_task, tasks, jobs, pool), strict=True):
+        if outcome.features is None:
+            print(f"  {task.slug}: {outcome.error}", file=sys.stderr)
+            skipped[task.slug] = outcome.error
+            continue
+        _apply_feature_excludes(
+            outcome.features, overrides, task.record["repo_url"], task.sub_path
+        )
+        results[task.slug] = {**task.record, "features": outcome.features}
 
     if skipped:
         results["__skipped__"] = skipped
@@ -648,6 +788,13 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Path to corpus-overrides.yaml (exclusions + branch swaps). "
         "Recommended: --overrides ./corpus-overrides.yaml.",
+    )
+    p_scan.add_argument(
+        "--jobs",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Clone and scan N charms at a time (default: one per core; 1 = serial).",
     )
     p_scan.set_defaults(func=cmd_scan)
 

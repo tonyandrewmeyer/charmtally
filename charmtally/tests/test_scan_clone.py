@@ -11,7 +11,7 @@ import subprocess
 from typing import TYPE_CHECKING
 
 from ..corpus import CharmRef
-from ..scan import ensure_clone, head_sha, refresh_clone, scan_charm
+from ..scan import ensure_clone, ensure_clone_status, head_sha, refresh_clone, scan_charm
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -146,3 +146,25 @@ class TestScanRecordsSha:
         (charm / "charmcraft.yaml").write_text("type: charm\nname: x\n")
         if head_sha(tmp_path) is None:
             assert scan_charm(charm, [])["__meta__"]["repo_sha"] is None
+
+
+class TestEnsureCloneStatus:
+    def test_a_fresh_clone_is_not_stale(self, tmp_path: Path) -> None:
+        origin = tmp_path / "origin"
+        _init_repo(origin)
+        clone = ensure_clone_status(_ref(origin), tmp_path / "work")
+        assert clone is not None
+        assert clone.stale is False
+
+    def test_a_failed_refresh_reports_staleness(self, tmp_path: Path) -> None:
+        """The stale checkout is still scanned — a week-old reading beats
+        dropping the charm — but it must not look like a fresh one."""
+        origin = tmp_path / "origin"
+        _init_repo(origin)
+        work = tmp_path / "work"
+        assert ensure_clone_status(_ref(origin), work) is not None
+
+        clone = ensure_clone_status(_ref(origin, branch="no-such-branch"), work)
+        assert clone is not None
+        assert clone.stale is True
+        assert scan_charm(clone.path, [], stale=clone.stale)["__meta__"]["stale"] is True

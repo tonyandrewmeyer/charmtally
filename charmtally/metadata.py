@@ -57,6 +57,8 @@ Descriptive facts surfaced for the dashboard (no scoring rules attached):
                             tox.ini / Makefile / justfile presence
     repo_sha              — commit the charm was scanned at, or None when the
                             charm root isn't a git checkout
+    stale                 — true when that commit is last run's, because the
+                            clone could not be refreshed
 
 `CharmMeta.to_dict` / `CharmMeta.from_dict` are the round-trip pair used to
 write and re-read the per-charm ``__meta__`` block in results.json.
@@ -135,6 +137,10 @@ class CharmMeta:
     # or None for a working tree that isn't a git checkout. Used to build
     # permalinks in the dashboard and to key the LLM verdict cache.
     repo_sha: str | None = None
+    # True when the clone this reading came from could not be refreshed, so
+    # `repo_sha` is an older commit than the remote's tip rather than the
+    # charm's current state. Set by the scan, not read off the charm.
+    stale: bool = False
 
     def to_dict(self) -> dict:
         """Serialise to the ``__meta__`` block written into results.json.
@@ -169,6 +175,7 @@ class CharmMeta:
             "has_terraform_module": self.has_terraform_module,
             "tooling": list(self.tooling),
             "repo_sha": self.repo_sha,
+            "stale": self.stale,
         }
 
     @classmethod
@@ -205,6 +212,7 @@ class CharmMeta:
             has_terraform_module=bool(raw.get("has_terraform_module")),
             tooling=tuple(raw.get("tooling") or []),
             repo_sha=raw.get("repo_sha"),
+            stale=bool(raw.get("stale")),
         )
 
 
