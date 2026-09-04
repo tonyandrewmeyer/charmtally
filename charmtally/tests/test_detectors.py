@@ -1753,6 +1753,106 @@ def test_shared_source_yields_the_same_evidence(tmp_path: Path) -> None:
     assert standalone == shared
 
 
+def test_source_file_walks_the_tree_once_for_every_detector(tmp_path: Path, monkeypatch) -> None:
+    """The catalogue has 31 `import` and 10 `call` detectors. Each used to walk
+    the whole module for itself; one indexing walk per file answers them all."""
+    from .. import detectors
+
+    _write_charm(tmp_path, "import ops\nops.main(x)\n")
+
+    walks: list[object] = []
+    real = detectors.ast.walk
+    monkeypatch.setattr(detectors.ast, "walk", lambda tree: walks.append(tree) or real(tree))
+
+    source = detectors.CharmSource(tmp_path)
+    for _ in range(10):
+        detect_feature(tmp_path, _feature("import", module="ops"), source)
+        detect_feature(tmp_path, _feature("call", attr="main"), source)
+
+    assert len(walks) == 1
+
+
+def test_source_file_index_preserves_walk_order(tmp_path: Path) -> None:
+    """Detectors iterate the index instead of the tree, so it must hold exactly
+    the nodes `ast.walk` would have reached, in the order it would have."""
+    from ..detectors import SourceFile, ast
+
+    code = "import a\nfrom b import c\n\n\ndef f():\n    g(h(), i)\n    import j\n"
+    (tmp_path / "f.py").write_text(code)
+    src = SourceFile(tmp_path / "f.py", tmp_path)
+
+    assert src.tree is not None
+    walked = list(ast.walk(src.tree))
+    assert src.imports == [n for n in walked if isinstance(n, (ast.Import, ast.ImportFrom))]
+    assert src.calls == [n for n in walked if isinstance(n, ast.Call)]
+
+
+def test_source_file_index_is_empty_for_an_unparseable_file(tmp_path: Path) -> None:
+    from ..detectors import SourceFile
+
+    (tmp_path / "f.py").write_text("def (:\n")
+    src = SourceFile(tmp_path / "f.py", tmp_path)
+    assert src.tree is None
+    assert src.imports == []
+    assert src.calls == []
+
+
+def test_charm_source_globs_and_parses_metadata_once(tmp_path: Path, monkeypatch) -> None:
+    """36 catalogue detectors read the charm's metadata; the glob and the parse
+    must happen once per charm, not once per detector."""
+    from .. import detectors
+    from .. import metadata as metadata_mod
+
+    _write_charm(tmp_path, "import ops\n")
+
+    globs: list[Path] = []
+    loads: list[Path] = []
+    real_find = metadata_mod._find_metadata_files
+    real_load = metadata_mod._load_yaml
+    monkeypatch.setattr(
+        metadata_mod, "_find_metadata_files", lambda root: globs.append(root) or real_find(root)
+    )
+    monkeypatch.setattr(
+        metadata_mod, "_load_yaml", lambda path: loads.append(path) or real_load(path)
+    )
+
+    source = detectors.CharmSource(tmp_path)
+    for _ in range(5):
+        detect_feature(tmp_path, _feature("relation-count", role="requires", min=0), source)
+        detect_feature(tmp_path, _feature("requires-interface", interfaces=["x"]), source)
+
+    assert globs == [tmp_path]
+    assert loads == [tmp_path / "charmcraft.yaml"]
+
+
+def test_charm_source_sweeps_and_parses_yaml_once(tmp_path: Path, monkeypatch) -> None:
+    """`yaml-key` detectors share one glob-and-parse sweep of the charm tree."""
+    from .. import detectors
+
+    _write_charm(tmp_path, "import ops\n")
+
+    sweeps: list[tuple[Path, list[str]]] = []
+    parses: list[str] = []
+    real_files = detectors._yaml_files
+    real_docs = detectors._yaml_documents
+    monkeypatch.setattr(
+        detectors,
+        "_yaml_files",
+        lambda root, globs: sweeps.append((root, globs)) or real_files(root, globs),
+    )
+    monkeypatch.setattr(
+        detectors, "_yaml_documents", lambda text: parses.append(text) or real_docs(text)
+    )
+
+    source = detectors.CharmSource(tmp_path)
+    for _ in range(5):
+        detect_feature(tmp_path, _feature("yaml-key", key="type"), source)
+        detect_feature(tmp_path, _feature("yaml-key", key="name"), source)
+
+    assert len(sweeps) == 1
+    assert len(parses) == 1
+
+
 def test_source_file_line_is_bounds_safe(tmp_path: Path) -> None:
     from ..detectors import SourceFile
 
