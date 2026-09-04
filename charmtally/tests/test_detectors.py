@@ -3,6 +3,7 @@ architecture patterns (part-reconcile / unconditional-init)."""
 
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 
 from ..catalogue import Detector, Feature, Pattern, default_path
@@ -1708,14 +1709,15 @@ def test_charm_source_parses_each_file_once(tmp_path: Path, monkeypatch) -> None
     """A charm is matched against ~70 features and patterns; each file must be
     read and parsed once for the charm, not once per feature."""
     from .. import detectors
+    from ..detectors import _files
 
     _write_charm(tmp_path, "import ops\n")
     (tmp_path / "src" / "other.py").write_text("import ops\n")
 
     parsed: list[str] = []
-    real = detectors._parse_text
+    real = _files._parse_text
     monkeypatch.setattr(
-        detectors, "_parse_text", lambda text, path: parsed.append(str(path)) or real(text, path)
+        _files, "_parse_text", lambda text, path: parsed.append(str(path)) or real(text, path)
     )
 
     source = detectors.CharmSource(tmp_path)
@@ -1728,13 +1730,14 @@ def test_charm_source_parses_each_file_once(tmp_path: Path, monkeypatch) -> None
 def test_charm_source_shares_files_across_scopes(tmp_path: Path, monkeypatch) -> None:
     """The "src" and "any" scopes overlap; an overlapping file is parsed once."""
     from .. import detectors
+    from ..detectors import _files
 
     _write_charm(tmp_path, "import ops\n")
 
     parsed: list[str] = []
-    real = detectors._parse_text
+    real = _files._parse_text
     monkeypatch.setattr(
-        detectors, "_parse_text", lambda text, path: parsed.append(str(path)) or real(text, path)
+        _files, "_parse_text", lambda text, path: parsed.append(str(path)) or real(text, path)
     )
 
     source = detectors.CharmSource(tmp_path)
@@ -1761,8 +1764,8 @@ def test_source_file_walks_the_tree_once_for_every_detector(tmp_path: Path, monk
     _write_charm(tmp_path, "import ops\nops.main(x)\n")
 
     walks: list[object] = []
-    real = detectors.ast.walk
-    monkeypatch.setattr(detectors.ast, "walk", lambda tree: walks.append(tree) or real(tree))
+    real = ast.walk
+    monkeypatch.setattr(ast, "walk", lambda tree: walks.append(tree) or real(tree))
 
     source = detectors.CharmSource(tmp_path)
     for _ in range(10):
@@ -1775,7 +1778,7 @@ def test_source_file_walks_the_tree_once_for_every_detector(tmp_path: Path, monk
 def test_source_file_index_preserves_walk_order(tmp_path: Path) -> None:
     """Detectors iterate the index instead of the tree, so it must hold exactly
     the nodes `ast.walk` would have reached, in the order it would have."""
-    from ..detectors import SourceFile, ast
+    from ..detectors import SourceFile
 
     code = "import a\nfrom b import c\n\n\ndef f():\n    g(h(), i)\n    import j\n"
     (tmp_path / "f.py").write_text(code)
@@ -1828,20 +1831,21 @@ def test_charm_source_globs_and_parses_metadata_once(tmp_path: Path, monkeypatch
 def test_charm_source_sweeps_and_parses_yaml_once(tmp_path: Path, monkeypatch) -> None:
     """`yaml-key` detectors share one glob-and-parse sweep of the charm tree."""
     from .. import detectors
+    from ..detectors import _files
 
     _write_charm(tmp_path, "import ops\n")
 
     sweeps: list[tuple[Path, list[str]]] = []
     parses: list[str] = []
-    real_files = detectors._yaml_files
-    real_docs = detectors._yaml_documents
+    real_files = _files._yaml_files
+    real_docs = _files._yaml_documents
     monkeypatch.setattr(
-        detectors,
+        _files,
         "_yaml_files",
         lambda root, globs: sweeps.append((root, globs)) or real_files(root, globs),
     )
     monkeypatch.setattr(
-        detectors, "_yaml_documents", lambda text: parses.append(text) or real_docs(text)
+        _files, "_yaml_documents", lambda text: parses.append(text) or real_docs(text)
     )
 
     source = detectors.CharmSource(tmp_path)

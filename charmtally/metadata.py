@@ -208,7 +208,7 @@ class CharmMeta:
         )
 
 
-# See `detectors._LOADER`: libyaml's C loader where available.
+# See `detectors._files._LOADER`: libyaml's C loader where available.
 _LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
 
 

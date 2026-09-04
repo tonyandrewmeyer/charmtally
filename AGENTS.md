@@ -139,15 +139,16 @@ adds bytes rather than removing any.
   repo setup to as few `git` invocations as possible.
 - Tests are excluded from `ty` (see `[tool.ty.src]`); the package is not.
 
-## Detector kinds (`charmtally/detectors.py`)
+## Detector kinds (`charmtally/detectors/`)
 
 All triggered from `features.yaml`, in three groups.
 
 Per Python file in scope: `import` · `call` · `call-kwarg` · `observe-event` ·
 `regex`.
 
-Per Python file, backing the architecture axis: `ast-init-call` ·
-`ast-observe-shared-handler` · `ast-shared-method`.
+Per Python file, backing the architecture and component-graph axes:
+`ast-init-call` · `ast-observe-shared-handler` · `ast-shared-method` ·
+`ast-subclass-module`.
 
 File-independent, reading the charm root directly (these are the only ones
 that can see non-Python files — `_select_files` returns `*.py` only):
@@ -163,6 +164,23 @@ caches the metadata glob, the YAML sweep and every parse. A detector that
 re-walks or re-globs for itself pays that cost once per detector per file,
 which is what made the scan 5x slower than it needed to be.
 
+The package is laid out along those three groups. `_files.py` selects, reads
+and parses what the detectors run over (`_select_files`, `SourceFile`,
+`CharmSource`, the YAML sweep); `_ast.py` and `_config.py` hold the kinds
+themselves; `_registry.py` dispatches to them and owns `detect_feature`.
+
+Dispatch is two `{kind: handler}` registries in `_registry.py`, and adding a
+kind is one entry in one of them. A file-independent kind is a function of
+`(CharmSource, config)` run once per charm. A per-file kind is a *factory*:
+`detect_feature` calls it once per feature to get back a runner, and the
+runner is then called once per file. Anything a kind wants precompiled —
+`observe-event`'s patterns, `regex`'s pattern, `import`'s check of whether
+the charm is its own library's provider — is done in the factory, so it
+costs once per feature rather than once per file. A factory returning `None`
+disables its detector for that charm outright. Keep per-detector state in
+the closure: threading it through the per-file loop by positional index into
+`feature.detectors` is what the registry replaced.
+
 When adding a new detector kind, also add at least one positive and one
 negative test in `tests/test_detectors.py`.
 
@@ -177,7 +195,7 @@ Not part of the pipeline; each is run with `uv run python -m charmtally.tools.X`
   *yields* the bindings that survive its three cuts, which is right for a scan
   and wrong for auditing one, so calibration rounds kept writing throwaway
   re-implementations of its accumulation logic — and a sweep that restates the
-  detector quietly stops agreeing with it. This imports `detectors.py`'s own
+  detector quietly stops agreeing with it. This imports `detectors._ast`'s own
   private helpers and re-runs `_detect_ast_observe_shared_handler`'s
   accumulation verbatim instead. Keep it that way: if the detector's
   accumulation changes, this must follow by importing, never by copying.
