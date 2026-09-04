@@ -4,7 +4,7 @@ Usage:
     uv run python -m charmtally.tools.bindings <charm-root> [<charm-root> ...]
 
 Not part of the pipeline. This is a calibration instrument: the `reconcile`
-detector (`detectors._detect_ast_observe_shared_handler`) only ever *yields*
+detector (`detectors._ast._detect_ast_observe_shared_handler`) only ever *yields*
 the bindings that survive its three cuts, which is the right shape for a
 scan and the wrong shape for auditing one. Several calibration rounds have
 needed to see the bindings that did **not** survive, and each wrote its own
@@ -39,9 +39,9 @@ import json
 import sys
 from pathlib import Path
 
-from ..detectors import (
+from ..detectors import CharmSource
+from ..detectors._ast import (
     _LOOP_ACTION_SUFFIX,
-    CharmSource,
     _build_parent_map,
     _enclosing_class,
     _enclosing_for_with_target,
