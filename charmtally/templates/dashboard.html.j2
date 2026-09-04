@@ -414,6 +414,7 @@
         {% if c.plugins %}<span class="sep">·</span>{{ c.plugins|join(",") }}{% endif %}
         {% if c.bases %}<span class="sep">·</span>{{ c.bases|join(",") }}{% endif %}
         {% if c.min_juju %}<span class="sep">·</span>juju&nbsp;{{ c.min_juju }}{% endif %}
+        {% if c.ops_requirement is not none %}<span class="sep" title="The `ops` version the charm asks for">·</span>ops&nbsp;{{ c.ops_requirement if c.ops_requirement else "*" }}{% endif %}
         {% if c.library_count %}<span class="sep">·</span>{{ c.library_count }}&nbsp;lib{{ "" if c.library_count == 1 else "s" }}{% endif %}
         {% if c.tooling %}<span class="sep">·</span>{{ c.tooling|join("+") }}{% endif %}
         {% if c.has_terraform_module %}<span class="sep">·</span>tf{% endif %}
