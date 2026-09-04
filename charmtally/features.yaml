@@ -10,6 +10,9 @@
 #                   import:        module (str) + optional names (list)
 #                   observe-event: event class name(s)
 #                   call:          dotted attribute call (e.g. unit.open_port)
+#                   call-kwarg:    as `call`, plus keyword: + equals: — matches
+#                                  only when that keyword is passed one of the
+#                                  listed literal values
 #                   yaml-key:      key path in a yaml literal under `files`
 #                   regex:         raw pattern (last resort; prefer AST)
 #                   pytest-config-key: scan root pyproject.toml / pytest.ini /
@@ -618,6 +621,46 @@ features:
   # `db.none` fires when the charm requires none of the interfaces
   # listed in any db.* feature. Keep the invert-list in sync with the
   # union of every db.* interfaces list below.
+
+  - name: ops.typed-config.handled-errors
+    library: ops
+    summary: Charm handles typed config/param validation failure instead of erroring.
+    scope: src
+    expected_rare: true
+    detect:
+      - kind: call-kwarg
+        attr: load_config
+        keyword: errors
+        equals: ['blocked']
+      - kind: call-kwarg
+        attr: load_params
+        keyword: errors
+        equals: ['fail']
+    notes: |
+      A sub-row of `ops.typed-config`: that one says the charm calls the
+      typed-data API, this one says it handles the call failing.
+
+      `load_config(C, errors='blocked')` catches the validation failure, sets
+      a BlockedStatus the operator can read, and exits successfully. The
+      default, `errors='raise'`, leaves the exception to reach the hook
+      boundary, so the unit goes to `error` and Juju holds every subsequent
+      hook — including the `config-changed` that would fix it — until someone
+      runs `juju resolved`. That is the same user-visible failure the
+      hand-rolled parsing typed config replaced. `load_params` spells its
+      half `errors='fail'`, which fails the action rather than the unit;
+      both are counted here for the same reason `ops.typed-config` counts
+      both calls.
+
+      Two known blind spots, both deliberate:
+
+      * A charm that takes the default and wraps the call in its own
+        `try`/`except` setting a status is doing the right thing by other
+        means, and reads here as absent.
+      * `errors=` passed as a variable or splatted in from a dict is not
+        visible to a scan, and is likewise counted as absent rather than
+        guessed at either way.
+    verified: []
+    negative: []
 
   - name: db.postgresql
     library: metadata

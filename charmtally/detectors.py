@@ -1,8 +1,10 @@
 """Run a single feature's detectors against a charm tree.
 
-Four kinds run per Python file in scope:
+Five kinds run per Python file in scope:
     import         — AST: matches `import X` and `from X import Y` (with optional names filter)
     call           — AST: matches `*.<attr>(...)` where <attr> is the trailing dotted suffix
+    call-kwarg     — AST: as `call`, but only when a named keyword argument is
+                     passed one of a listed set of literal values
     observe-event  — regex: matches `observe(... on.<snake_name>(...)|on['<snake_name>'] ...)`
                      for each given event class (translated CamelCase→snake_case,
                      dropping trailing 'Event')
@@ -1022,6 +1024,32 @@ def _detect_ast_subclass_of(src: SourceFile, cfg: dict) -> Iterator[ast.ClassDef
                 break
 
 
+def _detect_call_kwarg(tree: ast.Module, cfg: dict) -> Iterator[ast.Call]:
+    """Match `call`-style calls that pass a keyword argument with a listed value.
+
+    Config is `call`'s `attr`, plus `keyword` and `equals` (a list of
+    literals). Used where the call itself is not the signal — the argument
+    that decides what the call *does* is: `load_config(C, errors='blocked')`
+    handles a bad config, `load_config(C)` lets it reach the hook boundary,
+    and both are the same call.
+
+    A keyword passed as anything but a literal — a variable, or splatted in
+    from a dict — is deliberately not yielded. Its value isn't visible
+    without resolution a scan doesn't do, and counting it either way would
+    be a guess; absent evidence reads as "not shown to do this", which is
+    what it is.
+    """
+    keyword = cfg["keyword"]
+    wanted = cfg["equals"]
+    for call in _detect_call(tree, cfg):
+        for kw in call.keywords:
+            if kw.arg != keyword or not isinstance(kw.value, ast.Constant):
+                continue
+            if any(kw.value.value == want for want in wanted):
+                yield call
+                break
+
+
 # ── public entry point ─────────────────────────────────────────────────────────
 
 
@@ -1315,6 +1343,7 @@ def detect_feature(
     # report the same way: one Evidence per node, snippet taken from the
     # node's own source line.
     ast_walkers = {
+        "call-kwarg": _detect_call_kwarg,
         "ast-init-call": _detect_ast_init_call,
         "ast-observe-shared-handler": _detect_ast_observe_shared_handler,
         "ast-shared-method": _detect_ast_shared_method,
