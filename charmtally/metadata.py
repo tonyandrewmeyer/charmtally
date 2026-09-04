@@ -208,9 +208,16 @@ class CharmMeta:
         )
 
 
+# See `detectors._LOADER`: libyaml's C loader where available.
+_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+
+
 def _load_yaml(path: Path) -> dict | None:
     try:
-        data = yaml.safe_load(path.read_text(encoding="utf-8", errors="replace"))
+        # `_LOADER` is a safe loader either way — ruff just can't see
+        # through the getattr to know that.
+        text = path.read_text(encoding="utf-8", errors="replace")
+        data = yaml.load(text, Loader=_LOADER)  # ruff: ignore[unsafe-yaml-load]
     except (yaml.YAMLError, OSError):
         return None
     return data if isinstance(data, dict) else None

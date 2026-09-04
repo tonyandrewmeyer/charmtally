@@ -61,6 +61,12 @@ if TYPE_CHECKING:
     from .catalogue import Detectable
 
 
+# libyaml's C loader where the wheel ships it (it is 12x faster than the
+# pure-Python one, and this module parses every YAML file in every charm),
+# falling back to the Python loader where it doesn't.
+_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+
+
 @dataclass(frozen=True)
 class Evidence:
     """A single detector hit: where it matched and the matching text."""
@@ -141,7 +147,15 @@ def _parse_text(text: str, path: Path) -> ast.Module | None:
 
 
 def _parse(path: Path) -> ast.Module | None:
-    return _parse_text(path.read_text(encoding="utf-8", errors="replace"), path)
+    return _parse_text(_read_text(path), path)
+
+
+def _read_text(path: Path) -> str:
+    """Read `path` as text, or "" if it isn't readable."""
+    try:
+        return path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
 
 
 # ── per-charm source cache ──────────────────────────────────────────────────────
@@ -150,7 +164,7 @@ def _parse(path: Path) -> ast.Module | None:
 class SourceFile:
     """One Python file, read and parsed at most once per charm scan."""
 
-    __slots__ = ("_lines", "path", "rel", "text", "tree")
+    __slots__ = ("_calls", "_imports", "_lines", "path", "rel", "text", "tree")
 
     def __init__(self, path: Path, charm_root: Path) -> None:
         self.path = path
@@ -158,6 +172,8 @@ class SourceFile:
         self.text = path.read_text(encoding="utf-8", errors="replace")
         self.tree = _parse_text(self.text, path)
         self._lines: list[str] | None = None
+        self._imports: list[ast.Import | ast.ImportFrom] | None = None
+        self._calls: list[ast.Call] | None = None
 
     def line(self, lineno: int) -> str:
         """Return the 1-indexed source line `lineno`, stripped, or "" if out of range."""
@@ -166,6 +182,37 @@ class SourceFile:
         if 1 <= lineno <= len(self._lines):
             return self._lines[lineno - 1].strip()
         return ""
+
+    def _index(self) -> tuple[list[ast.Import | ast.ImportFrom], list[ast.Call]]:
+        """Walk the tree once, collecting the node types the hot detectors want.
+
+        The catalogue has 31 `import` and 10 `call`/`call-kwarg` detectors, and
+        each used to `ast.walk` the whole module for itself — 41 full walks per
+        file, which measured as most of a scan's CPU. One walk collecting both
+        node lists answers all of them by iteration. Collection order is
+        `ast.walk` order, so each detector still yields exactly what it did.
+        """
+        imports: list[ast.Import | ast.ImportFrom] = []
+        calls: list[ast.Call] = []
+        if self.tree is not None:
+            for node in ast.walk(self.tree):
+                if isinstance(node, (ast.Import, ast.ImportFrom)):
+                    imports.append(node)
+                elif isinstance(node, ast.Call):
+                    calls.append(node)
+        self._imports = imports
+        self._calls = calls
+        return imports, calls
+
+    @property
+    def imports(self) -> list[ast.Import | ast.ImportFrom]:
+        """Every import statement in the file, in `ast.walk` order."""
+        return self._imports if self._imports is not None else self._index()[0]
+
+    @property
+    def calls(self) -> list[ast.Call]:
+        """Every call expression in the file, in `ast.walk` order."""
+        return self._calls if self._calls is not None else self._index()[1]
 
 
 class CharmSource:
@@ -186,6 +233,10 @@ class CharmSource:
         self._by_path: dict[Path, SourceFile] = {}
         self._charm_name: str | None = None
         self._charm_name_read = False
+        self._meta_files: list[Path] | None = None
+        self._meta_data: dict[Path, dict | None] = {}
+        self._yaml_sweeps: dict[tuple[str, ...], list[Path]] = {}
+        self._yaml_docs: dict[Path, tuple[str, list[object]]] = {}
 
     @property
     def charm_name(self) -> str | None:
@@ -209,6 +260,46 @@ class CharmSource:
             self._by_path[path] = cached
         return cached
 
+    def metadata_files(self) -> list[Path]:
+        """Return the charm's charmcraft.yaml / metadata.yaml paths, globbed for once.
+
+        The catalogue has 21 `relation-count` and 15 `requires-interface`
+        detectors, each of which used to re-run the whole-tree glob and
+        re-parse what it found.
+        """
+        if self._meta_files is None:
+            self._meta_files = _metadata._find_metadata_files(self.charm_root)
+        return self._meta_files
+
+    def metadata_data(self, path: Path) -> dict | None:
+        """Return the parsed contents of one metadata file, loaded at most once."""
+        if path not in self._meta_data:
+            self._meta_data[path] = _metadata._load_yaml(path)
+        return self._meta_data[path]
+
+    def yaml_files(self, globs: list[str]) -> list[Path]:
+        """Return the YAML files matching `globs`, swept for once per glob set."""
+        key = tuple(globs)
+        cached = self._yaml_sweeps.get(key)
+        if cached is None:
+            cached = _yaml_files(self.charm_root, globs)
+            self._yaml_sweeps[key] = cached
+        return cached
+
+    def yaml_documents(self, path: Path) -> tuple[str, list[object]]:
+        """Return the text and parsed documents of one YAML file, read at most once.
+
+        The text comes back alongside the documents because `yaml-key` needs
+        both — the documents to match structurally, the text to locate a line
+        for the dashboard to deep-link to.
+        """
+        cached = self._yaml_docs.get(path)
+        if cached is None:
+            text = _read_text(path)
+            cached = (text, _yaml_documents(text))
+            self._yaml_docs[path] = cached
+        return cached
+
 
 def _attr_chain(node: ast.AST) -> list[str] | None:
     """Return the dotted-name chain of an Attribute expression, or None."""
@@ -225,10 +316,10 @@ def _attr_chain(node: ast.AST) -> list[str] | None:
 # ── detector kinds ──────────────────────────────────────────────────────────────
 
 
-def _detect_import(tree: ast.Module, cfg: dict) -> Iterator[ast.Import | ast.ImportFrom]:
+def _detect_import(src: SourceFile, cfg: dict) -> Iterator[ast.Import | ast.ImportFrom]:
     module = cfg["module"]
     wanted_names = set(cfg.get("names") or [])
-    for node in ast.walk(tree):
+    for node in src.imports:
         if isinstance(node, ast.Import):
             # `names:` filters which symbols are imported FROM a module; it
             # can't be checked on a bare `import X` without symbol resolution.
@@ -251,7 +342,7 @@ def _detect_import(tree: ast.Module, cfg: dict) -> Iterator[ast.Import | ast.Imp
                             break
 
 
-def _detect_call(tree: ast.Module, cfg: dict) -> Iterator[ast.Call]:
+def _detect_call(src: SourceFile, cfg: dict) -> Iterator[ast.Call]:
     """Match calls whose attribute chain ends with the configured dotted suffix.
 
     e.g. attr = "unit.open_port" matches `self.unit.open_port(80)` and
@@ -261,9 +352,7 @@ def _detect_call(tree: ast.Module, cfg: dict) -> Iterator[ast.Call]:
     `self._model = charm.model` and call methods on the alias.
     """
     suffix = cfg["attr"].split(".")
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Call):
-            continue
+    for node in src.calls:
         func = node.func
         if isinstance(func, ast.Attribute):
             chain = _attr_chain(func)
@@ -314,7 +403,7 @@ def _self_attr_calls(method_body: list[ast.stmt], attrs: set[str]) -> Iterator[a
             yield node
 
 
-def _detect_ast_init_call(tree: ast.Module, cfg: dict) -> Iterator[ast.Call]:
+def _detect_ast_init_call(src: SourceFile, cfg: dict) -> Iterator[ast.Call]:
     """Match charms whose __init__ body contains a `self.X(...)` call where.
 
     X is one of `cfg["attrs"]`. Signal for the `unconditional-init` pattern:
@@ -325,6 +414,9 @@ def _detect_ast_init_call(tree: ast.Module, cfg: dict) -> Iterator[ast.Call]:
     good enough on charm source where __init__ is almost exclusively the
     charm class).
     """
+    tree = src.tree
+    if tree is None:
+        return
     attrs = set(cfg["attrs"])
     for node in ast.walk(tree):
         if not isinstance(node, ast.ClassDef):
@@ -648,7 +740,7 @@ def _event_name(node: ast.expr, relation_names: dict[str, str] | None = None) ->
 _LOOP_ACTION_SUFFIX = "_action"
 
 
-def _detect_ast_observe_shared_handler(tree: ast.Module, cfg: dict) -> Iterator[ast.Call]:
+def _detect_ast_observe_shared_handler(src: SourceFile, cfg: dict) -> Iterator[ast.Call]:
     """Match the holistic `reconcile` pattern: a single handler method is.
 
     bound to >= `min_events` distinct events via `framework.observe(...)`.
@@ -693,6 +785,9 @@ def _detect_ast_observe_shared_handler(tree: ast.Module, cfg: dict) -> Iterator[
     relation it's for. A runtime-supplied key (e.g. a constructor
     parameter) stays unresolved, same as before.
     """
+    tree = src.tree
+    if tree is None:
+        return
     min_events = int(cfg.get("min_events", 3))
     exclude_suffixes = tuple(cfg.get("exclude_suffixes", ["_error"]))
 
@@ -780,7 +875,7 @@ def _detect_ast_observe_shared_handler(tree: ast.Module, cfg: dict) -> Iterator[
         yield from per_handler_calls[handler]
 
 
-def _detect_ast_shared_method(tree: ast.Module, cfg: dict) -> Iterator[ast.Call]:
+def _detect_ast_shared_method(src: SourceFile, cfg: dict) -> Iterator[ast.Call]:
     """Match charms with the `part-reconcile` pattern: per-event `_on_*`.
 
     handler methods that each delegate into a shared reconcile method.
@@ -790,6 +885,9 @@ def _detect_ast_shared_method(tree: ast.Module, cfg: dict) -> Iterator[ast.Call]
     `self.X(...)` where X is in `cfg["attrs"]`. Yields one ast.Call node
     per qualifying caller so evidence lines are reported per handler.
     """
+    tree = src.tree
+    if tree is None:
+        return
     attrs = set(cfg["attrs"])
     min_callers = int(cfg.get("min_callers", 2))
     handler_re = re.compile(cfg.get("handler_re", r"^_on_"))
@@ -856,7 +954,7 @@ def _resolve_base_dotted_path(node: ast.expr, import_table: dict[str, str]) -> s
     return head if len(chain) == 1 else f"{head}.{'.'.join(chain[1:])}"
 
 
-def _detect_ast_subclass_of(tree: ast.Module, cfg: dict) -> Iterator[ast.ClassDef]:
+def _detect_ast_subclass_of(src: SourceFile, cfg: dict) -> Iterator[ast.ClassDef]:
     """Match a ClassDef with a base that resolves to a dotted path under `cfg["module"]`.
 
     Signal for `component-graph`'s `paas_charm.*` member (CALIBRATION #42):
@@ -876,6 +974,9 @@ def _detect_ast_subclass_of(tree: ast.Module, cfg: dict) -> Iterator[ast.ClassDe
     `paas_charm.go.Charm` and `paas_charm.app.App`) still only makes the
     pattern present, since presence is a boolean over all evidence.
     """
+    tree = src.tree
+    if tree is None:
+        return
     module = cfg["module"]
     import_table = _resolve_import_table(tree)
     if not import_table:
@@ -890,7 +991,7 @@ def _detect_ast_subclass_of(tree: ast.Module, cfg: dict) -> Iterator[ast.ClassDe
                 break
 
 
-def _detect_call_kwarg(tree: ast.Module, cfg: dict) -> Iterator[ast.Call]:
+def _detect_call_kwarg(src: SourceFile, cfg: dict) -> Iterator[ast.Call]:
     """Match `call`-style calls that pass a keyword argument with a listed value.
 
     Config is `call`'s `attr`, plus `keyword` and `equals` (a list of
@@ -907,7 +1008,7 @@ def _detect_call_kwarg(tree: ast.Module, cfg: dict) -> Iterator[ast.Call]:
     """
     keyword = cfg["keyword"]
     wanted = cfg["equals"]
-    for call in _detect_call(tree, cfg):
+    for call in _detect_call(src, cfg):
         for kw in call.keywords:
             if kw.arg != keyword or not isinstance(kw.value, ast.Constant):
                 continue
@@ -919,7 +1020,7 @@ def _detect_call_kwarg(tree: ast.Module, cfg: dict) -> Iterator[ast.Call]:
 # ── public entry point ─────────────────────────────────────────────────────────
 
 
-def _detect_pytest_config_key(charm_root: Path, config: dict) -> list[Evidence]:
+def _detect_pytest_config_key(source: CharmSource, config: dict) -> list[Evidence]:
     """Look for pytest config keys (e.g. `log_level`) in the four standard.
 
     config-file locations a charm might use.
@@ -933,6 +1034,7 @@ def _detect_pytest_config_key(charm_root: Path, config: dict) -> list[Evidence]:
     Stops on the first parse error per file; treats malformed config the
     same as absent.
     """
+    charm_root = source.charm_root
     keys = set(config["keys"])
     results: list[Evidence] = []
 
@@ -1009,19 +1111,15 @@ def _yaml_files(charm_root: Path, globs: list[str]) -> list[Path]:
     return sorted(out)
 
 
-def _yaml_documents(path: Path) -> list[object]:
-    """Return the parsed documents in `path`, or [] if it isn't loadable.
+def _yaml_documents(text: str) -> list[object]:
+    """Return the parsed documents in `text`, or [] if it isn't loadable.
 
-    Uses ``safe_load_all`` because charm repos carry multi-document YAML
+    Loads *all* documents because charm repos carry multi-document YAML
     (k8s manifests, kustomize output) alongside charm metadata.
     """
     try:
-        return [
-            doc
-            for doc in yaml.safe_load_all(path.read_text(encoding="utf-8", errors="replace"))
-            if doc
-        ]
-    except (yaml.YAMLError, OSError, RecursionError):
+        return [doc for doc in yaml.load_all(text, Loader=_LOADER) if doc]
+    except (yaml.YAMLError, RecursionError):
         return []
 
 
@@ -1043,7 +1141,7 @@ def _find_mapping_key(node: object, keys: set[str]) -> str | None:
     return None
 
 
-def _detect_yaml_key(charm_root: Path, config: dict) -> list[Evidence]:
+def _detect_yaml_key(source: CharmSource, config: dict) -> list[Evidence]:
     """Match YAML files declaring one of `keys` as a mapping key.
 
     config:
@@ -1066,15 +1164,14 @@ def _detect_yaml_key(charm_root: Path, config: dict) -> list[Evidence]:
         return []
 
     results: list[Evidence] = []
-    for path in _yaml_files(charm_root, globs):
-        documents = _yaml_documents(path)
+    for path in source.yaml_files(globs):
+        text, documents = source.yaml_documents(path)
         if not documents:
             continue
         found = next((k for k in (_find_mapping_key(doc, keys) for doc in documents) if k), None)
         if not found:
             continue
-        rel = str(path.relative_to(charm_root))
-        text = path.read_text(encoding="utf-8", errors="replace")
+        rel = str(path.relative_to(source.charm_root))
         key_re = re.compile(rf"^\s*[\"']?{re.escape(found)}[\"']?\s*:", re.MULTILINE)
         match = key_re.search(text)
         line = text.count("\n", 0, match.start()) + 1 if match else 0
@@ -1082,7 +1179,7 @@ def _detect_yaml_key(charm_root: Path, config: dict) -> list[Evidence]:
     return results
 
 
-def _detect_requires_interface(charm_root: Path, config: dict) -> list[Evidence]:
+def _detect_requires_interface(source: CharmSource, config: dict) -> list[Evidence]:
     """Match `requires:` block interfaces in charmcraft.yaml / metadata.yaml.
 
     config:
@@ -1094,16 +1191,16 @@ def _detect_requires_interface(charm_root: Path, config: dict) -> list[Evidence]
     """
     wanted = set(config.get("interfaces") or [])
     invert = bool(config.get("invert"))
-    meta_files = _metadata._find_metadata_files(charm_root)
+    meta_files = source.metadata_files()
     if not meta_files:
         return []
     matches: list[Evidence] = []
     first_meta_rel: str | None = None
     for meta_path in meta_files:
-        data = _metadata._load_yaml(meta_path)
+        data = source.metadata_data(meta_path)
         if not data:
             continue
-        rel = str(meta_path.relative_to(charm_root))
+        rel = str(meta_path.relative_to(source.charm_root))
         if first_meta_rel is None:
             first_meta_rel = rel
         block = data.get("requires") or {}
@@ -1124,7 +1221,7 @@ def _detect_requires_interface(charm_root: Path, config: dict) -> list[Evidence]
     return matches
 
 
-def _detect_relation_count(charm_root: Path, config: dict) -> list[Evidence]:
+def _detect_relation_count(source: CharmSource, config: dict) -> list[Evidence]:
     """Bucket a charm by its requires / provides relation count.
 
     config:
@@ -1144,17 +1241,17 @@ def _detect_relation_count(charm_root: Path, config: dict) -> list[Evidence]:
     max_ = int(config["max"]) if "max" in config else None
     only_optional = bool(config.get("optional"))
 
-    meta_files = _metadata._find_metadata_files(charm_root)
+    meta_files = source.metadata_files()
     if not meta_files:
         return []
     seen: dict[str, bool] = {}
     first_rel: str | None = None
     for meta_path in meta_files:
-        data = _metadata._load_yaml(meta_path)
+        data = source.metadata_data(meta_path)
         if not data:
             continue
         if first_rel is None:
-            first_rel = str(meta_path.relative_to(charm_root))
+            first_rel = str(meta_path.relative_to(source.charm_root))
         block = data.get(role) or {}
         if not isinstance(block, dict):
             continue
@@ -1188,13 +1285,13 @@ def detect_feature(
     # (Python-only) would never hand them.
     for det in feature.detectors:
         if det.kind == "pytest-config-key":
-            evidence.extend(_detect_pytest_config_key(charm_root, det.config))
+            evidence.extend(_detect_pytest_config_key(source, det.config))
         elif det.kind == "requires-interface":
-            evidence.extend(_detect_requires_interface(charm_root, det.config))
+            evidence.extend(_detect_requires_interface(source, det.config))
         elif det.kind == "relation-count":
-            evidence.extend(_detect_relation_count(charm_root, det.config))
+            evidence.extend(_detect_relation_count(source, det.config))
         elif det.kind == "yaml-key":
-            evidence.extend(_detect_yaml_key(charm_root, det.config))
+            evidence.extend(_detect_yaml_key(source, det.config))
 
     # Pre-compile observe-event regexes per detector.
     observe_pats: dict[int, list[re.Pattern[str]]] = {}
@@ -1230,7 +1327,7 @@ def detect_feature(
             if det.kind == "import" and tree is not None:
                 if i in provided_lib_detectors:
                     continue
-                for imp in _detect_import(tree, det.config):
+                for imp in _detect_import(src, det.config):
                     line = ast.get_source_segment(text, imp) or ""
                     evidence.append(
                         Evidence(rel, imp.lineno, det.kind, line.splitlines()[0][:120])
@@ -1238,7 +1335,7 @@ def detect_feature(
             elif det.kind == "call" and tree is not None:
                 evidence.extend(
                     Evidence(rel, call.lineno, det.kind, src.line(call.lineno)[:120])
-                    for call in _detect_call(tree, det.config)
+                    for call in _detect_call(src, det.config)
                 )
             elif det.kind == "observe-event":
                 for pat in observe_pats[i]:
@@ -1248,7 +1345,7 @@ def detect_feature(
             elif det.kind in ast_walkers and tree is not None:
                 evidence.extend(
                     Evidence(rel, node.lineno, det.kind, src.line(node.lineno)[:120])
-                    for node in ast_walkers[det.kind](tree, det.config)
+                    for node in ast_walkers[det.kind](src, det.config)
                 )
             elif det.kind == "regex":
                 for m in _detect_regex(text, det.config["pattern"]):

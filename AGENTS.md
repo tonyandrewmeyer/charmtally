@@ -157,7 +157,11 @@ A charm is matched against every feature and pattern, so `scan_charm`
 builds one `CharmSource` and passes it to every `detect_feature` call;
 each file is read and parsed once per charm, not once per feature. New
 per-file detector kinds must read from the `SourceFile` they're handed
-rather than re-reading the path.
+rather than re-reading the path. That extends to the *tree*: `SourceFile`
+walks it once and hands out `imports` / `calls` indices, and `CharmSource`
+caches the metadata glob, the YAML sweep and every parse. A detector that
+re-walks or re-globs for itself pays that cost once per detector per file,
+which is what made the scan 5x slower than it needed to be.
 
 When adding a new detector kind, also add at least one positive and one
 negative test in `tests/test_detectors.py`.
