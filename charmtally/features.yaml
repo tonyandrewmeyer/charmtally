@@ -433,6 +433,33 @@ features:
     verified: []
     negative: []
 
+  - name: testing.pytest-jubilant
+    library: pytest-jubilant
+    summary: Integration tests use the pytest-jubilant plugin.
+    scope: tests
+    detect:
+      - kind: import
+        module: pytest_jubilant
+      - kind: regex
+        pattern: 'def\s+test_\w*\s*\([^)]*\bjuju(?:_factory)?\b'
+    notes: |
+      The plugin half of jubilant: `jubilant.integration-tests` sees the
+      library, this sees the pytest plugin that hands out a temporary model.
+      Two arms for the same reason `testing.pytest-operator` has two — the
+      plugin is normally reached through its `juju` / `juju_factory` fixture
+      rather than an import, and a test module that only takes the fixture
+      never names `pytest_jubilant`.
+      Deliberately a row of its own rather than a third arm of the
+      integration-testing split: a charm using the plugin is using jubilant
+      too, so both are expected to fire together and neither has to arbitrate
+      the other away.
+      The fixture arm is the looser of the two — a charm that writes its own
+      `juju` fixture in `conftest.py` matches it as well — which is acceptable
+      here, because such a fixture is still handing a `jubilant.Juju` to the
+      test.
+    verified: []
+    negative: []
+
   - name: testing.pytest-log-config
     library: python
     summary: Test config sets pytest log_level / log_cli_level / log_file_level.

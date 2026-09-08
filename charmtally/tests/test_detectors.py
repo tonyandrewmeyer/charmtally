@@ -1702,6 +1702,41 @@ def __init__(self, framework):
     assert detect_feature(tmp_path, feature) == []
 
 
+def test_pytest_jubilant_fires_on_the_plugin_import(tmp_path: Path) -> None:
+    _write_test_file(tmp_path, "import pytest_jubilant\n")
+    ev = detect_feature(tmp_path, _catalogue_feature("testing.pytest-jubilant"))
+    assert [e.detector_kind for e in ev] == ["import"]
+
+
+def test_pytest_jubilant_fires_on_the_juju_fixture(tmp_path: Path) -> None:
+    """The usual shape: the module takes the fixture and never names the plugin."""
+    _write_test_file(
+        tmp_path,
+        "def test_deploy(juju):\n    juju.deploy('./x.charm')\n",
+    )
+    ev = detect_feature(tmp_path, _catalogue_feature("testing.pytest-jubilant"))
+    assert [e.detector_kind for e in ev] == ["regex"]
+
+
+def test_pytest_jubilant_fires_on_the_juju_factory_fixture(tmp_path: Path) -> None:
+    _write_test_file(
+        tmp_path,
+        "def test_two_models(request, juju_factory):\n    pass\n",
+    )
+    assert len(detect_feature(tmp_path, _catalogue_feature("testing.pytest-jubilant"))) == 1
+
+
+def test_pytest_jubilant_absent_from_a_pytest_operator_test(tmp_path: Path) -> None:
+    """`ops_test` is the other plugin's fixture, and `juju` appears only in prose."""
+    _write_test_file(
+        tmp_path,
+        "async def test_deploy(ops_test):\n"
+        '    """Deploy the charm to the juju model."""\n'
+        '    await ops_test.model.deploy("x")\n',
+    )
+    assert detect_feature(tmp_path, _catalogue_feature("testing.pytest-jubilant")) == []
+
+
 # ── CharmSource (shared parse cache) ─────────────────────────────────────────
 
 
