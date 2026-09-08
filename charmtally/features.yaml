@@ -18,6 +18,10 @@
 #                   pytest-config-key: scan root pyproject.toml / pytest.ini /
 #                                  setup.cfg / tox.ini for given keys (TOML +
 #                                  INI parse, not regex)
+#                   requirement:   a Python dependency `name:` declared in
+#                                  charmcraft.yaml / pyproject.toml /
+#                                  requirements*.txt, optionally only when
+#                                  requested with a given `extra:`
 #   added-in:     ops/pebble/etc version the feature first shipped in
 #                 (best-effort; informational, not used by the extractor)
 #   notes:        free text — caveats, false-positive risks
@@ -608,6 +612,35 @@ features:
       Deliberately one feature covering both calls: a charm that types its
       config but not its action parameters has still adopted the API, and the
       adoption scorecard asks the OR of the two anyway.
+    verified: []
+    negative: []
+
+  - name: ops.tracing
+    library: ops
+    summary: Charm depends on ops[tracing] / ops-tracing.
+    scope: any
+    detect:
+      - kind: requirement
+        name: ops
+        extra: tracing
+      - kind: requirement
+        name: ops-tracing
+    added-in: ops 2.21
+    notes: |
+      A dependency fact rather than a code one: `ops-tracing` is the package
+      that ships the OpenTelemetry exporter and the `tracing` relation
+      plumbing, and a charm that has not added it cannot emit a span
+      whatever its source says. `ops[tracing]` and a bare `ops-tracing` pin
+      are the same dependency spelled two ways, so both arms are counted.
+
+      This says the charm has *turned tracing on*, not that it uses it: a
+      charm that adds the dependency and never instruments anything beyond
+      what ops emits itself still reads as present here. Manual
+      instrumentation is a separate signal.
+
+      The blind spot is a charm that pins its dependencies somewhere the
+      scan does not read — a lock file, a constraints file, or a base image.
+      Those read as absent rather than being guessed at.
     verified: []
     negative: []
 

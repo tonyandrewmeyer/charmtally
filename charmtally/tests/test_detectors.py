@@ -2011,3 +2011,82 @@ class MyCharm(paas_charm.flask.Charm):
     )
     ev = detect_feature(tmp_path, _catalogue_pattern("component-graph"))
     assert len(ev) == 1
+
+
+# ── requirement (ops.tracing) ────────────────────────────────────────────────
+
+
+def _requirement_feature(**cfg) -> Feature:
+    return Feature(
+        name="test",
+        library="ops",
+        summary="t",
+        scope="any",
+        detectors=(Detector(kind="requirement", config=cfg),),
+    )
+
+
+def test_requirement_fires_on_a_requirements_file(tmp_path: Path) -> None:
+    _seed_charm_root(tmp_path)
+    (tmp_path / "requirements.txt").write_text("ops ~= 2.21\nops-tracing==0.2\n")
+    ev = detect_feature(tmp_path, _requirement_feature(name="ops-tracing"))
+    assert len(ev) == 1
+    assert ev[0].file == "requirements.txt"
+    assert ev[0].line == 2
+    assert ev[0].snippet == "ops-tracing==0.2"
+
+
+def test_requirement_matches_any_pep503_spelling(tmp_path: Path) -> None:
+    _seed_charm_root(tmp_path)
+    (tmp_path / "requirements-dev.txt").write_text("OPS_Tracing >= 1\n")
+    ev = detect_feature(tmp_path, _requirement_feature(name="ops-tracing"))
+    assert len(ev) == 1
+    assert ev[0].file == "requirements-dev.txt"
+
+
+def test_requirement_ignores_a_longer_distribution_name(tmp_path: Path) -> None:
+    _seed_charm_root(tmp_path)
+    (tmp_path / "requirements.txt").write_text("ops-tracing-extras==1\ncharmlibs-ops\n")
+    ev = detect_feature(tmp_path, _requirement_feature(name="ops-tracing"))
+    assert ev == []
+
+
+def test_requirement_extra_fires_on_pyproject_dependency(tmp_path: Path) -> None:
+    _seed_charm_root(tmp_path)
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\ndependencies = ["ops[testing, tracing] ~= 2.21"]\n'
+    )
+    ev = detect_feature(tmp_path, _requirement_feature(name="ops", extra="tracing"))
+    assert len(ev) == 1
+    assert ev[0].file == "pyproject.toml"
+
+
+def test_requirement_extra_does_not_fire_on_a_bare_dependency(tmp_path: Path) -> None:
+    _seed_charm_root(tmp_path)
+    (tmp_path / "requirements.txt").write_text("ops ~= 2.21\nops[testing]\n")
+    ev = detect_feature(tmp_path, _requirement_feature(name="ops", extra="tracing"))
+    assert ev == []
+
+
+def test_requirement_reads_charmcraft_yaml(tmp_path: Path) -> None:
+    (tmp_path / "charmcraft.yaml").write_text(
+        "type: charm\nname: t\nparts:\n  charm:\n    python-packages: [ops[tracing]]\n"
+    )
+    ev = detect_feature(tmp_path, _requirement_feature(name="ops", extra="tracing"))
+    assert len(ev) == 1
+    assert ev[0].file == "charmcraft.yaml"
+
+
+def test_ops_tracing_catalogue_feature_fires_on_either_spelling(tmp_path: Path) -> None:
+    """End-to-end against the shipped `features.yaml` feature, both arms."""
+    feature = _catalogue_feature("ops.tracing")
+
+    _seed_charm_root(tmp_path)
+    (tmp_path / "requirements.txt").write_text("ops[tracing] ~= 2.21\n")
+    assert detect_feature(tmp_path, feature)
+
+    (tmp_path / "requirements.txt").write_text("ops ~= 2.21\nops-tracing\n")
+    assert detect_feature(tmp_path, feature)
+
+    (tmp_path / "requirements.txt").write_text("ops ~= 2.21\n")
+    assert detect_feature(tmp_path, feature) == []
