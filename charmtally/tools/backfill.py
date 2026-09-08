@@ -652,6 +652,8 @@ def rocks_for_date(
                 "team": ref.team,
                 "readable": facts is not None,
                 "run_user": facts["run_user"] if facts is not None else None,
+                "has_services": facts is not None and facts["has_services"],
+                "has_checks": facts is not None and facts["has_checks"],
             }
             outcome.records[ref.slug] = record
             outcome.tally[SCANNED if facts is not None else UNREADABLE] += 1

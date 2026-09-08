@@ -276,7 +276,9 @@ def _rock_repo(root: Path) -> Path:
         root,
         when="2026-02-01T00:00:00Z",
     )
-    (root / "rockcraft.yaml").write_text("name: demo\nrun-user: _daemon_\n")
+    (root / "rockcraft.yaml").write_text(
+        "name: demo\nrun-user: _daemon_\nservices:\n  web:\n    command: /bin/web\n"
+    )
     _git(["add", "-A"], root)
     _git(
         ["-c", "commit.gpgsign=false", "commit", "-q", "-m", "rock"],
@@ -328,6 +330,10 @@ class TestRocksForDate:
         record = outcome.records["x/y:rockcraft.yaml"]
         assert record["readable"] is True
         assert record["run_user"] == "_daemon_"
+        # The layer facts replay too, so a backfilled date cannot disagree
+        # with a scanned one about whether the rock ships its own layer.
+        assert record["has_services"] is True
+        assert record["has_checks"] is False
         assert outcome.tally[backfill.SCANNED] == 1
 
     def test_repo_newer_than_the_date_is_not_yet_created(self, tmp_path: Path):

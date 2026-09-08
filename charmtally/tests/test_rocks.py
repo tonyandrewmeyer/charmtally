@@ -90,7 +90,38 @@ def test_slug_distinguishes_rocks_in_one_repo() -> None:
 def test_facts_read_run_user() -> None:
     facts = rocks.facts_from_rockcraft("name: foo\nrun-user: _daemon_\n")
 
-    assert facts == {"run_user": "_daemon_", "name": "foo"}
+    assert facts == {
+        "run_user": "_daemon_",
+        "name": "foo",
+        "has_services": False,
+        "has_checks": False,
+    }
+
+
+def test_facts_read_a_declared_pebble_layer() -> None:
+    facts = rocks.facts_from_rockcraft(
+        "name: foo\n"
+        "services:\n"
+        "  web:\n"
+        "    command: /bin/web\n"
+        "checks:\n"
+        "  up:\n"
+        "    http:\n"
+        "      url: http://localhost/\n"
+    )
+
+    assert facts is not None
+    assert facts["has_services"] is True
+    assert facts["has_checks"] is True
+
+
+def test_facts_report_an_empty_services_key_as_no_layer() -> None:
+    """A present but empty key declares no service, so it ships no layer."""
+    facts = rocks.facts_from_rockcraft("name: foo\nservices:\nchecks: {}\n")
+
+    assert facts is not None
+    assert facts["has_services"] is False
+    assert facts["has_checks"] is False
 
 
 def test_facts_report_an_absent_run_user_as_none() -> None:
@@ -113,7 +144,8 @@ def test_scan_rocks_marks_unfetchable_rocks_unreadable() -> None:
     ]
 
     def fetch(url: str) -> str | None:
-        return "run-user: _daemon_\n" if "/c/ok/" in url else None
+        layer = "run-user: _daemon_\nservices:\n  web:\n    command: /bin/web\n"
+        return layer if "/c/ok/" in url else None
 
     records = rocks.scan_rocks(refs, fetch=fetch, workers=2)
 
@@ -124,10 +156,13 @@ def test_scan_rocks_marks_unfetchable_rocks_unreadable() -> None:
         "team": "",
         "readable": True,
         "run_user": "_daemon_",
+        "has_services": True,
+        "has_checks": False,
     }
     gone = records["c/gone:rockcraft.yaml"]
     assert gone["readable"] is False
     assert gone["run_user"] is None
+    assert gone["has_services"] is False
 
 
 def test_scan_rocks_of_nothing_is_empty() -> None:
