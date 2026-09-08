@@ -140,12 +140,32 @@ def fetch_text(url: str, *, timeout: float = 30.0) -> str | None:
         return None
 
 
+def _declares(doc: dict, key: str) -> bool:
+    """Whether `doc` declares at least one entry under `key`.
+
+    Rockcraft writes `services` and `checks` as mappings, so a present but
+    empty (or null) key declares nothing and reads as False — the rock ships
+    no layer either way, and "the key exists" is not the fact anyone wants.
+    """
+    value = doc.get(key)
+    return isinstance(value, dict) and bool(value)
+
+
 def facts_from_rockcraft(text: str) -> dict | None:
     """Extract the scanned facts from one `rockcraft.yaml`, or None if unparsable.
 
     `run_user` is None when the key is absent, which is rockcraft's own
     default and means the rock runs as root — a real reading, not a gap. An
     unparsable file is the gap, and is reported as one.
+
+    `has_services` is the Pebble-layer question: rockcraft turns the
+    `services` key into a layer inside the image, so a rock that declares one
+    ships its layer rather than leaving the charm to hand-build it with
+    `add_layer`. `has_checks` rides along because it is the same parse and
+    the same layer. Both are False for a rock that declares nothing; a record
+    written before this scan learned to look has *no* such key, which is why
+    consumers should read them with `.get` and treat a missing key as "not
+    scanned" rather than as False.
     """
     try:
         doc = yaml.safe_load(text)
@@ -157,6 +177,8 @@ def facts_from_rockcraft(text: str) -> dict | None:
     return {
         "run_user": run_user if isinstance(run_user, str) else None,
         "name": doc.get("name") if isinstance(doc.get("name"), str) else None,
+        "has_services": _declares(doc, "services"),
+        "has_checks": _declares(doc, "checks"),
     }
 
 
@@ -169,6 +191,8 @@ def scan_rock(ref: RockRef, fetch: Callable[[str], str | None] = fetch_text) -> 
         "team": ref.team,
         "readable": False,
         "run_user": None,
+        "has_services": False,
+        "has_checks": False,
     }
     text = fetch(raw_url(ref))
     if text is None:
@@ -178,6 +202,8 @@ def scan_rock(ref: RockRef, fetch: Callable[[str], str | None] = fetch_text) -> 
         return record
     record["readable"] = True
     record["run_user"] = facts["run_user"]
+    record["has_services"] = facts["has_services"]
+    record["has_checks"] = facts["has_checks"]
     return record
 
 
