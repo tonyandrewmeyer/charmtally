@@ -18,12 +18,15 @@ Four more run per Python file and back the architecture axis:
                                    own import table, to a dotted path under a
                                    configured module root
 
-Four are file-independent: they read the charm root directly rather than the
+Five are file-independent: they read the charm root directly rather than the
 Python files `_select_files` returns.
     yaml-key           — a mapping key present in YAML matching a glob
     pytest-config-key  — a pytest setting in pyproject/pytest.ini/setup.cfg/tox.ini
     requires-interface — an interface named in the metadata `requires:` block
     relation-count     — bucket the charm by its requires/provides/peers count
+    requirement        — a Python dependency declared in charmcraft.yaml,
+                         pyproject.toml or a requirements file, optionally
+                         with a given extra
 
 The package is split along those three groups: `_files` selects, reads and
 parses what the detectors run over, `_ast` and `_config` hold the kinds

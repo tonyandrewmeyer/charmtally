@@ -396,14 +396,30 @@ def _charmlibs_names(charm_root: Path) -> list[str]:
         for sub in _CHARMLIBS_IMPORT.findall(text):
             names.add(_normalise_charmlib(sub))
 
-    for rel in ("pyproject.toml", "charmcraft.yaml", "requirements.txt"):
-        path = charm_root / rel
-        if path.is_file():
-            names.update(_charmlibs_requirements(path))
-    for req in charm_root.glob("requirements*.txt"):
-        names.update(_charmlibs_requirements(req))
+    for path in dependency_files(charm_root):
+        names.update(_charmlibs_requirements(path))
 
     return sorted(names)
+
+
+def dependency_files(charm_root: Path) -> list[Path]:
+    """Return the files a charm can declare a Python dependency in.
+
+    `charmcraft.yaml` is on the list because charmcraft takes inline
+    `parts.charm.python-packages` / `charm-requirements`, so a charm can pin a
+    dependency without a requirements file at all.
+
+    Shared with the `requirement` detector kind rather than restated there:
+    "which files record a dependency" is one fact about a charm, and two
+    copies of it would drift the moment either side learned a new location.
+    """
+    out: list[Path] = []
+    for rel in ("charmcraft.yaml", "pyproject.toml"):
+        path = charm_root / rel
+        if path.is_file():
+            out.append(path)
+    out.extend(sorted(p for p in charm_root.glob("requirements*.txt") if p.is_file()))
+    return out
 
 
 def _normalise_charmlib(dotted: str) -> str:

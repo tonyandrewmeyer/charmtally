@@ -1,8 +1,8 @@
 """The file-independent detector kinds.
 
-These four read the charm root directly rather than the Python files
+These five read the charm root directly rather than the Python files
 `_select_files` returns, which makes them the only detectors that can see a
-charm's YAML, INI and TOML. They take a `CharmSource` rather than a
+charm's YAML, INI, TOML and requirements files. They take a `CharmSource` rather than a
 `SourceFile`, run once per charm rather than once per file, and build their
 own `Evidence` — there is no node to point at.
 """
@@ -244,3 +244,66 @@ def _detect_relation_count(source: CharmSource, config: dict) -> list[Evidence]:
         return []
     label = f"{role}{'-optional' if only_optional else ''}={count}"
     return [Evidence(first_rel or "charmcraft.yaml", 0, "relation-count", label)]
+
+
+def _canonical_dist(name: str) -> str:
+    """Normalise a distribution or extra name the way PEP 503 does."""
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
+def _requirement_pattern(name: str) -> re.Pattern[str]:
+    """Build a pattern matching `name` as a whole requirement, however it is spelled.
+
+    `-`, `_` and `.` are interchangeable in a distribution name and case is
+    irrelevant, so `ops-tracing`, `ops_tracing` and `OPS.Tracing` are one
+    dependency. The boundaries are what stop `charmlibs-apt` from answering a
+    question about `apt`, or `ops-tracing-extras` one about `ops-tracing`.
+    """
+    body = "[-_.]".join(re.escape(part) for part in _canonical_dist(name).split("-"))
+    return re.compile(rf"(?<![\w.-]){body}(?![\w-])", re.IGNORECASE)
+
+
+def _detect_requirement(source: CharmSource, config: dict) -> list[Evidence]:
+    """Match a Python dependency the charm declares.
+
+    config:
+      name:  the distribution name, spelled any PEP 503-equivalent way.
+      extra: optional — match only when `name` is requested with this extra,
+             i.e. `name[extra]` rather than a bare `name`.
+
+    Scans the charm's dependency files as text rather than parsing each
+    format: a dependency is spelled the same in a requirements line, a
+    `pyproject.toml` dependency list and a charmcraft `python-packages`
+    entry, and the three files disagree about everything else. Nothing here
+    resolves a version specifier, so `ops-tracing==0.1` and
+    `ops-tracing>=2,<3` are both simply "declared".
+    """
+    name = config.get("name")
+    if not name:
+        return []
+    extra = config.get("extra")
+    pattern = _requirement_pattern(name)
+    wanted_extra = _canonical_dist(extra) if extra else None
+
+    results: list[Evidence] = []
+    for rel, text in source.dependency_files():
+        for match in pattern.finditer(text):
+            if wanted_extra is not None and not _requests_extra(text, match.end(), wanted_extra):
+                continue
+            line = text.count("\n", 0, match.start()) + 1
+            end = text.find("\n", match.start())
+            snippet = text[match.start() : end if end != -1 else len(text)]
+            results.append(Evidence(rel, line, "requirement", snippet.strip()[:120]))
+            # One hit per file is enough: the feature only asks whether the
+            # charm declares the dependency, not how many times.
+            break
+    return results
+
+
+def _requests_extra(text: str, offset: int, extra: str) -> bool:
+    """Whether the requirement ending at `offset` carries `extra` in its extras list."""
+    rest = text[offset:]
+    match = re.match(r"\s*\[([^\]]*)\]", rest)
+    if not match:
+        return False
+    return any(_canonical_dist(part.strip().strip("'\"")) == extra for part in match[1].split(","))

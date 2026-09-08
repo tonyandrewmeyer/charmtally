@@ -22,6 +22,7 @@ from . import _ast as _ast_kinds
 from ._config import (
     _detect_pytest_config_key,
     _detect_relation_count,
+    _detect_requirement,
     _detect_requires_interface,
     _detect_yaml_key,
 )
@@ -140,6 +141,7 @@ def _from_nodes(walker: Callable[[SourceFile, dict], Iterator[ast.stmt | ast.exp
 # that can see files `_select_files` never returns.
 _CHARM_KINDS: dict[str, Callable[[CharmSource, dict], list[Evidence]]] = {
     "pytest-config-key": _detect_pytest_config_key,
+    "requirement": _detect_requirement,
     "requires-interface": _detect_requires_interface,
     "relation-count": _detect_relation_count,
     "yaml-key": _detect_yaml_key,

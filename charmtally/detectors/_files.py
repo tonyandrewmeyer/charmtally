@@ -198,6 +198,7 @@ class CharmSource:
         self._meta_data: dict[Path, dict | None] = {}
         self._yaml_sweeps: dict[tuple[str, ...], list[Path]] = {}
         self._yaml_docs: dict[Path, tuple[str, list[object]]] = {}
+        self._dep_files: list[tuple[str, str]] | None = None
 
     @property
     def charm_name(self) -> str | None:
@@ -237,6 +238,20 @@ class CharmSource:
         if path not in self._meta_data:
             self._meta_data[path] = _metadata._load_yaml(path)
         return self._meta_data[path]
+
+    def dependency_files(self) -> list[tuple[str, str]]:
+        """Return the charm's dependency files as (path relative to the root, text).
+
+        Globbed and read at most once per charm: every `requirement` detector
+        in the catalogue reads the same handful of files, and there is one per
+        dependency the catalogue asks about.
+        """
+        if self._dep_files is None:
+            self._dep_files = [
+                (str(path.relative_to(self.charm_root)), _read_text(path))
+                for path in _metadata.dependency_files(self.charm_root)
+            ]
+        return self._dep_files
 
     def yaml_files(self, globs: list[str]) -> list[Path]:
         """Return the YAML files matching `globs`, swept for once per glob set."""
