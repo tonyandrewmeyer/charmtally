@@ -562,6 +562,235 @@ features:
     detect:
       - kind: import
         module: charms.rolling_ops
+    notes: |
+      Despite the name, this is the *old* side of a migration pair — the
+      Charmhub-vendored `charms.rolling_ops` lib. `charmlibs.rollingops`
+      below is the "after" (PyPI `charmlibs-rollingops`,
+      `from charmlibs import rollingops`). Not renamed to make that
+      clearer: `features.yaml` renames break every downstream snapshot
+      (see AGENTS.md), and this feature predates the pairing.
+    verified: []
+    negative: []
+
+  - name: charmlibs.rollingops
+    library: charmlibs
+    summary: Charm imports the charmlibs.rollingops library (PyPI charmlibs-rollingops).
+    scope: src
+    detect:
+      - kind: import
+        module: charmlibs.rollingops
+      - kind: import
+        module: charmlibs
+        names: [rollingops]
+    notes: |
+      The "after" half of the pair described on `charmlibs.rolling-ops`
+      above. Same migration shape as the tls-certificates pair below, much
+      smaller population (charmtally#95).
+    verified: []
+    negative: []
+
+  - name: charmlibs.tls-certificates
+    library: charmlibs
+    summary: Charm imports the vendored tls_certificates_interface library (pre-charmlibs).
+    scope: src
+    detect:
+      - kind: import
+        module: charms.tls_certificates_interface
+    notes: |
+      The "before" half of the migration pair charmtally#95 asked for: the
+      Charmhub-vendored lib (`lib/charms/tls_certificates_interface/v#/tls_certificates.py`;
+      the module-prefix match covers every vendored version, v0-v4, without
+      listing them). `charmlibs.interfaces.tls-certificates` below is the
+      "after" — PyPI `charmlibs-interfaces-tls-certificates`, v1.
+
+      `charmlibs.namespace` (above) matches any import from the `charmlibs`
+      namespace and can't say whether a given charm is on pathops, apt, or
+      one of the interface libraries. This feature and the
+      `charmlibs.interfaces.*` ones below narrow that down for the
+      interfaces half, one library at a time — the only way to get a
+      per-library adoption number rather than one lumped total, at the
+      cost of one `features.yaml` entry per library (charmtally#95's own
+      open question, decided in favour of the finer split).
+
+      Checked against `canonical/charmlibs`'s `interfaces/index.json`
+      (2026-09-09): of 68 entries, 9 name a `charmlibs.interfaces.*`
+      library in their `lib` field — auth_proxy, forward_auth,
+      istio_metadata, k8s_backup_target, ldap, oauth, openfga,
+      tls_certificates and tracing. (The issue that asked for this counted
+      8 — tracing isn't in its list — so either it shipped between the
+      issue being filed and this check, or the issue's count missed it;
+      either way, 9 is what's actually in the file now.) The other 59
+      point back at a vendored `charms.*` lib, at `cosl`, or at nothing,
+      and get no detector: there's nothing to migrate to, and scoring them
+      as a gap would be wrong. tls-certificates has by far the largest
+      vendored population of the 9, which is why charmtally#95 called it
+      out by name and why it alone gets an old-side pair here — the other
+      8 don't have a confirmed vendored `charms.*` predecessor to detect
+      against (see `charmlibs.interfaces.auth-proxy`'s notes).
+    verified: []
+    negative: []
+
+  - name: charmlibs.interfaces.tls-certificates
+    library: charmlibs
+    summary: Charm imports the charmlibs.interfaces.tls_certificates library (v1, PyPI charmlibs-interfaces-tls-certificates).
+    scope: src
+    detect:
+      - kind: import
+        module: charmlibs.interfaces.tls_certificates
+      - kind: import
+        module: charmlibs.interfaces
+        names: [tls_certificates]
+    notes: |
+      The "after" half of the pair described in full on
+      `charmlibs.tls-certificates` above.
+    verified: []
+    negative: []
+
+  - name: charmlibs.interfaces.auth-proxy
+    library: charmlibs
+    summary: Charm imports the charmlibs.interfaces.auth_proxy library.
+    scope: src
+    detect:
+      - kind: import
+        module: charmlibs.interfaces.auth_proxy
+      - kind: import
+        module: charmlibs.interfaces
+        names: [auth_proxy]
+    notes: |
+      One of the 9 real `charmlibs.interfaces.*` libraries — see
+      `charmlibs.tls-certificates`'s notes for the full accounting. No
+      old-side pair: unlike tls-certificates and rolling-ops, this round
+      didn't confirm a specific vendored `charms.*` predecessor to detect
+      against, and guessing at an import path would risk a false "no
+      before" reading rather than an honest "not checked yet".
+    verified: []
+    negative: []
+
+  - name: charmlibs.interfaces.forward-auth
+    library: charmlibs
+    summary: Charm imports the charmlibs.interfaces.forward_auth library.
+    scope: src
+    detect:
+      - kind: import
+        module: charmlibs.interfaces.forward_auth
+      - kind: import
+        module: charmlibs.interfaces
+        names: [forward_auth]
+    notes: |
+      One of the 9 real `charmlibs.interfaces.*` libraries — see
+      `charmlibs.tls-certificates`'s notes for the full accounting and
+      `charmlibs.interfaces.auth-proxy`'s notes for why there's no
+      old-side pair here.
+    verified: []
+    negative: []
+
+  - name: charmlibs.interfaces.istio-metadata
+    library: charmlibs
+    summary: Charm imports the charmlibs.interfaces.istio_metadata library.
+    scope: src
+    detect:
+      - kind: import
+        module: charmlibs.interfaces.istio_metadata
+      - kind: import
+        module: charmlibs.interfaces
+        names: [istio_metadata]
+    notes: |
+      One of the 9 real `charmlibs.interfaces.*` libraries — see
+      `charmlibs.tls-certificates`'s notes for the full accounting and
+      `charmlibs.interfaces.auth-proxy`'s notes for why there's no
+      old-side pair here.
+    verified: []
+    negative: []
+
+  - name: charmlibs.interfaces.k8s-backup-target
+    library: charmlibs
+    summary: Charm imports the charmlibs.interfaces.k8s_backup_target library.
+    scope: src
+    detect:
+      - kind: import
+        module: charmlibs.interfaces.k8s_backup_target
+      - kind: import
+        module: charmlibs.interfaces
+        names: [k8s_backup_target]
+    notes: |
+      One of the 9 real `charmlibs.interfaces.*` libraries — see
+      `charmlibs.tls-certificates`'s notes for the full accounting and
+      `charmlibs.interfaces.auth-proxy`'s notes for why there's no
+      old-side pair here.
+    verified: []
+    negative: []
+
+  - name: charmlibs.interfaces.ldap
+    library: charmlibs
+    summary: Charm imports the charmlibs.interfaces.ldap library.
+    scope: src
+    detect:
+      - kind: import
+        module: charmlibs.interfaces.ldap
+      - kind: import
+        module: charmlibs.interfaces
+        names: [ldap]
+    notes: |
+      One of the 9 real `charmlibs.interfaces.*` libraries — see
+      `charmlibs.tls-certificates`'s notes for the full accounting and
+      `charmlibs.interfaces.auth-proxy`'s notes for why there's no
+      old-side pair here.
+    verified: []
+    negative: []
+
+  - name: charmlibs.interfaces.oauth
+    library: charmlibs
+    summary: Charm imports the charmlibs.interfaces.oauth library.
+    scope: src
+    detect:
+      - kind: import
+        module: charmlibs.interfaces.oauth
+      - kind: import
+        module: charmlibs.interfaces
+        names: [oauth]
+    notes: |
+      One of the 9 real `charmlibs.interfaces.*` libraries — see
+      `charmlibs.tls-certificates`'s notes for the full accounting and
+      `charmlibs.interfaces.auth-proxy`'s notes for why there's no
+      old-side pair here.
+    verified: []
+    negative: []
+
+  - name: charmlibs.interfaces.openfga
+    library: charmlibs
+    summary: Charm imports the charmlibs.interfaces.openfga library.
+    scope: src
+    detect:
+      - kind: import
+        module: charmlibs.interfaces.openfga
+      - kind: import
+        module: charmlibs.interfaces
+        names: [openfga]
+    notes: |
+      One of the 9 real `charmlibs.interfaces.*` libraries — see
+      `charmlibs.tls-certificates`'s notes for the full accounting and
+      `charmlibs.interfaces.auth-proxy`'s notes for why there's no
+      old-side pair here.
+    verified: []
+    negative: []
+
+  - name: charmlibs.interfaces.tracing
+    library: charmlibs
+    summary: Charm imports the charmlibs.interfaces.tracing library.
+    scope: src
+    detect:
+      - kind: import
+        module: charmlibs.interfaces.tracing
+      - kind: import
+        module: charmlibs.interfaces
+        names: [tracing]
+    notes: |
+      One of the 9 real `charmlibs.interfaces.*` libraries — see
+      `charmlibs.tls-certificates`'s notes for the full accounting and
+      `charmlibs.interfaces.auth-proxy`'s notes for why there's no
+      old-side pair here. Distinct from `ops.tracing` above, which is
+      ops's own OpenTelemetry exporter dependency, not this relation
+      interface.
     verified: []
     negative: []
 

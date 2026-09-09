@@ -1737,6 +1737,203 @@ def test_pytest_jubilant_absent_from_a_pytest_operator_test(tmp_path: Path) -> N
     assert detect_feature(tmp_path, _catalogue_feature("testing.pytest-jubilant")) == []
 
 
+# ── charmlibs.interfaces (charmtally#95) ─────────────────────────────────────
+
+
+def test_charmlibs_rolling_ops_fires_on_the_vendored_import(tmp_path: Path) -> None:
+    _write_charm(
+        tmp_path,
+        "from charms.rolling_ops.v0.rollingops import RollingOpsManager\n",
+    )
+    assert len(detect_feature(tmp_path, _catalogue_feature("charmlibs.rolling-ops"))) == 1
+
+
+def test_charmlibs_rolling_ops_ignores_the_charmlibs_replacement(tmp_path: Path) -> None:
+    _write_charm(tmp_path, "from charmlibs import rollingops\n")
+    assert detect_feature(tmp_path, _catalogue_feature("charmlibs.rolling-ops")) == []
+
+
+def test_charmlibs_rollingops_fires_on_the_bare_module_import(tmp_path: Path) -> None:
+    """The monorepo's own documented shape: `from charmlibs import rollingops`."""
+    _write_charm(tmp_path, "from charmlibs import rollingops\n")
+    assert len(detect_feature(tmp_path, _catalogue_feature("charmlibs.rollingops"))) == 1
+
+
+def test_charmlibs_rollingops_fires_on_the_submodule_import(tmp_path: Path) -> None:
+    _write_charm(
+        tmp_path,
+        "from charmlibs.rollingops import RollingOpsManager\n",
+    )
+    assert len(detect_feature(tmp_path, _catalogue_feature("charmlibs.rollingops"))) == 1
+
+
+def test_charmlibs_rollingops_ignores_the_vendored_predecessor(tmp_path: Path) -> None:
+    _write_charm(
+        tmp_path,
+        "from charms.rolling_ops.v0.rollingops import RollingOpsManager\n",
+    )
+    assert detect_feature(tmp_path, _catalogue_feature("charmlibs.rollingops")) == []
+
+
+def test_charmlibs_tls_certificates_fires_on_the_vendored_import(tmp_path: Path) -> None:
+    _write_charm(
+        tmp_path,
+        "from charms.tls_certificates_interface.v3.tls_certificates import "
+        "TLSCertificatesRequiresV3\n",
+    )
+    assert len(detect_feature(tmp_path, _catalogue_feature("charmlibs.tls-certificates"))) == 1
+
+
+def test_charmlibs_tls_certificates_ignores_the_charmlibs_replacement(tmp_path: Path) -> None:
+    _write_charm(
+        tmp_path,
+        "from charmlibs.interfaces.tls_certificates import TLSCertificatesRequirer\n",
+    )
+    assert detect_feature(tmp_path, _catalogue_feature("charmlibs.tls-certificates")) == []
+
+
+def test_charmlibs_interfaces_tls_certificates_fires_on_the_submodule_import(
+    tmp_path: Path,
+) -> None:
+    _write_charm(
+        tmp_path,
+        "from charmlibs.interfaces.tls_certificates import TLSCertificatesRequirer\n",
+    )
+    ev = detect_feature(tmp_path, _catalogue_feature("charmlibs.interfaces.tls-certificates"))
+    assert len(ev) == 1
+
+
+def test_charmlibs_interfaces_tls_certificates_fires_on_the_bare_module_import(
+    tmp_path: Path,
+) -> None:
+    _write_charm(tmp_path, "from charmlibs.interfaces import tls_certificates\n")
+    ev = detect_feature(tmp_path, _catalogue_feature("charmlibs.interfaces.tls-certificates"))
+    assert len(ev) == 1
+
+
+def test_charmlibs_interfaces_tls_certificates_ignores_the_vendored_predecessor(
+    tmp_path: Path,
+) -> None:
+    _write_charm(
+        tmp_path,
+        "from charms.tls_certificates_interface.v3.tls_certificates import "
+        "TLSCertificatesRequiresV3\n",
+    )
+    ev = detect_feature(tmp_path, _catalogue_feature("charmlibs.interfaces.tls-certificates"))
+    assert ev == []
+
+
+def test_charmlibs_interfaces_auth_proxy_fires_on_the_submodule_import(tmp_path: Path) -> None:
+    _write_charm(tmp_path, "from charmlibs.interfaces.auth_proxy import AuthProxyRequirer\n")
+    ev = detect_feature(tmp_path, _catalogue_feature("charmlibs.interfaces.auth-proxy"))
+    assert len(ev) == 1
+
+
+def test_charmlibs_interfaces_auth_proxy_ignores_an_unrelated_interface(tmp_path: Path) -> None:
+    _write_charm(tmp_path, "from charmlibs.interfaces.oauth import OAuthRequirer\n")
+    assert detect_feature(tmp_path, _catalogue_feature("charmlibs.interfaces.auth-proxy")) == []
+
+
+def test_charmlibs_interfaces_forward_auth_fires_on_the_bare_module_import(
+    tmp_path: Path,
+) -> None:
+    _write_charm(tmp_path, "from charmlibs.interfaces import forward_auth\n")
+    ev = detect_feature(tmp_path, _catalogue_feature("charmlibs.interfaces.forward-auth"))
+    assert len(ev) == 1
+
+
+def test_charmlibs_interfaces_forward_auth_ignores_an_unrelated_interface(
+    tmp_path: Path,
+) -> None:
+    _write_charm(tmp_path, "from charmlibs.interfaces.ldap import LdapRequirer\n")
+    ev = detect_feature(tmp_path, _catalogue_feature("charmlibs.interfaces.forward-auth"))
+    assert ev == []
+
+
+def test_charmlibs_interfaces_istio_metadata_fires_on_the_submodule_import(
+    tmp_path: Path,
+) -> None:
+    _write_charm(
+        tmp_path, "from charmlibs.interfaces.istio_metadata import IstioMetadataProvider\n"
+    )
+    ev = detect_feature(tmp_path, _catalogue_feature("charmlibs.interfaces.istio-metadata"))
+    assert len(ev) == 1
+
+
+def test_charmlibs_interfaces_istio_metadata_ignores_an_unrelated_interface(
+    tmp_path: Path,
+) -> None:
+    _write_charm(tmp_path, "from charmlibs.interfaces.openfga import OpenfgaRequirer\n")
+    ev = detect_feature(tmp_path, _catalogue_feature("charmlibs.interfaces.istio-metadata"))
+    assert ev == []
+
+
+def test_charmlibs_interfaces_k8s_backup_target_fires_on_the_bare_module_import(
+    tmp_path: Path,
+) -> None:
+    _write_charm(tmp_path, "from charmlibs.interfaces import k8s_backup_target\n")
+    ev = detect_feature(tmp_path, _catalogue_feature("charmlibs.interfaces.k8s-backup-target"))
+    assert len(ev) == 1
+
+
+def test_charmlibs_interfaces_k8s_backup_target_ignores_an_unrelated_interface(
+    tmp_path: Path,
+) -> None:
+    _write_charm(tmp_path, "from charmlibs.interfaces.tracing import TracingRequirer\n")
+    ev = detect_feature(tmp_path, _catalogue_feature("charmlibs.interfaces.k8s-backup-target"))
+    assert ev == []
+
+
+def test_charmlibs_interfaces_ldap_fires_on_the_submodule_import(tmp_path: Path) -> None:
+    _write_charm(tmp_path, "from charmlibs.interfaces.ldap import LdapRequirer\n")
+    ev = detect_feature(tmp_path, _catalogue_feature("charmlibs.interfaces.ldap"))
+    assert len(ev) == 1
+
+
+def test_charmlibs_interfaces_ldap_ignores_an_unrelated_interface(tmp_path: Path) -> None:
+    _write_charm(tmp_path, "from charmlibs.interfaces.auth_proxy import AuthProxyRequirer\n")
+    assert detect_feature(tmp_path, _catalogue_feature("charmlibs.interfaces.ldap")) == []
+
+
+def test_charmlibs_interfaces_oauth_fires_on_the_bare_module_import(tmp_path: Path) -> None:
+    _write_charm(tmp_path, "from charmlibs.interfaces import oauth\n")
+    ev = detect_feature(tmp_path, _catalogue_feature("charmlibs.interfaces.oauth"))
+    assert len(ev) == 1
+
+
+def test_charmlibs_interfaces_oauth_ignores_an_unrelated_interface(tmp_path: Path) -> None:
+    _write_charm(tmp_path, "from charmlibs.interfaces.forward_auth import ForwardAuthRequirer\n")
+    assert detect_feature(tmp_path, _catalogue_feature("charmlibs.interfaces.oauth")) == []
+
+
+def test_charmlibs_interfaces_openfga_fires_on_the_submodule_import(tmp_path: Path) -> None:
+    _write_charm(tmp_path, "from charmlibs.interfaces.openfga import OpenfgaRequirer\n")
+    ev = detect_feature(tmp_path, _catalogue_feature("charmlibs.interfaces.openfga"))
+    assert len(ev) == 1
+
+
+def test_charmlibs_interfaces_openfga_ignores_an_unrelated_interface(tmp_path: Path) -> None:
+    _write_charm(
+        tmp_path, "from charmlibs.interfaces.istio_metadata import IstioMetadataProvider\n"
+    )
+    ev = detect_feature(tmp_path, _catalogue_feature("charmlibs.interfaces.openfga"))
+    assert ev == []
+
+
+def test_charmlibs_interfaces_tracing_fires_on_the_bare_module_import(tmp_path: Path) -> None:
+    _write_charm(tmp_path, "from charmlibs.interfaces import tracing\n")
+    ev = detect_feature(tmp_path, _catalogue_feature("charmlibs.interfaces.tracing"))
+    assert len(ev) == 1
+
+
+def test_charmlibs_interfaces_tracing_ignores_an_unrelated_interface(tmp_path: Path) -> None:
+    _write_charm(
+        tmp_path, "from charmlibs.interfaces.k8s_backup_target import K8sBackupTargetRequirer\n"
+    )
+    ev = detect_feature(tmp_path, _catalogue_feature("charmlibs.interfaces.tracing"))
+    assert ev == []
+
+
 # ── CharmSource (shared parse cache) ─────────────────────────────────────────
 
 
