@@ -408,6 +408,7 @@ def test_charm_meta_dict_round_trip() -> None:
         has_terraform_module=True,
         tooling=("tox", "just"),
         repo_sha="0123456789abcdef",
+        stale=True,
     )
     assert CharmMeta.from_dict(meta.to_dict()) == meta
 
@@ -425,6 +426,7 @@ def test_charm_meta_from_dict_tolerates_missing_keys() -> None:
         is_reactive=False,
     )
     assert meta.repo_sha is None
+    assert meta.stale is False
 
 
 def test_charm_meta_from_dict_ignores_unknown_keys() -> None:
