@@ -289,6 +289,11 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
             *bases,
             *tooling,
             f"juju {m['min_juju_version']}" if m.get("min_juju_version") else "",
+            # `ops` with no specifier is a finding, so it gets a searchable
+            # word rather than falling through the falsy branch as unknown.
+            f"ops {m['ops_requirement'] or 'unpinned'}"
+            if m.get("ops_requirement") is not None
+            else "",
             "terraform" if m.get("has_terraform_module") else "",
         ]).strip()
         charm_rows.append({
@@ -315,6 +320,7 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
             "plugins": plugins,
             "bases": bases,
             "min_juju": m.get("min_juju_version"),
+            "ops_requirement": m.get("ops_requirement"),
             "tooling": tooling,
             "stack_text": stack_text,
         })
