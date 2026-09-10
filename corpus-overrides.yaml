@@ -37,6 +37,8 @@ exclude:
     reason: not-a-charm — abandoned ODL stub
   - url: https://github.com/canonical/cos-coordinated-workers
     reason: "not-a-charm — PyPI library (`coordinated_workers`) shipping a decoy root charmcraft.yaml (`name: ceci-nest-pas-une-charm`); CALIBRATION #22 follow-up #8"
+  - url: https://github.com/canonical/paas-charm-cli
+    reason: "not-a-charm — the repo's actual product is src/paas_charm_cli/, a CLI tool for scaffolding and deploying paas_charm-based charms; app/charm and db-app/charm are the tool's own example fixtures (app/app.py an 8-line Flask \"Hello, world!\" toy, db-app/charm containing only a charmcraft.yaml with no src/ at all — no charm code to run), not deployed charms, and hyrum's charms.csv lists the repo with no Team and Source: auto-discover; CALIBRATION #47 Task 2 item 3"
 
   # unreachable: git ls-remote failed
   - url: https://github.com/canonical/bundle-jupyter/issues/
