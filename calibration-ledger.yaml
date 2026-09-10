@@ -1,0 +1,3375 @@
+# Calibration ledger — machine-readable extract of CALIBRATION.md's verdicts.
+#
+# Source: canonical-work-queue `non-roadmap/feature-dashboard/CALIBRATION.md`
+# (8,077 lines, ~48 audit rounds, 2026-06 to 2026-09-09), extracted 2026-09-10.
+# The prose document remains authoritative: this file is a transcription of
+# what it already says, not a re-adjudication. Nothing here was decided by
+# reading a charm; every row cites the CALIBRATION.md line it came from.
+#
+# Why it exists: every round had to re-read prose to know which slugs were
+# already adjudicated, nothing could regression-test the detectors against past
+# verdicts, and a round could silently re-draw a slug an earlier round read.
+# CALIBRATION #47 is the worked example of the last failure mode — #41 claimed
+# `superset-k8s-operator` was unadjudicated when round 31 had given it a full
+# TP row, and #42/#45/#46 repeated the claim for six weeks.
+#
+# The extraction write-up, including the reconciliation against the document's
+# own cumulative figures and what this file deliberately cannot capture, is at
+# canonical-work-queue `non-roadmap/feature-dashboard/LEDGER-EXTRACTION.md`.
+#
+# ---------------------------------------------------------------------------
+# Schema
+# ---------------------------------------------------------------------------
+#
+# A record is keyed on (slug, bucket), not on slug alone. A charm can be
+# adjudicated separately in several buckets — `aproxy-operator` is a TP for the
+# `clear-gap:ops.collect-status` bucket (round 2) and an FP for `reconcile`
+# (round 26) — and those are two different questions with two different
+# answers, not a contradiction.
+#
+#   slug            The charm as the scan output identifies it: a bare repo
+#                   slug, or `<repo>/<sub-charm path>` for a monorepo. Rounds
+#                   1-4 predate that convention and use informal display names
+#                   (`Alertmanager`, `Microk8s`); those are transcribed as
+#                   written rather than normalised — see the write-up.
+#   bucket          What the round drew the charm from:
+#                     reconcile | delta | reactive | component-graph
+#                     clear-gap:<feature> | present:<feature>
+#                     worth-considering:<feature> | corpus-membership
+#   feature         The feature or detector the verdict is about, where the
+#                   round names one; null where it doesn't.
+#   verdict         TP | FP | NA | other | unadjudicated
+#                     TP/FP        the round's own adjudication
+#                     NA           the round judged the charm out of scope for
+#                                  the feature (reactive charm, test fixture)
+#                     other        a round-specific label outside TP/FP/NA;
+#                                  `verdict_as_written` carries the wording
+#                     unadjudicated the round named the charm but reached no
+#                                  TP/FP verdict (sweep hit, sizing instance,
+#                                  or an explicit "not adjudicated" note)
+#   round           The round the current verdict comes from.
+#   date            That round's date.
+#   reason          One line quoted or closely paraphrased from that round.
+#   source_line     Line number in CALIBRATION.md, at the 2026-09-10 revision.
+#   verdict_as_written   The round's own wording, where it isn't a bare TP/FP.
+#   history         Prior verdict events for the same (slug, bucket), oldest
+#                   first. The top-level fields are the most recent event.
+#
+# Optional flags:
+#   counts_toward_precision: false
+#                   This event is NOT part of any round's own TP/FP tally —
+#                   an inherited-twin verdict, a shape-sweep hit, or a
+#                   sizing instance. Excluding these is what makes the
+#                   document's cumulative figures reproduce exactly; a
+#                   consumer computing precision must honour it.
+#   inherited_from  The twin slug whose verdict this one inherits.
+#   verdict_source_round
+#                   The round that actually read the source, when a later
+#                   round records the verdict by inheritance.
+#   restates_round  An earlier round this row re-states rather than re-reads.
+#   sample          Which draw the row came from, where the round names one.
+#   superseded: true
+#                   A claim a later round established was wrong. The only
+#                   instances are #41/#42/#45/#46's "superset-k8s-operator is
+#                   unadjudicated", corrected by #47.
+#
+# ---------------------------------------------------------------------------
+# Reproduces (see LEDGER-EXTRACTION.md for the workings)
+# ---------------------------------------------------------------------------
+#   delta bucket, rounds 34/38/39/47 ............ 38 TP / 47   exact
+#   reconcile, the #21-#32 series figure ........ 94 TP / 116  exact
+#   reconcile live bucket, #32 -> #45 ........... 120 TP / 133 exact
+#
+version: 1
+generated: "2026-09-10"
+source:
+  repo: canonical-work-queue
+  path: non-roadmap/feature-dashboard/CALIBRATION.md
+  rounds_covered: 48
+  line_count: 8077
+records:
+  - slug: "Alertmanager"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 1
+    date: null
+    reason: "0 collect-status, direct status= in src/charm.py:346,488,492"
+    source_line: 32
+  - slug: "GLAuth-K8s"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 1
+    date: null
+    reason: "direct charm.unit.status = ... in src/utils.py"
+    source_line: 38
+  - slug: "Microk8s"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 1
+    date: null
+    reason: "direct unit.status = ... throughout src/charm.py"
+    source_line: 36
+  - slug: "admission-webhook"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 1
+    date: null
+    reason: "0 collect-status, 3+ direct status= in src/charm.py"
+    source_line: 30
+  - slug: "admission-webhook-operator"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 15
+    date: "2026-06-13"
+    reason: "Direct .unit.status = evidence"
+    source_line: 552
+    verdict_as_written: "TP"
+  - slug: "airbyte-k8s-operator"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 15
+    date: "2026-06-13"
+    reason: "Direct .unit.status = evidence (30-charm cross-team collect-status sweep)"
+    source_line: 529
+    verdict_as_written: "TP"
+    history:
+      - round: 1
+        date: null
+        verdict: "TP"
+        reason: "0 collect-status, direct status= across relation modules"
+        source_line: 31
+  - slug: "alertmanager-k8s-operator"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 15
+    date: "2026-06-13"
+    reason: "Direct .unit.status = evidence"
+    source_line: 556
+    verdict_as_written: "TP"
+  - slug: "aproxy-operator"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 15
+    date: "2026-06-13"
+    reason: "Direct .unit.status = evidence"
+    source_line: 530
+    verdict_as_written: "TP"
+    history:
+      - round: 2
+        date: "2026-06-06"
+        verdict: "TP"
+        reason: "Direct unit.status = ... calls in src/charm.py:65,69; no collect-status handler"
+        source_line: 154
+  - slug: "apt-mirror"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 1
+    date: null
+    reason: "direct model.unit.status = ... in src/charm.py"
+    source_line: 35
+  - slug: "apt-stresstest"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "NA"
+    round: 1
+    date: null
+    reason: "reactive charm (reactive/apt_stresstest.py, layer.yaml); ops feature catalogue doesn't apply"
+    source_line: 33
+  - slug: "argo-operators/charms/argo-controller"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "FP"
+    round: 2
+    date: "2026-06-06"
+    reason: "Uses chisme CharmReconciler + components — status managed by the component framework, not direct assignment"
+    source_line: 155
+  - slug: "avalanche-k8s-operator"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 15
+    date: "2026-06-13"
+    reason: "Direct .unit.status = evidence"
+    source_line: 557
+    verdict_as_written: "TP"
+    history:
+      - round: 2
+        date: "2026-06-06"
+        verdict: "TP"
+        reason: "Direct unit.status = ... calls; no collect-status handler"
+        source_line: 156
+  - slug: "blackbox-exporter-k8s-operator"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 15
+    date: "2026-06-13"
+    reason: "Direct .unit.status = evidence"
+    source_line: 558
+    verdict_as_written: "TP"
+    history:
+      - round: 3
+        date: "2026-06-06"
+        verdict: "TP"
+        reason: "Direct unit.status = ... calls in src/charm.py:172,201; no collect-status, no framework"
+        source_line: 242
+  - slug: "cassandra-charm"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "NA"
+    round: 3
+    date: "2026-06-06"
+    reason: "NA (detector bug) — reactive charm; is_reactive misses Python-package reactive layouts"
+    source_line: 243
+  - slug: "catalogue-k8s-operator/charm"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 4
+    date: "2026-06-06"
+    reason: "Direct self.app.status / self.unit.status at src/charm.py:161,162; no collect-status, no framework"
+    source_line: 324
+  - slug: "certbot"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 1
+    date: null
+    reason: "direct model.unit.status = ... in src/charm.py"
+    source_line: 34
+  - slug: "certbot-charm"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 15
+    date: "2026-06-13"
+    reason: "Direct .unit.status = evidence"
+    source_line: 538
+    verdict_as_written: "TP"
+  - slug: "charm-aodh"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "NA"
+    round: 4
+    date: "2026-06-06"
+    reason: "NA (detector bug) — OpenStack reactive charm with src/reactive/ layout and osci.yaml; is_reactive misses both signals"
+    source_line: 325
+  - slug: "charm-apt-mirror"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 15
+    date: "2026-06-13"
+    reason: "Direct .unit.status = evidence"
+    source_line: 534
+    verdict_as_written: "TP"
+  - slug: "charm-ceilometer"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "other"
+    round: 15
+    date: "2026-06-13"
+    reason: "Pre-ops hooks/ + charmhelpers/ layout; the clear-gap rationale does not apply"
+    source_line: 531
+    verdict_as_written: "not-an-ops-charm"
+  - slug: "charm-ceilometer-agent"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "other"
+    round: 15
+    date: "2026-06-13"
+    reason: "Pre-ops hooks/ + charmhelpers/ layout"
+    source_line: 532
+    verdict_as_written: "not-an-ops-charm"
+  - slug: "charm-cilium"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 15
+    date: "2026-06-13"
+    reason: "Direct .unit.status = evidence"
+    source_line: 533
+    verdict_as_written: "TP"
+  - slug: "charm-k8s-postgresql"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 15
+    date: "2026-06-13"
+    reason: "Direct .unit.status = evidence"
+    source_line: 545
+    verdict_as_written: "TP"
+    history:
+      - round: 3
+        date: "2026-06-06"
+        verdict: "TP"
+        reason: "Direct model.unit.status = ...; no collect-status"
+        source_line: 244
+  - slug: "charm-microk8s"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 15
+    date: "2026-06-13"
+    reason: "Direct .unit.status = evidence"
+    source_line: 551
+    verdict_as_written: "TP"
+  - slug: "charm-nginx"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 15
+    date: "2026-06-13"
+    reason: "Direct .unit.status = evidence"
+    source_line: 535
+    verdict_as_written: "TP"
+    history:
+      - round: 3
+        date: "2026-06-06"
+        verdict: "TP"
+        reason: "Direct model.unit.status = ...; no collect-status"
+        source_line: 245
+  - slug: "charm-simple-streams"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 4
+    date: "2026-06-06"
+    reason: "Direct model.unit.status = ...; no collect-status"
+    source_line: 326
+  - slug: "cinder-csi-operator"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 4
+    date: "2026-06-06"
+    reason: "Direct unit.status = ...; no collect-status"
+    source_line: 327
+  - slug: "container-log-archive-charm"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "other"
+    round: 15
+    date: "2026-06-13"
+    reason: "Pre-ops hooks/ + charmhelpers/ layout"
+    source_line: 546
+    verdict_as_written: "not-an-ops-charm"
+  - slug: "content-cache-k8s-operator"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 15
+    date: "2026-06-13"
+    reason: "Direct .unit.status = evidence"
+    source_line: 547
+    verdict_as_written: "TP"
+  - slug: "content-cache-operator/c-c"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 15
+    date: "2026-06-13"
+    reason: "Direct .unit.status = evidence"
+    source_line: 548
+    verdict_as_written: "TP"
+  - slug: "dex-auth-operator"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 15
+    date: "2026-06-13"
+    reason: "Direct .unit.status = evidence"
+    source_line: 553
+    verdict_as_written: "TP"
+  - slug: "exim-operator"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 15
+    date: "2026-06-13"
+    reason: "Direct .unit.status = evidence"
+    source_line: 536
+    verdict_as_written: "TP"
+    history:
+      - round: 1
+        date: null
+        verdict: "TP"
+        reason: "direct unit.status = ops.BlockedStatus(...) in src/charm.py"
+        source_line: 37
+  - slug: "glauth-k8s-operator"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 15
+    date: "2026-06-13"
+    reason: "Direct .unit.status = evidence"
+    source_line: 549
+    verdict_as_written: "TP"
+  - slug: "glauth-operator"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 15
+    date: "2026-06-13"
+    reason: "Direct .unit.status = evidence"
+    source_line: 550
+    verdict_as_written: "TP"
+  - slug: "istio-operators/istio-gateway"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 15
+    date: "2026-06-13"
+    reason: "Direct .unit.status = evidence"
+    source_line: 554
+    verdict_as_written: "TP"
+  - slug: "kafka-broker-rack-awareness"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 15
+    date: "2026-06-13"
+    reason: "Direct .unit.status = evidence"
+    source_line: 541
+    verdict_as_written: "TP"
+    history:
+      - round: 1
+        date: null
+        verdict: "TP"
+        reason: "direct unit.status = self._get_status() in src/charm.py"
+        source_line: 39
+  - slug: "katib-operators/katib-db-manager"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 15
+    date: "2026-06-13"
+    reason: "Direct .unit.status = evidence"
+    source_line: 555
+    verdict_as_written: "TP"
+  - slug: "mongodb-k8s-operator"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "other"
+    round: 15
+    date: "2026-06-13"
+    reason: "Uses single_kernel_mongo.abstract_charm.AbstractMongoCharm; fixed by adding the import as a positive signal"
+    source_line: 542
+    verdict_as_written: "framework-import (fix #15)"
+  - slug: "mongodb-operator"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "other"
+    round: 15
+    date: "2026-06-13"
+    reason: "Uses single_kernel_mongo.abstract_charm.AbstractMongoCharm; fixed by adding the import as a positive signal"
+    source_line: 543
+    verdict_as_written: "framework-import (fix #15)"
+  - slug: "mysql-k8s-operator"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 15
+    date: "2026-06-13"
+    reason: "TP after --branch=main re-clone; the audit script's first pass missed it on the readme stub branch"
+    source_line: 544
+    verdict_as_written: "TP (branch=main)"
+  - slug: "ranger-k8s-operator"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 15
+    date: "2026-06-13"
+    reason: "Direct .unit.status = evidence"
+    source_line: 539
+    verdict_as_written: "TP"
+  - slug: "snappass-test"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 15
+    date: "2026-06-13"
+    reason: "Direct .unit.status = evidence"
+    source_line: 537
+    verdict_as_written: "TP"
+  - slug: "sunbeam-charms/keystone-saml-k8s"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 15
+    date: "2026-06-13"
+    reason: "Direct .unit.status = evidence"
+    source_line: 559
+    verdict_as_written: "TP"
+  - slug: "superset-k8s-operator"
+    bucket: "clear-gap:ops.collect-status"
+    feature: "ops.collect-status"
+    verdict: "TP"
+    round: 15
+    date: "2026-06-13"
+    reason: "Direct .unit.status = evidence"
+    source_line: 540
+    verdict_as_written: "TP"
+  - slug: "airbyte-k8s-operator"
+    bucket: "clear-gap:ops.pebble-ready"
+    feature: "ops.pebble-ready"
+    verdict: "FP"
+    round: 1
+    date: null
+    reason: "framework.observe(self.on[container_name].pebble_ready, ...) uses a variable container name; detector regex requires a quoted string literal"
+    source_line: 43
+  - slug: "argo"
+    bucket: "clear-gap:ops.pebble-ready"
+    feature: "ops.pebble-ready"
+    verdict: "FP"
+    round: 1
+    date: null
+    reason: "root charmcraft.yaml (bundle) plus sub-charms under charms/argo-controller/; fan-out skips because root looks like a single charm"
+    source_line: 44
+  - slug: "envoy"
+    bucket: "clear-gap:ops.pebble-ready"
+    feature: "ops.pebble-ready"
+    verdict: "FP"
+    round: 1
+    date: null
+    reason: "uses charmed_kubeflow_chisme.components.PebbleServiceComponent; pebble events handled via the chisme component"
+    source_line: 48
+  - slug: "juju-dashboard/charms/k8s-charm"
+    bucket: "clear-gap:ops.pebble-ready"
+    feature: "ops.pebble-ready"
+    verdict: "TP"
+    round: 2
+    date: "2026-06-06"
+    reason: "Builds a pebble layer but never observes pebble_ready; layer applied from install/config_changed instead. Real gap."
+    source_line: 149
+  - slug: "kafka-k8s"
+    bucket: "clear-gap:ops.pebble-ready"
+    feature: "ops.pebble-ready"
+    verdict: "FP"
+    round: 1
+    date: null
+    reason: "getattr(self.charm.on, \"kafka_pebble_ready\") form; detector misses the getattr pattern entirely"
+    source_line: 45
+  - slug: "mongodb-k8s-operator"
+    bucket: "clear-gap:ops.pebble-ready"
+    feature: "ops.pebble-ready"
+    verdict: "FP"
+    round: 2
+    date: "2026-06-06"
+    reason: "charm.py is a 36-line shim subclassing single_kernel_mongo.abstract_charm.AbstractMongoCharm; all event wiring lives in the external library"
+    source_line: 150
+  - slug: "mysql-router-k8s-operator"
+    bucket: "clear-gap:ops.pebble-ready"
+    feature: "ops.pebble-ready"
+    verdict: "FP"
+    round: 2
+    date: "2026-06-06"
+    reason: "abstract_charm.py observes every event via a reconcile-all loop; no explicit pebble_ready token in source"
+    source_line: 152
+  - slug: "mysql-router-operators/kubernetes"
+    bucket: "clear-gap:ops.pebble-ready"
+    feature: "ops.pebble-ready"
+    verdict: "FP"
+    round: 2
+    date: "2026-06-06"
+    reason: "Same codebase as mysql-router-k8s-operator (different repo, monorepo fan-out)"
+    source_line: 153
+  - slug: "parca-k8s-operator"
+    bucket: "clear-gap:ops.pebble-ready"
+    feature: "ops.pebble-ready"
+    verdict: "TP"
+    round: 3
+    date: "2026-06-06"
+    reason: "Containers + workload classes that configure a pebble layer, but no pebble_ready observer"
+    source_line: 239
+  - slug: "sunbeam-charms / aodh-k8s"
+    bucket: "clear-gap:ops.pebble-ready"
+    feature: "ops.pebble-ready"
+    verdict: "FP"
+    round: 1
+    date: null
+    reason: "pebble handling delegated to sunbeam base class (OSCI pattern); tests confirm pebble works"
+    source_line: 46
+  - slug: "sunbeam-charms/charms/ovn-central-k8s"
+    bucket: "clear-gap:ops.pebble-ready"
+    feature: "ops.pebble-ready"
+    verdict: "FP"
+    round: 2
+    date: "2026-06-06"
+    reason: "Imports ops_sunbeam.ovn.container_handlers (OVN variant); the fix-#3 detector matches only ops_sunbeam.container_handlers"
+    source_line: 151
+  - slug: "tempo-operators/coordinator"
+    bucket: "clear-gap:ops.pebble-ready"
+    feature: "ops.pebble-ready"
+    verdict: "FP"
+    round: 3
+    date: "2026-06-06"
+    reason: "Imports coordinated_workers.coordinator.Coordinator; pebble handled by the Coordinator base class"
+    source_line: 240
+  - slug: "tempo-operators/worker"
+    bucket: "clear-gap:ops.pebble-ready"
+    feature: "ops.pebble-ready"
+    verdict: "FP"
+    round: 3
+    date: "2026-06-06"
+    reason: "Imports coordinated_workers.worker.Worker — same framework, worker side"
+    source_line: 241
+  - slug: "test-charms / noticestest"
+    bucket: "clear-gap:ops.pebble-ready"
+    feature: "ops.pebble-ready"
+    verdict: "NA"
+    round: 1
+    date: null
+    reason: "intentional test fixture for pebble_custom_notice only; not a real charm"
+    source_line: 47
+  - slug: "COS Configuration"
+    bucket: "clear-gap:ops.secrets"
+    feature: "ops.secrets"
+    verdict: "FP"
+    round: 1
+    date: null
+    reason: "src/secrets_helper.py:55 calls self._model.get_secret(...); detector misses the underscore-prefixed alias"
+    source_line: 53
+  - slug: "Kratos External IDP Integrator"
+    bucket: "clear-gap:ops.secrets"
+    feature: "ops.secrets"
+    verdict: "TP"
+    round: 1
+    date: null
+    reason: "client_secret config; no Juju Secrets API usage in src/"
+    source_line: 55
+  - slug: "airbyte-k8s-operator"
+    bucket: "clear-gap:ops.secrets"
+    feature: "ops.secrets"
+    verdict: "TP"
+    round: "secrets-sweep"
+    date: "2026-06-06"
+    reason: "vault-auth-token et al., all type: string; charmcraft.yaml has zero type: secret"
+    source_line: 440
+    restates_round: 1
+    history:
+      - round: 1
+        date: null
+        verdict: "TP"
+        reason: "many secret-like config options, zero Juju Secrets API usage"
+        source_line: 52
+  - slug: "grafana-cloud-integrator"
+    bucket: "clear-gap:ops.secrets"
+    feature: "ops.secrets"
+    verdict: "TP"
+    round: "secrets-sweep"
+    date: "2026-06-06"
+    reason: "password, no type: secret"
+    source_line: 439
+    restates_round: "R3 per the sweep table; the verdict actually comes from round 2 (line 157)"
+    history:
+      - round: 2
+        date: "2026-06-06"
+        verdict: "TP"
+        reason: "password config option, no Juju Secrets API"
+        source_line: 157
+  - slug: "jenkins-agent-k8s"
+    bucket: "clear-gap:ops.secrets"
+    feature: "ops.secrets"
+    verdict: "TP"
+    round: 1
+    date: null
+    reason: "jenkins_agent_token config, secrets fetched only from relation databag; no Juju Secrets API"
+    source_line: 54
+  - slug: "jenkins-agent-k8s-operator"
+    bucket: "clear-gap:ops.secrets"
+    feature: "ops.secrets"
+    verdict: "TP"
+    round: "secrets-sweep"
+    date: "2026-06-06"
+    reason: "jenkins_agent_token, no type: secret"
+    source_line: 438
+    restates_round: 1
+  - slug: "kratos-external-idp-integrator"
+    bucket: "clear-gap:ops.secrets"
+    feature: "ops.secrets"
+    verdict: "TP"
+    round: "secrets-sweep"
+    date: "2026-06-06"
+    reason: "client_secret, no type: secret"
+    source_line: 437
+    restates_round: 1
+  - slug: "sunbeam-charms/charms/horizon-k8s"
+    bucket: "clear-gap:ops.secrets"
+    feature: "ops.secrets"
+    verdict: "TP"
+    round: "secrets-sweep"
+    date: "2026-06-06"
+    reason: "secret is type: string"
+    source_line: 442
+    restates_round: 2
+    history:
+      - round: 2
+        date: "2026-06-06"
+        verdict: "TP"
+        reason: "secret config option, no Juju Secrets API (weak but defensible TP)"
+        source_line: 158
+  - slug: "sunbeam-charms/charms/storage/cinder-volume-datera"
+    bucket: "clear-gap:ops.secrets"
+    feature: "ops.secrets"
+    verdict: "TP"
+    round: 3
+    date: "2026-06-06"
+    reason: "san-password config; no Juju Secrets API"
+    source_line: 246
+  - slug: "sunbeam-charms/charms/storage/cinder-volume-dellpowermax"
+    bucket: "clear-gap:ops.secrets"
+    feature: "ops.secrets"
+    verdict: "TP"
+    round: 3
+    date: "2026-06-06"
+    reason: "san-password config; no Juju Secrets API"
+    source_line: 247
+  - slug: "sunbeam-charms/charms/storage/cinder-volume-dellpowerstore"
+    bucket: "clear-gap:ops.secrets"
+    feature: "ops.secrets"
+    verdict: "FP"
+    round: 4
+    date: "2026-06-06"
+    reason: "Config declares san-login/san-password as type: secret — the charm IS using Juju secrets at the config layer"
+    source_line: 328
+  - slug: "sunbeam-charms/charms/storage/cinder-volume-dellsc"
+    bucket: "clear-gap:ops.secrets"
+    feature: "ops.secrets"
+    verdict: "FP"
+    round: 4
+    date: "2026-06-06"
+    reason: "Same — every *-password / *-login field is type: secret"
+    source_line: 329
+  - slug: "sunbeam-charms/charms/watcher-k8s"
+    bucket: "clear-gap:ops.secrets"
+    feature: "ops.secrets"
+    verdict: "TP"
+    round: "secrets-sweep"
+    date: "2026-06-06"
+    reason: "maas-api-key is type: string"
+    source_line: 441
+  - slug: "sunbeam-charms/charms/storage/cinder-volume-dellpowerflex"
+    bucket: "component-graph"
+    feature: "architecture:component-graph"
+    verdict: "TP"
+    round: 40
+    date: "2026-08-24"
+    reason: "New corpus arrival, 41st cinder-volume-* sub-charm; imports ops_sunbeam.charm, all 40 siblings already component-graph — TP by the established pattern"
+    source_line: 5546
+    verdict_as_written: "TP"
+  - slug: "paas-charm-cli/app/charm"
+    bucket: "corpus-membership"
+    feature: null
+    verdict: "other"
+    round: 47
+    date: "2026-09-08"
+    reason: "CLI-tool example fixture, not a deployed charm; charmcraft.yaml names itself sample-app and app.py is an 8-line Flask toy"
+    source_line: 7948
+    verdict_as_written: "should not be in the corpus"
+    counts_toward_precision: false
+  - slug: "paas-charm-cli/db-app/charm"
+    bucket: "corpus-membership"
+    feature: null
+    verdict: "other"
+    round: 47
+    date: "2026-09-08"
+    reason: "Contains only charmcraft.yaml — no src/, no charm code to run at all, yet scores a clear-gap on ops.collect-status"
+    source_line: 7948
+    verdict_as_written: "should not be in the corpus"
+    counts_toward_precision: false
+  - slug: "admission-webhook-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 35
+    date: "2026-08-04"
+    reason: "Shape-2 sweep hit: _on_event, the MLOps \"Perform all required actions for the Charm\" convention, 4 events"
+    source_line: 4048
+    verdict_as_written: "New instance"
+    counts_toward_precision: false
+  - slug: "airflow-coordinator-k8s-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 35
+    date: "2026-08-04"
+    reason: "Shape-2 sweep hit: _reconcile, \"Idempotent reconcile method to handle most relevant charm events\", 11 events"
+    source_line: 4064
+    verdict_as_written: "New instance"
+    counts_toward_precision: false
+  - slug: "airflow-core-operators/charms/dag-processor"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 47
+    date: "2026-09-08"
+    reason: "Identical shape to triggerer/scheduler: one direct binding plus a vendored library observing _reconcile via a method-returned event list. Sized, not adjudicated TP/FP"
+    source_line: 7904
+    verdict_as_written: "third confirmed instance (follow-up #16)"
+    counts_toward_precision: false
+  - slug: "airflow-core-operators/charms/scheduler"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "FP"
+    round: 39
+    date: "2026-08-21"
+    reason: "Same shape and same vendored library as triggerer — second independent instance of follow-up #16"
+    source_line: 5309
+    verdict_as_written: "FP"
+  - slug: "airflow-core-operators/charms/triggerer"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "FP"
+    round: 39
+    date: "2026-08-21"
+    reason: "Genuine holistic _reconcile reached through a vendored library that observes it via method calls returning a list — new gap, follow-up #16"
+    source_line: 5307
+    verdict_as_written: "FP"
+  - slug: "airflow-kubernetes-executor-k8s-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 35
+    date: "2026-08-04"
+    reason: "Holistic body but its 3-event set is baseline-only — same pre-existing cut as kubeflow-roles-operator"
+    source_line: 4065
+    verdict_as_written: "Real reconcile body, stays delta post-fix"
+    counts_toward_precision: false
+  - slug: "auditd-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 47
+    date: "2026-09-08"
+    reason: "_configure_charm is baseline-only — the founding example of that shape, and the cut it named is landed; today's read confirms it still applies"
+    source_line: 7761
+    verdict_as_written: "TP"
+    sample: "12-slug delta draw, seed 20260908"
+  - slug: "authentik-ldap-outpost-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 35
+    date: "2026-08-04"
+    reason: "Shape-2 sweep hit: _on_holistic_handler, \"Handle events holistically\" — the clearest self-declared instance in the sweep, 12 events"
+    source_line: 4066
+    verdict_as_written: "New instance"
+    counts_toward_precision: false
+  - slug: "ceph-charms/ceph-nvme"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 38
+    date: "2026-08-20"
+    reason: "Alias shape, 16 bindings, every one 1-to-1 — confirms the shipped alias resolution does not over-fire on a genuinely-delta charm"
+    source_line: 5081
+    verdict_as_written: "TP"
+  - slug: "certbot-k8s-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 38
+    date: "2026-08-20"
+    reason: "3 handlers, 1 event each (aside: the file fails ast.parse outright — an abandoned/WIP repo; verdict unaffected)"
+    source_line: 5073
+    verdict_as_written: "TP"
+  - slug: "charm-aws-iam"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 38
+    date: "2026-08-20"
+    reason: "src/-nested layer.yaml means is_reactive misses it"
+    source_line: 5123
+    verdict_as_written: "follow-up #15 instance"
+    counts_toward_precision: false
+  - slug: "charm-containerd"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 38
+    date: "2026-08-20"
+    reason: "Uses charms.reactive decorators, not ops observe, so it cannot be reconcile-shaped. But it should be tagged reactive, not delta — follow-up #15"
+    source_line: 5074
+    verdict_as_written: "TP (delta/reconcile axis)"
+  - slug: "charm-easyrsa"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 38
+    date: "2026-08-20"
+    reason: "src/-nested layer.yaml; twin of layer-easyrsa (identical repo_sha)"
+    source_line: 5123
+    verdict_as_written: "follow-up #15 instance"
+    counts_toward_precision: false
+  - slug: "charm-flannel"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 38
+    date: "2026-08-20"
+    reason: "src/-nested layer.yaml means is_reactive misses it; genuinely reactive but sitting in delta. Not a TP/FP verdict"
+    source_line: 5123
+    verdict_as_written: "follow-up #15 instance"
+    counts_toward_precision: false
+  - slug: "charm-kubernetes-control-plane"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 35
+    date: "2026-08-04"
+    reason: "The loop dispatches Juju actions, not lifecycle/relation events — justified adding an _action-suffix exclusion to the fix"
+    source_line: 4080
+    verdict_as_written: "Excluded as non-instance"
+    counts_toward_precision: false
+  - slug: "charm-nova-compute-nvidia-vgpu"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 47
+    date: "2026-09-08"
+    reason: "5 handlers; the only shared one binds 2 events on the same relation (below floor, relation-scoped either way)"
+    source_line: 7764
+    verdict_as_written: "TP"
+    sample: "12-slug delta draw, seed 20260908"
+  - slug: "charm-openstack-service-checks"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 38
+    date: "2026-08-20"
+    reason: "src/-nested layer.yaml means is_reactive misses it"
+    source_line: 5123
+    verdict_as_written: "follow-up #15 instance"
+    counts_toward_precision: false
+  - slug: "charm-osci-frr"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 38
+    date: "2026-08-20"
+    reason: "src/-nested layer.yaml means is_reactive misses it"
+    source_line: 5123
+    verdict_as_written: "follow-up #15 instance"
+    counts_toward_precision: false
+  - slug: "charm-prometheus-blackbox-exporter"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 38
+    date: "2026-08-20"
+    reason: "src/-nested layer.yaml means is_reactive misses it"
+    source_line: 5123
+    verdict_as_written: "follow-up #15 instance"
+    counts_toward_precision: false
+  - slug: "charm-prometheus-libvirt-exporter"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 38
+    date: "2026-08-20"
+    reason: "src/-nested layer.yaml means is_reactive misses it"
+    source_line: 5123
+    verdict_as_written: "follow-up #15 instance"
+    counts_toward_precision: false
+  - slug: "charm-sriov-network-device-plugin"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 39
+    date: "2026-08-21"
+    reason: "2 direct calls, 2 distinct 1-event handlers. Minimal charm"
+    source_line: 5315
+    verdict_as_written: "TP"
+  - slug: "charm-sysconfig"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 38
+    date: "2026-08-20"
+    reason: "src/-nested layer.yaml means is_reactive misses it"
+    source_line: 5123
+    verdict_as_written: "follow-up #15 instance"
+    counts_toward_precision: false
+  - slug: "charmed-5g-upf-interface"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 47
+    date: "2026-09-08"
+    reason: "3 handlers, each 1 event — correctly delta, no holistic pattern exists. But the file is the unmodified charmcraft init scaffold in a self-declared-archived repo"
+    source_line: 7757
+    verdict_as_written: "TP (corpus-hygiene flag)"
+    sample: "12-slug delta draw, seed 20260908"
+  - slug: "charmed-etcd-benchmark-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 39
+    date: "2026-08-21"
+    reason: "Delegates to 3 same-repo events/*.py classes, none shared across >=3 events"
+    source_line: 5312
+    verdict_as_written: "TP"
+  - slug: "comsys-openldap-k8s-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 39
+    date: "2026-08-21"
+    reason: "6 direct calls plus a 2-event relation handler; no shared handler crosses 3"
+    source_line: 5314
+    verdict_as_written: "TP"
+  - slug: "consul-k8s-operator/charm"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 35
+    date: "2026-08-04"
+    reason: "Sweep hit ruled out: only 2 events once correctly resolved, below the 3-event floor"
+    source_line: 4074
+    verdict_as_written: "Excluded as non-instance"
+    counts_toward_precision: false
+  - slug: "cos-configuration-k8s-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 36
+    date: "2026-08-15"
+    reason: "Verdict-flipping instance of the dynamic relation-name subscript gap; a structural sweep finding, not a TP/FP verdict"
+    source_line: 4367
+    verdict_as_written: "0 -> 4 (not reconcile -> reconcile)"
+    counts_toward_precision: false
+    history:
+      - round: 35
+        date: "2026-08-04"
+        verdict: "unadjudicated"
+        reason: "Dynamic-subscript idiom collapses 4 relations' relation_joined to one bare event name — a real gap, but in event-name granularity, not follow-up #14's scope"
+        source_line: 4069
+        verdict_as_written: "Real reconcile body, stays delta post-fix — different, pre-existing gap"
+        counts_toward_precision: false
+  - slug: "cve-scanner-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 39
+    date: "2026-08-21"
+    reason: "7 direct calls, largest shared binding 2 events"
+    source_line: 5308
+    verdict_as_written: "TP"
+  - slug: "data-integrator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 36
+    date: "2026-08-15"
+    reason: "Subscript keys come from a helper parameter and cross-module imports; deliberately not resolved this round"
+    source_line: 4394
+    verdict_as_written: "not confirmed read in full for a verdict opinion"
+    counts_toward_precision: false
+  - slug: "dex-auth-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 35
+    date: "2026-08-04"
+    reason: "Shape-2 sweep hit: main, same MLOps convention, 7 events"
+    source_line: 4051
+    verdict_as_written: "New instance"
+    counts_toward_precision: false
+  - slug: "discourse-k8s-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 34
+    date: "2026-08-03"
+    reason: "Correctly excluded from reconcile by cut #1; 14 distinct _on_* handlers each doing its own narrow job. Genuinely delta"
+    source_line: 3817
+    verdict_as_written: "TP"
+  - slug: "dns-operators/dns-policy-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 47
+    date: "2026-09-08"
+    reason: "A genuinely holistic _on_reconcile bound by exactly one observe() call, fired by a systemd timer — correctly delta under the label's operational definition. A new architectural shape, not a follow-up"
+    source_line: 7762
+    verdict_as_written: "TP (see note)"
+    sample: "12-slug delta draw, seed 20260908"
+  - slug: "docker-registry-charm"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 38
+    date: "2026-08-20"
+    reason: "src/-nested layer.yaml means is_reactive misses it"
+    source_line: 5123
+    verdict_as_written: "follow-up #15 instance"
+    counts_toward_precision: false
+  - slug: "ecosystem-prep/filebeat-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 47
+    date: "2026-09-08"
+    reason: "4 observe calls; the one shared handler caps at 2 events. Correctly delta (corpus-hygiene caveat noted separately, not folded into the FP count)"
+    source_line: 7755
+    verdict_as_written: "TP"
+    sample: "12-slug delta draw, seed 20260908"
+  - slug: "git-integrator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 35
+    date: "2026-08-04"
+    reason: "Holistic body but its 3-event set is baseline-only — third instance of the same pre-existing cut"
+    source_line: 4067
+    verdict_as_written: "Real reconcile body, stays delta post-fix"
+    counts_toward_precision: false
+  - slug: "github-runner-operators/charms/garm-configurator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 35
+    date: "2026-08-04"
+    reason: "Shape-2 sweep hit: _reconcile, \"Handle all charm events by reconciling configuration and relation data\", 7 events"
+    source_line: 4068
+    verdict_as_written: "New instance"
+    counts_toward_precision: false
+  - slug: "github-runner-operators/charms/planner-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 38
+    date: "2026-08-20"
+    reason: "4 handlers, 1 event each"
+    source_line: 5080
+    verdict_as_written: "TP"
+  - slug: "grafana-agent-k8s-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 36
+    date: "2026-08-15"
+    reason: "Subscript resolution needs cross-class, subclass-override resolution — not read further, not proposed as an instance"
+    source_line: 4425
+    verdict_as_written: "Not characterised as TP or FP"
+    counts_toward_precision: false
+  - slug: "grafana-agent-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 36
+    date: "2026-08-15"
+    reason: "Same as grafana-agent-k8s-operator — deliberately not resolved"
+    source_line: 4425
+    verdict_as_written: "Not characterised as TP or FP"
+    counts_toward_precision: false
+  - slug: "grafana-k8s-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 34
+    date: "2026-08-03"
+    reason: "Genuinely thin charm.py, no shared convergence handler and no for-loop-over-events shape; apparent richness comes from library-internal COS objects"
+    source_line: 3816
+    verdict_as_written: "TP"
+  - slug: "hpc-package-operators/openmpi"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 38
+    date: "2026-08-20"
+    reason: "3 handlers, 1 event each"
+    source_line: 5072
+    verdict_as_written: "TP"
+  - slug: "hpct-slurm-server-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 39
+    date: "2026-08-21"
+    reason: "3 direct calls, 3 distinct 1-event handlers; external-framework delegation correctly evaluated on its own visible bindings only"
+    source_line: 5311
+    verdict_as_written: "TP"
+  - slug: "intro-to-charming-mc"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 47
+    date: "2026-09-08"
+    reason: "Exactly 1 framework.observe call, 1 handler, 1 event. Textbook minimal delta"
+    source_line: 7754
+    verdict_as_written: "TP"
+    sample: "12-slug delta draw, seed 20260908"
+  - slug: "istio-operators/charms/istio-gateway"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 35
+    date: "2026-08-04"
+    reason: "Shape-2 sweep hit: start (unassuming name, holistic body) reconfigures the gateway on every one of 3 bound events"
+    source_line: 4049
+    verdict_as_written: "New instance"
+    counts_toward_precision: false
+  - slug: "jenkins-agent-k8s-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 35
+    date: "2026-08-04"
+    reason: "Shape-2 sweep hit: _on_reconcile, \"Single reconciliation entry point for all state-convergence events\", 6 events"
+    source_line: 4046
+    verdict_as_written: "New instance"
+    counts_toward_precision: false
+  - slug: "jenkins-agent-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 35
+    date: "2026-08-04"
+    reason: "Shape-2 sweep hit: _reconcile bound to 9 events via a hand-built tuple loop. Sweep finding, not a TP/FP verdict"
+    source_line: 4045
+    verdict_as_written: "New instance"
+    counts_toward_precision: false
+  - slug: "jenkins-k8s-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 35
+    date: "2026-08-04"
+    reason: "Shape-2 sweep hit: _reconcile, \"Single top-level reconcile method invoked by all event handlers\", 16 events"
+    source_line: 4047
+    verdict_as_written: "New instance"
+    counts_toward_precision: false
+  - slug: "jsimpso-indico-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 47
+    date: "2026-09-08"
+    reason: "_on_pebble_ready across 3 containers is symmetric-fanout; _config_pebble is scoped to container.name, no cross-container state"
+    source_line: 7760
+    verdict_as_written: "TP"
+    sample: "12-slug delta draw, seed 20260908"
+  - slug: "juju-introspect-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 34
+    date: "2026-08-03"
+    reason: "3 handlers (install/start/remove), each one line, each doing its own job. Textbook minimal delta"
+    source_line: 3823
+    verdict_as_written: "TP"
+  - slug: "katib-operators/charms/katib-ui"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 35
+    date: "2026-08-04"
+    reason: "Shape-2 sweep hit: main, \"Main entry point for the Charm\" — deploys k8s resources, updates pebble layer, 9 events"
+    source_line: 4050
+    verdict_as_written: "New instance"
+    counts_toward_precision: false
+  - slug: "knative-operators/charms/knative-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 35
+    date: "2026-08-04"
+    reason: "Shape-2 sweep hit: _main applies k8s resources and updates 2 pebble layers, 4 events"
+    source_line: 4056
+    verdict_as_written: "New instance"
+    counts_toward_precision: false
+  - slug: "knative-operators/charms/knative-serving"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 39
+    date: "2026-08-21"
+    reason: "_main bound to only 2 events; every other handler 1 event each. Below floor"
+    source_line: 5306
+    verdict_as_written: "TP"
+  - slug: "kserve-operators/charms/kserve-controller"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "FP"
+    round: 34
+    date: "2026-08-03"
+    reason: "The same MLOps _on_event convention already confirmed reconcile in 10 sibling charms, missed here for the identical loop-variable reason as mediawiki-k8s-operator"
+    source_line: 3819
+    verdict_as_written: "FP"
+  - slug: "kserve-operators/charms/kserve-llmisvc"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 35
+    date: "2026-08-04"
+    reason: "Shape-2 sweep hit: _on_event, \"Main reconcile loop for llmisvc charm\", 11 events"
+    source_line: 4058
+    verdict_as_written: "New instance"
+    counts_toward_precision: false
+  - slug: "kserve-operators/charms/llm-integrator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 35
+    date: "2026-08-04"
+    reason: "Shape-2 sweep hit: _on_event, \"Main reconcile loop for the llm-integrator charm\", 9 events"
+    source_line: 4057
+    verdict_as_written: "New instance"
+    counts_toward_precision: false
+  - slug: "kserve-operators/charms/lws-controller"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 35
+    date: "2026-08-04"
+    reason: "Shape-2 sweep hit: _on_event, \"Main reconcile loop for the lws-controller charm\", 7 events"
+    source_line: 4059
+    verdict_as_written: "New instance"
+    counts_toward_precision: false
+  - slug: "kubeflow-dashboard-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 35
+    date: "2026-08-04"
+    reason: "Shape-2 sweep hit: main, same MLOps convention, 7 events"
+    source_line: 4053
+    verdict_as_written: "New instance"
+    counts_toward_precision: false
+  - slug: "kubeflow-roles-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 35
+    date: "2026-08-04"
+    reason: "Genuinely holistic but its 3-event set is entirely baseline lifecycle; correctly excluded by the pre-existing baseline-lifecycle-only cut"
+    source_line: 4052
+    verdict_as_written: "Real reconcile body, stays delta post-fix"
+    counts_toward_precision: false
+  - slug: "layer-canal"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 38
+    date: "2026-08-20"
+    reason: "src/-nested layer.yaml means is_reactive misses it"
+    source_line: 5123
+    verdict_as_written: "follow-up #15 instance"
+    counts_toward_precision: false
+  - slug: "layer-easyrsa"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 38
+    date: "2026-08-20"
+    reason: "src/-nested layer.yaml; twin of charm-easyrsa (identical repo_sha)"
+    source_line: 5123
+    verdict_as_written: "follow-up #15 instance"
+    counts_toward_precision: false
+  - slug: "layer-etcd"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 38
+    date: "2026-08-20"
+    reason: "src/-nested layer.yaml means is_reactive misses it"
+    source_line: 5123
+    verdict_as_written: "follow-up #15 instance"
+    counts_toward_precision: false
+  - slug: "maas-image-mirror-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 39
+    date: "2026-08-21"
+    reason: "3 direct calls, 3 distinct 1-event handlers"
+    source_line: 5316
+    verdict_as_written: "TP"
+  - slug: "mediawiki-k8s-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "FP"
+    round: 34
+    date: "2026-08-03"
+    reason: "A textbook reconcile handler on 22 distinct events, invisible to the detector because each call site's event argument is a for-loop variable — follow-up #14 shape 2"
+    source_line: 3818
+    verdict_as_written: "FP"
+  - slug: "metallb-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 39
+    date: "2026-08-21"
+    reason: "5 direct calls, largest shared binding 2 events; spreads ops.manifests apply logic across per-event handlers"
+    source_line: 5317
+    verdict_as_written: "TP"
+  - slug: "mongo-single-kernel-library/single_kernel_mongo"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "FP"
+    round: 34
+    date: "2026-08-03"
+    reason: "Not a deployable charm at all — the shared library repo, scanned only because a charmcraft.yaml exists inside the library tree. Corpus hygiene issue (shape 3)"
+    source_line: 3820
+    verdict_as_written: "FP"
+  - slug: "mysql-operators/machines"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 47
+    date: "2026-09-08"
+    reason: "_on_storage_detaching is symmetric-fanout: per-storage-type primary-switchover logic, not a whole-charm rebuild"
+    source_line: 7759
+    verdict_as_written: "TP"
+    sample: "12-slug delta draw, seed 20260908"
+  - slug: "mysql-router-operators/kubernetes"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "FP"
+    round: 47
+    date: "2026-09-08"
+    reason: "The canonical reconcile-all idiom lives in common/common/, a directory sibling to the sub-charm root, invisible to _SRC_DIRS — a fresh read of an already-documented gap"
+    source_line: 7756
+    verdict_as_written: "FP"
+    sample: "12-slug delta draw, seed 20260908"
+  - slug: "netbox-k8s-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "FP"
+    round: 39
+    date: "2026-08-21"
+    reason: "NetboxCharm(paas_charm.django.Charm) — zero of its own observe calls; a real production charm, not a scaffold. Follow-up #17"
+    source_line: 5313
+    verdict_as_written: "FP"
+  - slug: "nginx-ingress-integrator-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 38
+    date: "2026-08-20"
+    reason: "6 handlers, 1 event each"
+    source_line: 5082
+    verdict_as_written: "TP"
+  - slug: "notebook-operators/charms/jupyter-ui"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 35
+    date: "2026-08-04"
+    reason: "Shape-2 sweep hit: main, \"Perform all required actions of the Charm\", 5 events"
+    source_line: 4055
+    verdict_as_written: "New instance"
+    counts_toward_precision: false
+  - slug: "oem-qa-tools/charms/wol-server"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 39
+    date: "2026-08-21"
+    reason: "4 direct calls, largest shared binding 2 events"
+    source_line: 5310
+    verdict_as_written: "TP"
+  - slug: "oidc-gatekeeper-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 35
+    date: "2026-08-04"
+    reason: "Shape-2 sweep hit: main, same MLOps convention, 12 events"
+    source_line: 4054
+    verdict_as_written: "New instance"
+    counts_toward_precision: false
+  - slug: "openfga-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 34
+    date: "2026-08-03"
+    reason: "17 distinct handlers, all one-to-one; the two multi-event bindings are each a single library's own paired events"
+    source_line: 3814
+    verdict_as_written: "TP"
+  - slug: "paas-charm-cli/app/charm"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "FP"
+    round: 38
+    date: "2026-08-20"
+    reason: "Zero of its own observe calls — a scaffold subclassing paas_charm.flask.Charm; corpus-hygiene, same shape as #34's Shape-3 FP"
+    source_line: 5075
+    verdict_as_written: "FP"
+  - slug: "postgresql-k8s-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 34
+    date: "2026-08-03"
+    reason: "40 distinct _on_* methods across 14 files; the two shared handlers cap at 2 events each. Textbook delta: one handler per event, no shared reconciler"
+    source_line: 3813
+    verdict_as_written: "TP"
+  - slug: "postgresql-test-app"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 36
+    date: "2026-08-15"
+    reason: "_on_relation_broken spans 4 distinct relations via literal-string subscripts — genuine charm-wide convergence; considered and rejected as a corpus-hygiene exclusion"
+    source_line: 4368
+    verdict_as_written: "Kept as a genuine TP"
+    counts_toward_precision: false
+  - slug: "prometheus-scrape-config-k8s-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 35
+    date: "2026-08-04"
+    reason: "Shape-2 sweep hit: _update_all_metrics_consumers, \"Update all scrape configuration jobs for all metrics consumers\", 9 events"
+    source_line: 4070
+    verdict_as_written: "New instance"
+    counts_toward_precision: false
+  - slug: "self-signed-certificates-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 35
+    date: "2026-08-04"
+    reason: "Shape-2 sweep hit: _configure, root-certificate lifecycle management, 5 events"
+    source_line: 4061
+    verdict_as_written: "New instance"
+    counts_toward_precision: false
+  - slug: "slurmd-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 38
+    date: "2026-08-20"
+    reason: "14 events, 14 distinct handlers via a dict-literal registration idiom — correctly delta since it is genuinely one-to-one"
+    source_line: 5078
+    verdict_as_written: "TP"
+  - slug: "snmp-exporter-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 38
+    date: "2026-08-20"
+    reason: "5 direct 1-event handlers plus one 2-event relation handler (same relation, below floor and relation-scoped)"
+    source_line: 5079
+    verdict_as_written: "TP"
+  - slug: "sunbeam-charms/charms/keystone-saml-k8s"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 35
+    date: "2026-08-04"
+    reason: "Sweep hits were all in files outside the slug's own scanned tree; its own source has no shape-2 pattern"
+    source_line: 4079
+    verdict_as_written: "Excluded as non-instance"
+    counts_toward_precision: false
+  - slug: "sysbench-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 47
+    date: "2026-09-08"
+    reason: "The apparent multi-relation binding is a one-line relay to a custom event; the real handler never crosses 2 events"
+    source_line: 7758
+    verdict_as_written: "TP"
+    sample: "12-slug delta draw, seed 20260908"
+  - slug: "takahe-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 34
+    date: "2026-08-03"
+    reason: "20 discrete handlers, none sharing >=3 distinct events. Genuinely delta; also confirms follow-up #14's alias shape is not a one-off"
+    source_line: 3822
+    verdict_as_written: "TP"
+  - slug: "testflinger/agent/charms/testflinger-agent-host-charm"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 47
+    date: "2026-09-08"
+    reason: "6 distinct 1-event handlers; the refresh_events list is a constructor argument to the vendored COSAgentProvider, not a hidden shared handler"
+    source_line: 7763
+    verdict_as_written: "TP"
+    sample: "12-slug delta draw, seed 20260908"
+  - slug: "traefik-k8s-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "FP"
+    round: 34
+    date: "2026-08-03"
+    reason: "Self-declared holistic-convergence handler bound to 5 events, invisible to the detector because the call site is a bare Name alias (observe = self.framework.observe) — follow-up #14 shape 1"
+    source_line: 3815
+    verdict_as_written: "FP"
+  - slug: "ubuntu-autopkgtest-operators/charms/autopkgtest-dispatcher-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 38
+    date: "2026-08-20"
+    reason: "15 direct observe calls, each to its own handler; nothing crosses 3 events. Textbook delta"
+    source_line: 5071
+    verdict_as_written: "TP"
+  - slug: "ubuntu-insights-k8s-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 47
+    date: "2026-09-08"
+    reason: "10 handlers; the two shared ones both cap at 2 events. Everything else 1-to-1"
+    source_line: 7765
+    verdict_as_written: "TP"
+    sample: "12-slug delta draw, seed 20260908"
+  - slug: "ubuntu-pro-operator/charms/ubuntu-pro"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 34
+    date: "2026-08-03"
+    reason: "Genuinely tiny: one class, one observe call, no other handlers. A real if minimal production charm — delta stands as directionally correct"
+    source_line: 3821
+    verdict_as_written: "TP"
+  - slug: "upki-mirror-k8s-operator"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 38
+    date: "2026-08-20"
+    reason: "Exactly 1 observe call total — minimal, genuinely delta"
+    source_line: 5077
+    verdict_as_written: "TP"
+  - slug: "vault-k8s-operator/k8s"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 35
+    date: "2026-08-04"
+    reason: "Shape-2 sweep hit: _configure, pebble + peer relation + unseal, 13 events"
+    source_line: 4062
+    verdict_as_written: "New instance"
+    counts_toward_precision: false
+  - slug: "vault-k8s-operator/machine"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "unadjudicated"
+    round: 35
+    date: "2026-08-04"
+    reason: "Shape-2 sweep hit: _configure, snap install + config, 12 events"
+    source_line: 4063
+    verdict_as_written: "New instance"
+    counts_toward_precision: false
+  - slug: "waltz-integration-juju"
+    bucket: "delta"
+    feature: "architecture:delta"
+    verdict: "TP"
+    round: 38
+    date: "2026-08-20"
+    reason: "5 handlers, 1 event each"
+    source_line: 5076
+    verdict_as_written: "TP"
+  - slug: "cos-configuration-k8s-operator"
+    bucket: "present:ops.relation-app-data"
+    feature: "ops.relation-app-data"
+    verdict: "TP"
+    round: 17
+    date: "2026-06-13"
+    reason: "src/charm.py:429 — relation.data[self.app].get(key, None)"
+    source_line: 665
+    verdict_as_written: "TP (after manual disambiguation)"
+  - slug: "glauth-operator"
+    bucket: "present:ops.relation-app-data"
+    feature: "ops.relation-app-data"
+    verdict: "TP"
+    round: 17
+    date: "2026-06-13"
+    reason: "src/ldapclient_lib.py:295 — event.relation.data[event.app][\"ca-cert\"]"
+    source_line: 664
+    verdict_as_written: "TP (after manual disambiguation)"
+  - slug: "ranger-k8s-operator"
+    bucket: "present:ops.relation-app-data"
+    feature: "ops.relation-app-data"
+    verdict: "TP"
+    round: 17
+    date: "2026-06-13"
+    reason: "src/relations/provider.py:70 — event.relation.data[event.app]; a clear TP, the audit script's snippet window was too narrow"
+    source_line: 663
+    verdict_as_written: "TP (after manual disambiguation)"
+  - slug: "mysql-k8s-operator"
+    bucket: "present:python.pydantic"
+    feature: "python.pydantic"
+    verdict: "TP"
+    round: 18
+    date: "2026-06-13"
+    reason: "Audit-script bug, not a detector bug: cached clone on the readme stub branch; from pydantic import BaseModel is at src/upgrade.py:30 on main"
+    source_line: 727
+    verdict_as_written: "FP/review -> TP"
+  - slug: "charm-aws-iam"
+    bucket: "reactive"
+    feature: "is_reactive"
+    verdict: "TP"
+    round: 40
+    date: "2026-08-24"
+    reason: "Follow-up #15 mover confirmed: src/layer.yaml present, root layer.yaml/osci.yaml absent, src/reactive/*.py present"
+    source_line: 5562
+    verdict_as_written: "TP"
+    verdict_source_round: "38/39"
+  - slug: "charm-containerd"
+    bucket: "reactive"
+    feature: "is_reactive"
+    verdict: "TP"
+    round: 40
+    date: "2026-08-24"
+    reason: "Follow-up #15 mover confirmed at unchanged repo_sha"
+    source_line: 5563
+    verdict_as_written: "TP"
+    verdict_source_round: "38/39"
+  - slug: "charm-easyrsa"
+    bucket: "reactive"
+    feature: "is_reactive"
+    verdict: "TP"
+    round: 40
+    date: "2026-08-24"
+    reason: "Follow-up #15 mover confirmed at unchanged repo_sha (Launchpad half of the easyrsa twin)"
+    source_line: 5564
+    verdict_as_written: "TP"
+    verdict_source_round: "38/39"
+  - slug: "charm-flannel"
+    bucket: "reactive"
+    feature: "is_reactive"
+    verdict: "TP"
+    round: 40
+    date: "2026-08-24"
+    reason: "Follow-up #15 mover confirmed at unchanged repo_sha"
+    source_line: 5565
+    verdict_as_written: "TP"
+    verdict_source_round: "38/39"
+  - slug: "charm-openstack-service-checks"
+    bucket: "reactive"
+    feature: "is_reactive"
+    verdict: "TP"
+    round: 40
+    date: "2026-08-24"
+    reason: "Follow-up #15 mover confirmed at unchanged repo_sha"
+    source_line: 5566
+    verdict_as_written: "TP"
+    verdict_source_round: 39
+  - slug: "charm-osci-frr"
+    bucket: "reactive"
+    feature: "is_reactive"
+    verdict: "TP"
+    round: 40
+    date: "2026-08-24"
+    reason: "Follow-up #15 mover confirmed; re-read fresh this round"
+    source_line: 5567
+    verdict_as_written: "TP"
+    verdict_source_round: 39
+  - slug: "charm-prometheus-blackbox-exporter"
+    bucket: "reactive"
+    feature: "is_reactive"
+    verdict: "TP"
+    round: 40
+    date: "2026-08-24"
+    reason: "Follow-up #15 mover confirmed at unchanged repo_sha"
+    source_line: 5568
+    verdict_as_written: "TP"
+    verdict_source_round: 39
+  - slug: "charm-prometheus-libvirt-exporter"
+    bucket: "reactive"
+    feature: "is_reactive"
+    verdict: "TP"
+    round: 40
+    date: "2026-08-24"
+    reason: "Follow-up #15 mover confirmed at unchanged repo_sha"
+    source_line: 5569
+    verdict_as_written: "TP"
+    verdict_source_round: 39
+  - slug: "charm-sysconfig"
+    bucket: "reactive"
+    feature: "is_reactive"
+    verdict: "TP"
+    round: 40
+    date: "2026-08-24"
+    reason: "Follow-up #15 mover confirmed at unchanged repo_sha"
+    source_line: 5570
+    verdict_as_written: "TP"
+    verdict_source_round: 39
+  - slug: "docker-registry-charm"
+    bucket: "reactive"
+    feature: "is_reactive"
+    verdict: "TP"
+    round: 40
+    date: "2026-08-24"
+    reason: "Follow-up #15 mover confirmed at unchanged repo_sha"
+    source_line: 5571
+    verdict_as_written: "TP"
+    verdict_source_round: 39
+  - slug: "layer-canal"
+    bucket: "reactive"
+    feature: "is_reactive"
+    verdict: "TP"
+    round: 40
+    date: "2026-08-24"
+    reason: "Follow-up #15 mover confirmed at unchanged repo_sha"
+    source_line: 5572
+    verdict_as_written: "TP"
+    verdict_source_round: 39
+  - slug: "layer-easyrsa"
+    bucket: "reactive"
+    feature: "is_reactive"
+    verdict: "TP"
+    round: 40
+    date: "2026-08-24"
+    reason: "Follow-up #15 mover confirmed — twin, same tree as charm-easyrsa"
+    source_line: 5573
+    verdict_as_written: "TP"
+    inherited_from: "charm-easyrsa"
+    verdict_source_round: "38/39"
+  - slug: "layer-etcd"
+    bucket: "reactive"
+    feature: "is_reactive"
+    verdict: "TP"
+    round: 40
+    date: "2026-08-24"
+    reason: "Follow-up #15 mover confirmed; re-read fresh this round"
+    source_line: 5574
+    verdict_as_written: "TP"
+    verdict_source_round: 39
+  - slug: "CI-testing-grafana-agent-fork"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "FP"
+    round: 29
+    date: "2026-07-29"
+    reason: "_metrics_alerts only calls update_alerts_rules(...) — a narrow single-purpose alert-rule sync, not charm-wide reconfiguration"
+    source_line: 2637
+    verdict_as_written: "FP"
+  - slug: "admission-webhook-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 37
+    date: "2026-08-17"
+    reason: "_on_event, MLOps convention, 4 events"
+    source_line: 4810
+    verdict_as_written: "TP"
+    verdict_source_round: 35
+  - slug: "airflow-coordinator-k8s-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 37
+    date: "2026-08-17"
+    reason: "_reconcile, \"idempotent reconcile... most relevant events\", 11 events"
+    source_line: 4824
+    verdict_as_written: "TP"
+    verdict_source_round: 35
+  - slug: "airflow-core-operators/charms/api-server"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 26
+    date: "2026-07-26"
+    reason: "Same ingress-boilerplate template as #23's TPs, with the handler literally named _reconcile and a pebble-ready trigger added — genuine"
+    source_line: 1994
+    verdict_as_written: "TP"
+  - slug: "app-center-ratings-k8s-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 37
+    date: "2026-08-17"
+    reason: "_try_start via alias, 7 events, full workload reconcile — read fresh this round"
+    source_line: 4830
+    verdict_as_written: "TP"
+  - slug: "aproxy-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "FP"
+    round: 26
+    date: "2026-07-26"
+    reason: "Textbook baseline-lifecycle-only triad (install/start/config_changed) — already correctly excluded by the landed cut #3"
+    source_line: 1995
+    verdict_as_written: "FP"
+  - slug: "auditd-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "FP"
+    round: 22
+    date: "2026-07-20"
+    reason: "New shape: the three baseline non-relational Juju lifecycle hooks and nothing else — idempotent-reconfiguration boilerplate"
+    source_line: 1060
+    verdict_as_written: "FP"
+  - slug: "authentik-ldap-outpost-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 37
+    date: "2026-08-17"
+    reason: "_on_holistic_handler, \"handle events holistically\", 12 events"
+    source_line: 4825
+    verdict_as_written: "TP"
+    verdict_source_round: 35
+  - slug: "authentik-server-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 22
+    date: "2026-07-20"
+    reason: "Explicitly named \"holistic handler\", richest binding in this batch (17 events)"
+    source_line: 1054
+    verdict_as_written: "TP"
+  - slug: "authentik-worker-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 26
+    date: "2026-07-26"
+    reason: "Explicit \"holistic\" tell — same IAM-family convention as #22's TP authentik-server-operator, worker side"
+    source_line: 1996
+    verdict_as_written: "TP"
+  - slug: "aws-k8s-storage"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 28
+    date: "2026-07-28"
+    reason: "Genuine ops.manifests convergence, correctly captured — _merge_config clears min_events on direct bindings alone, no call-graph blind spot"
+    source_line: 2386
+    verdict_as_written: "TP"
+  - slug: "backup-operators/backup_integrator_operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 23
+    date: "2026-07-24"
+    reason: "Explicit tell — second independent _reconcile TP in this repo"
+    source_line: 1314
+    verdict_as_written: "TP"
+  - slug: "backup-operators/bacula_fd_operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 29
+    date: "2026-07-29"
+    reason: "Explicit tell — third independent _reconcile-family TP from this repo, own src/, no shared-parent delegation"
+    source_line: 2636
+    verdict_as_written: "TP"
+  - slug: "backup-operators/bacula_server_operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 22
+    date: "2026-07-20"
+    reason: "Densest binding in this batch — 18 events across 4 distinct relations; unambiguous TP"
+    source_line: 1063
+    verdict_as_written: "TP"
+  - slug: "ceph-charms/ceph-dashboard"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 26
+    date: "2026-07-26"
+    reason: "Rich, genuine full-dashboard-reconfiguration handler spanning 6+ integration points"
+    source_line: 1997
+    verdict_as_written: "TP"
+  - slug: "charm-aws-cloud-provider"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 24
+    date: "2026-07-24"
+    reason: "Genuine multi-relation convergence — the ops.manifests Collector/Manifests framework recomputes the full manifest set from every upstream signal"
+    source_line: 1515
+    verdict_as_written: "TP"
+  - slug: "charm-aws-k8s-storage"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 28
+    date: "2026-07-28"
+    reason: "GitHub/Launchpad mirror twin of aws-k8s-storage; byte-identical tree at the same commit SHA, so it inherits that round's TP"
+    source_line: 2432
+    verdict_as_written: "TP (inherited from twin)"
+    counts_toward_precision: false
+    inherited_from: "aws-k8s-storage"
+  - slug: "charm-azure-cloud-provider"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 28
+    date: "2026-07-28"
+    reason: "Same ops.manifests shape, richer (9 direct bindings across 4 relation prefixes + config) — genuine, correctly captured"
+    source_line: 2387
+    verdict_as_written: "TP"
+  - slug: "charm-gcp-cloud-provider"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 28
+    date: "2026-07-28"
+    reason: "Same ops.manifests shape again (10 direct bindings across 4 relation prefixes + config), correctly captured"
+    source_line: 2388
+    verdict_as_written: "TP"
+  - slug: "charm-gcp-k8s-storage"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 24
+    date: "2026-07-24"
+    reason: "Same ops.manifests template as charm-aws-cloud-provider, same shape"
+    source_line: 1516
+    verdict_as_written: "TP"
+  - slug: "charm-k8s-postgresql"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 26
+    date: "2026-07-26"
+    reason: "Classic \"everything funnels into one config-apply handler\" idiom of early ops charms; genuine full reconfiguration on every trigger"
+    source_line: 1998
+    verdict_as_written: "TP"
+  - slug: "charm-kube-virt"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 26
+    date: "2026-07-26"
+    reason: "Counted TP (genuine reconcile architecture) but flagged as a new false-negative finding: both directly-observed handlers are cut-#1 relation-scoped shims delegating to a shared _merge_config"
+    source_line: 1999
+    verdict_as_written: "TP*"
+  - slug: "charm-kubernetes-e2e"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 26
+    date: "2026-07-26"
+    reason: "Genuine convergence: recomputes kubeconfig/certs/snap-install state from either relation changing or config changing"
+    source_line: 2000
+    verdict_as_written: "TP"
+  - slug: "charm-microk8s"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "FP"
+    round: 26
+    date: "2026-07-26"
+    reason: "Properly delta-architected; the false qualification comes from several different narrow single-purpose methods each observed from >=3 unrelated trigger points"
+    source_line: 2001
+    verdict_as_written: "FP"
+  - slug: "charm-rabbitmq-k8s"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 26
+    date: "2026-07-26"
+    reason: "Resolves #25's flagged \"fourth shape\": _on_config_changed is a rich, genuine full-workload-reconfiguration handler. No cut needed"
+    source_line: 2002
+    verdict_as_written: "TP"
+  - slug: "charm-ubuntu"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "FP"
+    round: 32
+    date: "2026-08-01"
+    reason: "_set_version sets ActiveStatus and reports the Ubuntu release; no self.config reference, no relation, manifest or pebble touch. Third independent instance of follow-up #13"
+    source_line: 3336
+    verdict_as_written: "FP"
+  - slug: "charm-woodpecker"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 26
+    date: "2026-07-26"
+    reason: "Genuine full-config-render convergence reading ceph/peer/certificate state"
+    source_line: 2003
+    verdict_as_written: "TP"
+  - slug: "charm-zookeeper-k8s"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 26
+    date: "2026-07-26"
+    reason: "Genuine ensemble reconfiguration: pushes ZooKeeper config derived from all peer addresses and restarts, then republishes to clients"
+    source_line: 2004
+    verdict_as_written: "TP"
+  - slug: "charmed-gh-jira-sync-bot"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 23
+    date: "2026-07-24"
+    reason: "No naming tell, small, but genuine — replans the pebble workload layer on any of its three triggers"
+    source_line: 1317
+    verdict_as_written: "TP"
+  - slug: "charmed-linstor/linstor-controller"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "FP"
+    round: 24
+    date: "2026-07-24"
+    reason: "Legacy pod-spec charm; baseline-lifecycle-only triad — third confirmed instance of follow-up #6's shape"
+    source_line: 1517
+    verdict_as_written: "FP"
+  - slug: "charmed-linstor/linstor-satellite"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "FP"
+    round: 26
+    date: "2026-07-26"
+    reason: "Identical shape to #24's audited FP charmed-linstor/linstor-controller — already correctly excluded by cut #3"
+    source_line: 2005
+    verdict_as_written: "FP"
+  - slug: "chopsticks/charm"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "FP"
+    round: 21
+    date: "2026-07-14"
+    reason: "Single-relation leader-failover handling only, not charm-wide convergence"
+    source_line: 854
+    verdict_as_written: "FP"
+  - slug: "chrony-client-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "FP"
+    round: 22
+    date: "2026-07-20"
+    reason: "Same shape as auditd-operator: baseline-lifecycle-only triad, no cross-cutting signal"
+    source_line: 1061
+    verdict_as_written: "FP"
+  - slug: "cinder-csi-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 26
+    date: "2026-07-26"
+    reason: "Same ops.manifests Collector/_merge_config template as #24's TPs — third independent instance, crosses org boundaries"
+    source_line: 2006
+    verdict_as_written: "TP"
+  - slug: "content-cache-operator/content-cache"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "FP"
+    round: 40
+    date: "2026-08-24"
+    reason: "All four triggers belong to one relation endpoint (certificate-transfer, observed twice over) — relation-scoped plumbing the cut cannot see. Follow-up #18"
+    source_line: 5612
+    verdict_as_written: "FP"
+  - slug: "cos-configuration-k8s-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 37
+    date: "2026-08-17"
+    reason: "4 relations resolved from one dynamic-subscript handler"
+    source_line: 4828
+    verdict_as_written: "TP"
+    verdict_source_round: 36
+  - slug: "cos-coordinated-workers"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "FP"
+    round: 22
+    date: "2026-07-20"
+    reason: "Not a deployable charm at all — the coordinated_workers PyPI library shipping a decoy root charmcraft.yaml"
+    source_line: 1066
+    verdict_as_written: "FP"
+  - slug: "cos-registration-server-k8s-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "FP"
+    round: 21
+    date: "2026-07-14"
+    reason: "Narrow purpose: push existing auth-device keys into relation data on 3 unrelated triggers, not general reconcile"
+    source_line: 856
+    verdict_as_written: "FP"
+  - slug: "data-integrator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 21
+    date: "2026-07-14"
+    reason: "Funnels 3 distinct entity-created events into the shared reconfigure path"
+    source_line: 852
+    verdict_as_written: "TP"
+  - slug: "ddeb-retriever-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 32
+    date: "2026-08-01"
+    reason: "Explicit tell; body applies git config, users, conf, dirs, systemd units, httpd and ports from self.config on any trigger — textbook"
+    source_line: 3337
+    verdict_as_written: "TP"
+  - slug: "dex-auth-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 37
+    date: "2026-08-17"
+    reason: "main, MLOps convention, 7 events"
+    source_line: 4813
+    verdict_as_written: "TP"
+    verdict_source_round: 35
+  - slug: "discourse-k8s-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "FP"
+    round: 21
+    date: "2026-07-14"
+    reason: "Regenerates OAuth client config for one relation only"
+    source_line: 855
+    verdict_as_written: "FP"
+  - slug: "dns-operators/bind-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 22
+    date: "2026-07-20"
+    reason: "3 unrelated relation interfaces + config + custom signal converging on one handler"
+    source_line: 1053
+    verdict_as_written: "TP"
+  - slug: "dns-operators/dns-secondary-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 45
+    date: "2026-09-03"
+    reason: "_reconcile sets up bind, rotates certificates, rewrites zone config, reloads, publishes both relations' data. Textbook tell-and-body match"
+    source_line: 7166
+    verdict_as_written: "TP"
+    sample: "Task A 12-slug draw, seed 20260903"
+    history:
+      - round: 23
+        date: "2026-07-24"
+        verdict: "TP"
+        reason: "Explicit _reconcile tell, spans config + 2 relations + a custom topology signal + certs"
+        source_line: 1310
+        verdict_as_written: "TP"
+  - slug: "exim-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 29
+    date: "2026-07-29"
+    reason: "Explicit tell, richest non-ops.manifests binding this round; first Charm-Tech-team charm audited for reconcile"
+    source_line: 2635
+    verdict_as_written: "TP"
+  - slug: "falco-operators/falco-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 26
+    date: "2026-07-26"
+    reason: "Explicit tell (method literally named reconcile, explicit comment)"
+    source_line: 2007
+    verdict_as_written: "TP"
+  - slug: "falco-operators/falcosidekick-k8s-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 31
+    date: "2026-07-31"
+    reason: "Explicit tell; body configures the full workload from state, TLS requirer, ingress requirer, and metrics provider on any trigger"
+    source_line: 3085
+    verdict_as_written: "TP"
+  - slug: "forgejo-k8s-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 24
+    date: "2026-07-24"
+    reason: "Explicit tell, rich multi-relation + pebble-ready convergence"
+    source_line: 1522
+    verdict_as_written: "TP"
+  - slug: "gcp-k8s-storage"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 45
+    date: "2026-09-03"
+    reason: "_merge_config evaluates every ops.manifests controller and applies on change — confirmed fresh rather than re-asserted from the twin"
+    source_line: 7159
+    verdict_as_written: "TP"
+    sample: "Task A 12-slug draw, seed 20260903"
+    history:
+      - round: 28
+        date: "2026-07-28"
+        verdict: "TP"
+        reason: "GitHub/Launchpad mirror twin of charm-gcp-k8s-storage (audited TP in #24); should be treated as covered, TP by inheritance"
+        source_line: 2430
+        verdict_as_written: "TP (inherited from twin)"
+        counts_toward_precision: false
+        inherited_from: "charm-gcp-k8s-storage"
+  - slug: "generic-exporter-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 21
+    date: "2026-07-14"
+    reason: "Method literally named reconcile"
+    source_line: 849
+    verdict_as_written: "TP"
+  - slug: "github-profiles-automator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 32
+    date: "2026-08-01"
+    reason: "Genuine k8s-resource apply on any of 5 heterogeneous triggers, not a relay"
+    source_line: 3338
+    verdict_as_written: "TP"
+  - slug: "github-runner-operators/charms/garm"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 26
+    date: "2026-07-26"
+    reason: "Explicit tell, richest binding this round at 7 collapsed event names across 11 observe() calls"
+    source_line: 2008
+    verdict_as_written: "TP"
+  - slug: "github-runner-operators/charms/garm-configurator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 37
+    date: "2026-08-17"
+    reason: "_reconcile, \"handle all charm events by reconciling\", 7 events"
+    source_line: 4826
+    verdict_as_written: "TP"
+    verdict_source_round: 35
+  - slug: "haproxy-operator/haproxy-ddos-protection-configurator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 23
+    date: "2026-07-24"
+    reason: "Small, right at the floor, but explicit _reconcile tell and genuine"
+    source_line: 1311
+    verdict_as_written: "TP"
+  - slug: "haproxy-operator/haproxy-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 22
+    date: "2026-07-20"
+    reason: "Code comment reads \"Hook relation-related events to the reconcile loop\" — textbook holistic convergence"
+    source_line: 1057
+    verdict_as_written: "TP"
+  - slug: "haproxy-operator/haproxy-route-policy-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 22
+    date: "2026-07-20"
+    reason: "Rich, explicit-name convergence — _reconcile bound to 11 events"
+    source_line: 1062
+    verdict_as_written: "TP"
+  - slug: "haproxy-operator/haproxy-spoe-auth-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 23
+    date: "2026-07-24"
+    reason: "Rich, explicit tell — third independent _reconcile TP in this repo"
+    source_line: 1312
+    verdict_as_written: "TP"
+  - slug: "http-proxy-operators/http-proxy-configurator-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 22
+    date: "2026-07-20"
+    reason: "Borderline but genuine — converges config plus both sides of a proxy-delegation relationship"
+    source_line: 1059
+    verdict_as_written: "TP"
+  - slug: "http-proxy-operators/http-proxy-policy-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 23
+    date: "2026-07-24"
+    reason: "Richest binding in this batch — explicit tell and docstring, a literal reconcile-named custom event"
+    source_line: 1313
+    verdict_as_written: "TP"
+  - slug: "http-proxy-operators/squid-forward-proxy-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 32
+    date: "2026-08-01"
+    reason: "Explicit tell; rebuilds the full squid config/passwd file from all http-proxy integrations — genuine"
+    source_line: 3339
+    verdict_as_written: "TP"
+  - slug: "hydra-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 21
+    date: "2026-07-14"
+    reason: "Explicitly named \"holistic handler\"; _on_holistic_handler bound to 7 events"
+    source_line: 846
+    verdict_as_written: "TP"
+  - slug: "identity-platform-admin-ui-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 23
+    date: "2026-07-24"
+    reason: "Genuine convergence: recomputes downstream OAuth/Kratos client config on config change or either upstream relation changing"
+    source_line: 1306
+    verdict_as_written: "TP"
+  - slug: "identity-platform-login-ui-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 23
+    date: "2026-07-24"
+    reason: "Explicit \"holistic\" tell, richest binding in this batch — same IAM-team convention"
+    source_line: 1307
+    verdict_as_written: "TP"
+  - slug: "infra-backup-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "FP"
+    round: 31
+    date: "2026-07-31"
+    reason: "Handler body only checks setup_failure and relation presence then sets Blocked/Active status — no manifest, pebble layer, or config write. Second independent instance of follow-up #13"
+    source_line: 3087
+    verdict_as_written: "FP"
+  - slug: "ingress-configurator-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 31
+    date: "2026-07-31"
+    reason: "Explicit tell; body dispatches to _reconcile_gateway_route/_reconcile_haproxy_route/... based on which route relation is active — textbook"
+    source_line: 3086
+    verdict_as_written: "TP"
+  - slug: "istio-beacon-k8s-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 22
+    date: "2026-07-20"
+    reason: "2 distinct relation roles plus config — sibling of istio-k8s-operator, smaller scope"
+    source_line: 1065
+    verdict_as_written: "TP"
+  - slug: "istio-ingress-k8s-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 23
+    date: "2026-07-24"
+    reason: "Narrow trigger set but the handler body is a full k8s-resource resync; true architecture closer to part-reconcile, kept as TP and flagged as a boundary case"
+    source_line: 1309
+    verdict_as_written: "TP (boundary case)"
+  - slug: "istio-k8s-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 22
+    date: "2026-07-20"
+    reason: "Method literally named _reconcile, bound to 12 events — sibling of #21's TP istio-pilot"
+    source_line: 1052
+    verdict_as_written: "TP"
+  - slug: "istio-operators/charms/istio-gateway"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 45
+    date: "2026-09-03"
+    reason: "start renders the full gateway manifest from config + relation data and applies every object via lightkube"
+    source_line: 7160
+    verdict_as_written: "TP"
+    sample: "Task A 12-slug draw, seed 20260903"
+    history:
+      - round: 37
+        date: "2026-08-17"
+        verdict: "TP"
+        reason: "start, holistic body despite unassuming name, 3 events"
+        source_line: 4811
+        verdict_as_written: "TP"
+        verdict_source_round: 35
+  - slug: "istio-operators/charms/istio-pilot"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 21
+    date: "2026-07-14"
+    reason: "Genuine holistic convergence — method literally named reconcile, bound to 7 events; same charm cited pre-rework"
+    source_line: 843
+    verdict_as_written: "TP"
+  - slug: "jenkins-agent-k8s-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 37
+    date: "2026-08-17"
+    reason: "_on_reconcile, \"single reconciliation entry point\", 6 events"
+    source_line: 4808
+    verdict_as_written: "TP"
+    verdict_source_round: 35
+  - slug: "jenkins-agent-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 45
+    date: "2026-09-03"
+    reason: "_reconcile fetches State.from_charm(self) and reconciles installation, relation data and service. Textbook tell-and-body match"
+    source_line: 7163
+    verdict_as_written: "TP"
+    sample: "Task A 12-slug draw, seed 20260903"
+    history:
+      - round: 37
+        date: "2026-08-17"
+        verdict: "TP"
+        reason: "_reconcile, \"reconcile the agent to its desired state\", 9 events"
+        source_line: 4807
+        verdict_as_written: "TP"
+        verdict_source_round: 35
+  - slug: "jenkins-k8s-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 37
+    date: "2026-08-17"
+    reason: "_reconcile, \"single top-level reconcile method\", 16 events"
+    source_line: 4809
+    verdict_as_written: "TP"
+    verdict_source_round: 35
+  - slug: "juju-controller"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "FP"
+    round: 45
+    date: "2026-09-03"
+    reason: "_on_metrics_reconcile is a self-contained credential-rotation routine for one subsystem wired to three heterogeneous triggers — follow-up #13's fifth instance"
+    source_line: 7207
+    verdict_as_written: "FP"
+    history:
+      - round: 44
+        date: "2026-09-01"
+        verdict: "unadjudicated"
+        reason: "One genuinely unpredicted architecture mover; read only far enough to confirm source drift rather than a detector artefact"
+        source_line: 6977
+        verdict_as_written: "logged, not adjudicated — no TP/FP verdict is given"
+        counts_toward_precision: false
+  - slug: "kafka-k8s-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 24
+    date: "2026-07-24"
+    reason: "Thin but genuine — idempotent full-recompute of the Cruise Control balancer/cluster config on any of the three triggers"
+    source_line: 1518
+    verdict_as_written: "TP"
+  - slug: "kafka-ui-k8s-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 31
+    date: "2026-07-31"
+    reason: "Body regenerates TLS truststore, writes the full workload config, and restarts the service on any trigger — genuine reconfiguration"
+    source_line: 3088
+    verdict_as_written: "TP"
+  - slug: "kafka-ui-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 31
+    date: "2026-07-31"
+    reason: "Genuinely independent code from the k8s variant (34-line diff), same convergence body"
+    source_line: 3089
+    verdict_as_written: "TP"
+  - slug: "katib-operators/charms/katib-db-manager"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 29
+    date: "2026-07-29"
+    reason: "Mirror image of follow-up #12's failure mode landing on the correct side; MLOps _on_event \"perform all required actions\" convention — genuine, correctly captured despite the indirect wiring"
+    source_line: 2630
+    verdict_as_written: "TP"
+  - slug: "katib-operators/charms/katib-ui"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 37
+    date: "2026-08-17"
+    reason: "main, deploys k8s resources + pebble layer, 9 events"
+    source_line: 4812
+    verdict_as_written: "TP"
+    verdict_source_round: 35
+  - slug: "kfp-operators/charms/kfp-api"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 45
+    date: "2026-09-03"
+    reason: "Two qualifying bindings, both read; _on_event applies k8s resources, reconciles auth policies, ensures the S3 bucket, rebuilds the pebble layer"
+    source_line: 7158
+    verdict_as_written: "TP"
+    sample: "Task A 12-slug draw, seed 20260903"
+    history:
+      - round: 21
+        date: "2026-07-14"
+        verdict: "TP"
+        reason: "Textbook full-state convergence; sub-method literally named _reconcile_authorization_policies"
+        source_line: 851
+        verdict_as_written: "TP"
+  - slug: "kiali-k8s-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 30
+    date: "2026-07-30"
+    reason: "Explicit tell, richest binding this round — regenerates the full Kiali config from 5 independent integrations inside one convergence method"
+    source_line: 2842
+    verdict_as_written: "TP"
+  - slug: "knative-operators/charms/knative-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 37
+    date: "2026-08-17"
+    reason: "_main, k8s resources + 2 pebble layers, 4 events"
+    source_line: 4817
+    verdict_as_written: "TP"
+    verdict_source_round: 35
+  - slug: "kratos-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 21
+    date: "2026-07-14"
+    reason: "Explicitly named \"holistic handler\" — IAM-team convention, same shape as hydra"
+    source_line: 845
+    verdict_as_written: "TP"
+  - slug: "kserve-operators/charms/kserve-controller"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 37
+    date: "2026-08-17"
+    reason: "_on_event, MLOps convention, k8s-resource apply + policy reconcile"
+    source_line: 4806
+    verdict_as_written: "TP"
+    verdict_source_round: "34/35"
+  - slug: "kserve-operators/charms/kserve-llmisvc"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 37
+    date: "2026-08-17"
+    reason: "_on_event, \"main reconcile loop\", 11 events"
+    source_line: 4819
+    verdict_as_written: "TP"
+    verdict_source_round: 35
+  - slug: "kserve-operators/charms/llm-integrator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 37
+    date: "2026-08-17"
+    reason: "_on_event, \"main reconcile loop\", 9 events"
+    source_line: 4818
+    verdict_as_written: "TP"
+    verdict_source_round: 35
+  - slug: "kserve-operators/charms/lws-controller"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 37
+    date: "2026-08-17"
+    reason: "_on_event, \"main reconcile loop\", 7 events"
+    source_line: 4820
+    verdict_as_written: "TP"
+    verdict_source_round: 35
+  - slug: "kube-state-metrics-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "FP"
+    round: 24
+    date: "2026-07-24"
+    reason: "Single-container \"(re)apply the one Pebble layer\" boilerplate — new shape, logged as follow-up #11"
+    source_line: 1526
+    verdict_as_written: "FP"
+  - slug: "kubeflow-dashboard-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 37
+    date: "2026-08-17"
+    reason: "main, MLOps convention, 7 events"
+    source_line: 4814
+    verdict_as_written: "TP"
+    verdict_source_round: 35
+  - slug: "kubeflow-profiles-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 32
+    date: "2026-08-01"
+    reason: "Ninth confirmed instance of the MLOps _on_event convention — deploys k8s resources and updates the kfam pebble layer on any of 3 triggers"
+    source_line: 3340
+    verdict_as_written: "TP"
+  - slug: "kubeflow-tensorboards-operator/charms/tensorboard-controller"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 23
+    date: "2026-07-24"
+    reason: "Explicit sibling comment and the same _on_event funnel-everything convention as kfp-api — MLOps team pattern"
+    source_line: 1315
+    verdict_as_written: "TP"
+  - slug: "kubeflow-tensorboards-operator/charms/tensorboards-web-app"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 23
+    date: "2026-07-24"
+    reason: "Same MLOps _on_event convention, same repo — second independent TP"
+    source_line: 1316
+    verdict_as_written: "TP"
+  - slug: "kubeflow-trainer-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 30
+    date: "2026-07-30"
+    reason: "Same MLOps \"perform all required actions\" _on_event convention — genuine full k8s-resource-apply + policy-manager reconcile on any of the 4 triggers"
+    source_line: 2839
+    verdict_as_written: "TP"
+  - slug: "launchpad-retracer-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 23
+    date: "2026-07-24"
+    reason: "Byte-for-byte the same shape and near-identical comment as #21's TP ubuntu-manpages-operator"
+    source_line: 1318
+    verdict_as_written: "TP"
+  - slug: "ldap-integrator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 22
+    date: "2026-07-20"
+    reason: "Thin (at the min_events floor) but genuine; explicit \"holistic\" tell"
+    source_line: 1056
+    verdict_as_written: "TP"
+  - slug: "livepatch-k8s-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 45
+    date: "2026-09-03"
+    reason: "Both qualifying bindings call into _update_workload_container_config, independently reached from 17+ other observed handlers — the central-reconfiguration shape, not follow-up #10's"
+    source_line: 7165
+    verdict_as_written: "TP"
+    sample: "Task A 12-slug draw, seed 20260903"
+    history:
+      - round: 30
+        date: "2026-07-30"
+        verdict: "TP"
+        reason: "Same \"narrow trigger, full-resync callee\" TP precedent as istio-ingress-k8s-operator/temporal-k8s-operator; the callee's docstring names it \"the central convergence method\""
+        source_line: 2843
+        verdict_as_written: "TP"
+  - slug: "loki-k8s-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "FP"
+    round: 21
+    date: "2026-07-14"
+    reason: "Sole qualifying binding is a narrow single-purpose relay across 2 symmetric relations, not general reconcile"
+    source_line: 853
+    verdict_as_written: "FP"
+  - slug: "maas-charms/maas-region"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "FP"
+    round: 24
+    date: "2026-07-24"
+    reason: "Textbook shape-1 (single-relation lifecycle handler) reached through the bare-subscript form"
+    source_line: 1520
+    verdict_as_written: "FP"
+  - slug: "maas-site-manager-k8s-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 31
+    date: "2026-07-31"
+    reason: "Richest evidence this round: full pod-spec rebuild reached from 9 distinct triggers; the 3 directly-observed events alone already clear the threshold"
+    source_line: 3090
+    verdict_as_written: "TP"
+  - slug: "mediawiki-k8s-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 37
+    date: "2026-08-17"
+    reason: "_reconciliation, 22-event hand-built loop list, explicit reconcile docstring"
+    source_line: 4805
+    verdict_as_written: "TP"
+    verdict_source_round: 34
+  - slug: "mlflow-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 45
+    date: "2026-09-03"
+    reason: "_on_event: bucket check, pebble layer, S3 CA bundle, policy-resource reconcile, exporter layer, manifests, ingress info"
+    source_line: 7162
+    verdict_as_written: "TP"
+    sample: "Task A 12-slug draw, seed 20260903"
+    history:
+      - round: 30
+        date: "2026-07-30"
+        verdict: "TP"
+        reason: "Seventh confirmed instance of the MLOps _on_event convention — no naming tell on the handler, but the docstring is the tell"
+        source_line: 2840
+        verdict_as_written: "TP"
+  - slug: "mysql-operators/kubernetes"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "FP"
+    round: 21
+    date: "2026-07-14"
+    reason: "Cluster-primary-failover-on-detach logic only (4 symmetric storage mounts), not general reconcile"
+    source_line: 857
+    verdict_as_written: "FP"
+  - slug: "mysql-operators/machines"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "FP"
+    round: 21
+    date: "2026-07-14"
+    reason: "Same finding — shared codebase across the two sub-charm slugs"
+    source_line: 858
+    verdict_as_written: "FP"
+  - slug: "namespace-node-affinity-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 24
+    date: "2026-07-24"
+    reason: "Unconditional full K8s-resource (webhook/RBAC) reapply on any lifecycle trigger; explicit docstring"
+    source_line: 1523
+    verdict_as_written: "TP"
+  - slug: "notebook-operators/charms/jupyter-controller"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 30
+    date: "2026-07-30"
+    reason: "Eighth confirmed instance of the MLOps _on_event convention, and the richest wiring of the family — loops over the charm's entire relation set unconditionally"
+    source_line: 2841
+    verdict_as_written: "TP"
+  - slug: "notebook-operators/charms/jupyter-ui"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 37
+    date: "2026-08-17"
+    reason: "main, \"perform all required actions\", 5 events"
+    source_line: 4816
+    verdict_as_written: "TP"
+    verdict_source_round: 35
+  - slug: "oathkeeper-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 23
+    date: "2026-07-24"
+    reason: "Thin (at the min_events floor), no naming tell, but genuine — same shape as ubuntu-manpages-operator/ldap-integrator"
+    source_line: 1308
+    verdict_as_written: "TP"
+  - slug: "observability-libs"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "FP"
+    round: 31
+    date: "2026-07-31"
+    reason: "Third confirmed instance of follow-up #11's apply-layer boilerplate; a synthetic library test-fixture charm (\"Tester charm for Observability libs\", container named \"placeholder\")"
+    source_line: 3093
+    verdict_as_written: "FP"
+  - slug: "oidc-gatekeeper-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 37
+    date: "2026-08-17"
+    reason: "main, MLOps convention, 12 events"
+    source_line: 4815
+    verdict_as_written: "TP"
+    verdict_source_round: 35
+  - slug: "opencti-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 24
+    date: "2026-07-24"
+    reason: "Explicit tell, unambiguous — _reconcile bound to 22 events, richest binding audited across #21-#24"
+    source_line: 1529
+    verdict_as_written: "TP"
+  - slug: "opendkim-operator/opendkim-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 21
+    date: "2026-07-14"
+    reason: "Genuine holistic convergence — method literally named _reconcile, bound to 4 events"
+    source_line: 848
+    verdict_as_written: "TP"
+  - slug: "openstack-cloud-controller-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 30
+    date: "2026-07-30"
+    reason: "Ninth directly-audited instance of the ops.manifests/Collector/_merge_config addon-charm template; the follow-up #12 blind spot does not reproduce here"
+    source_line: 2838
+    verdict_as_written: "TP"
+  - slug: "openstack-exporter-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 32
+    date: "2026-08-01"
+    reason: "Installs/configures the exporter snap directly from model config on any trigger — genuine"
+    source_line: 3341
+    verdict_as_written: "TP"
+  - slug: "penpot-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 31
+    date: "2026-07-31"
+    reason: "Explicit tell, richest binding audited this round; body rebuilds the pebble layer, replans, and starts/stops the 3 services"
+    source_line: 3091
+    verdict_as_written: "TP"
+  - slug: "pgbouncer-k8s-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 29
+    date: "2026-07-29"
+    reason: "Not a narrow peer-only handler: full pgbouncer config re-render plus monitoring-layer toggle and client endpoint update — genuine cross-cutting reconfiguration"
+    source_line: 2631
+    verdict_as_written: "TP"
+  - slug: "postfix-relay-operators/postfix-relay-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 30
+    date: "2026-07-30"
+    reason: "Explicit tell, \"Reconciling SMTP relay\" status message — third independent repo/team confirming the mail-relay reconcile convention"
+    source_line: 2845
+    verdict_as_written: "TP"
+  - slug: "postgresql-test-app"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 37
+    date: "2026-08-17"
+    reason: "_on_relation_broken, 4-relation convergence check, literal-subscript form"
+    source_line: 4829
+    verdict_as_written: "TP"
+    verdict_source_round: 36
+  - slug: "prometheus-k8s-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 21
+    date: "2026-07-14"
+    reason: "Full-config regeneration on any of 6 triggers — canonical reconcile shape"
+    source_line: 844
+    verdict_as_written: "TP"
+  - slug: "prometheus-scrape-config-k8s-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 37
+    date: "2026-08-17"
+    reason: "_update_all_metrics_consumers, republishes scrape config, 9 events"
+    source_line: 4827
+    verdict_as_written: "TP"
+    verdict_source_round: 35
+  - slug: "prometheus-scrape-target-k8s-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 32
+    date: "2026-08-01"
+    reason: "Computes scrape-job config from model config and republishes to relation data on any trigger — the charm's entire purpose, genuine reconfiguration"
+    source_line: 3342
+    verdict_as_written: "TP"
+  - slug: "resource-dispatcher"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 24
+    date: "2026-07-24"
+    reason: "Full-state convergence across every downstream K8s-manifest-provider relation type; \"perform all required actions\" docstring"
+    source_line: 1524
+    verdict_as_written: "TP"
+  - slug: "role-distributor-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 24
+    date: "2026-07-24"
+    reason: "Explicit tell, thin but genuine — recomputes and republishes role assignments on config, relation-membership, or leadership change"
+    source_line: 1525
+    verdict_as_written: "TP"
+  - slug: "ros2bag-fileserver-k8s-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "FP"
+    round: 22
+    date: "2026-07-20"
+    reason: "Byte-identical duplicate of cos-registration-server-k8s-operator's auth_devices_keys.py — same narrow write-once task"
+    source_line: 1058
+    verdict_as_written: "FP"
+  - slug: "secops-fork-opencti-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 29
+    date: "2026-07-29"
+    reason: "Near-byte-identical fork of opencti-operator (one unrelated line differs); every event binding identical, so it inherits #26's TP"
+    source_line: 2591
+    verdict_as_written: "TP (inherited from twin)"
+    counts_toward_precision: false
+    inherited_from: "opencti-operator"
+  - slug: "self-signed-certificates-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 37
+    date: "2026-08-17"
+    reason: "_configure, root-certificate lifecycle, 5 events"
+    source_line: 4821
+    verdict_as_written: "TP"
+    verdict_source_round: 35
+  - slug: "smtp-integrator-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 29
+    date: "2026-07-29"
+    reason: "Explicit tell, and the body genuinely reconciles across 3 distinct relations plus config — textbook"
+    source_line: 2632
+    verdict_as_written: "TP"
+  - slug: "sunbeam-charms/charms/keystone-k8s"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "FP"
+    round: 24
+    date: "2026-07-24"
+    reason: "Single-integration-scoped convergence, not charm-wide reconcile — new shape, logged as follow-up #10"
+    source_line: 1519
+    verdict_as_written: "FP"
+  - slug: "superset-k8s-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 47
+    date: "2026-09-08"
+    reason: "The verdict already existed (round 31); re-confirmed fresh at the current scanned SHA — _update is a genuine charm-wide convergence hub reached from 6 other handlers"
+    source_line: 7833
+    verdict_as_written: "TP, confirmed twice over"
+    counts_toward_precision: false
+    history:
+      - round: 31
+        date: "2026-07-31"
+        verdict: "TP"
+        reason: "_update rebuilds the full pebble layer from environment, Redis endpoint and Trino-catalog state — genuine charm-wide convergence hub"
+        source_line: 3094
+        verdict_as_written: "TP"
+      - round: 41
+        date: "2026-08-25"
+        verdict: "unadjudicated"
+        reason: "Task 6 recorded it as the one instance with no architecture-axis verdict. #47 established this was a research error — round 31's TP row existed"
+        source_line: 6177
+        verdict_as_written: "none on the architecture axis"
+        counts_toward_precision: false
+        superseded: true
+      - round: 42
+        date: "2026-08-27"
+        verdict: "unadjudicated"
+        reason: "Repeated #41's claim without re-checking"
+        source_line: 6551
+        verdict_as_written: "remains unadjudicated on the architecture axis"
+        counts_toward_precision: false
+        superseded: true
+      - round: 45
+        date: "2026-09-03"
+        verdict: "unadjudicated"
+        reason: "Repeated #41's claim without re-checking"
+        source_line: 7278
+        verdict_as_written: "Does not adjudicate superset-k8s-operator"
+        counts_toward_precision: false
+        superseded: true
+      - round: 46
+        date: "2026-09-04"
+        verdict: "unadjudicated"
+        reason: "Repeated #41's claim without re-checking"
+        source_line: 7498
+        verdict_as_written: "still the one #10/#18 instance with no architecture-axis verdict on record"
+        counts_toward_precision: false
+        superseded: true
+  - slug: "synapse-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 29
+    date: "2026-07-29"
+    reason: "Explicit tell, spans pebble + peer relation + 3 independent integration libraries + baseline lifecycle"
+    source_line: 2634
+    verdict_as_written: "TP"
+  - slug: "temporal-k8s-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 45
+    date: "2026-09-03"
+    reason: "_update rebuilds the entire server config context and replans the pebble layer — genuine convergence despite the single-relation trigger set, confirmed under #42's criterion"
+    source_line: 7164
+    verdict_as_written: "TP"
+    sample: "Task A 12-slug draw, seed 20260903"
+    history:
+      - round: 24
+        date: "2026-07-24"
+        verdict: "TP"
+        reason: "A part-reconcile-shaped charm whose directly-observed triggers independently clear the reconcile threshold"
+        source_line: 1527
+        verdict_as_written: "TP"
+  - slug: "tenant-service-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 30
+    date: "2026-07-30"
+    reason: "Explicit \"holistic\" tell, richest binding this round (16 events) — same IAM-family convention"
+    source_line: 2846
+    verdict_as_written: "TP"
+  - slug: "testflinger/server/charm"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "FP"
+    round: 24
+    date: "2026-07-24"
+    reason: "Both qualifying handlers are narrow single-integration relays — no charm-wide convergence signal anywhere in the file"
+    source_line: 1528
+    verdict_as_written: "FP"
+  - slug: "tls-certificates-requirer-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 22
+    date: "2026-07-20"
+    reason: "Same shape as #21's TP tls-constraints-operator — small single-purpose cert charm, but genuine convergence"
+    source_line: 1064
+    verdict_as_written: "TP"
+  - slug: "tls-constraints-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 21
+    date: "2026-07-14"
+    reason: "Recomputes full downstream cert-relation state on any cert change"
+    source_line: 847
+    verdict_as_written: "TP"
+  - slug: "traefik-k8s-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 37
+    date: "2026-08-17"
+    reason: "Self-declared holistic-convergence handler via alias, 5 events"
+    source_line: 4804
+    verdict_as_written: "TP"
+    verdict_source_round: 34
+  - slug: "training-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 45
+    date: "2026-09-03"
+    reason: "_on_event applies k8s resources and reconciles the policy-resource manager — tenth confirmed MLOps _on_event-convention instance"
+    source_line: 7157
+    verdict_as_written: "TP"
+    sample: "Task A 12-slug draw, seed 20260903"
+    history:
+      - round: 32
+        date: "2026-08-01"
+        verdict: "TP"
+        reason: "Tenth confirmed MLOps _on_event-convention instance — _apply_k8s_resources + policy-manager reconcile on any of 3 triggers"
+        source_line: 3343
+        verdict_as_written: "TP"
+  - slug: "transition-tracker-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 32
+    date: "2026-08-01"
+    reason: "Delegates to self._transition.configure(url) — genuine config apply on a composed helper object; the charm that falsifies a same-class-only delegation check"
+    source_line: 3344
+    verdict_as_written: "TP"
+  - slug: "trino-k8s-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 29
+    date: "2026-07-29"
+    reason: "Explicit code comment \"Every hook converges through a single idempotent reconciler\" — richest binding this round, no ambiguity"
+    source_line: 2633
+    verdict_as_written: "TP"
+  - slug: "ubuntu-manpages-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 21
+    date: "2026-07-14"
+    reason: "Comment states events are deliberately bound to config_changed's replan-everything path — small-scale but genuine convergence"
+    source_line: 850
+    verdict_as_written: "TP"
+  - slug: "ubuntu-merges-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 45
+    date: "2026-09-03"
+    reason: "Read like a narrow handler on first pass; verdict stands as TP per #42's criterion and the ingress-template precedent — the round's one disagreement, resolved"
+    source_line: 7161
+    verdict_as_written: "TP"
+    sample: "Task A 12-slug draw, seed 20260903"
+    history:
+      - round: 23
+        date: "2026-07-24"
+        verdict: "TP"
+        reason: "Same shape, same comment, same team as launchpad-retracer-operator — a recurring IS-team charm-template pattern"
+        source_line: 1319
+        verdict_as_written: "TP"
+  - slug: "ubuntu-static-reports-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 31
+    date: "2026-07-31"
+    reason: "Body sets external URL, archive-mirror config, mismatch overrides and the Launchpad OAuth key from self.config on any of the 3 triggers"
+    source_line: 3092
+    verdict_as_written: "TP"
+  - slug: "valkey-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "FP"
+    round: 40
+    date: "2026-08-24"
+    reason: "Narrow single-purpose restore-workflow handler bound across heterogeneous triggers — fourth independent instance of follow-up #13"
+    source_line: 5656
+    verdict_as_written: "FP"
+  - slug: "vault-k8s-operator/k8s"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 37
+    date: "2026-08-17"
+    reason: "_configure, pebble + peer + unseal, 13 events"
+    source_line: 4822
+    verdict_as_written: "TP"
+    verdict_source_round: 35
+  - slug: "vault-k8s-operator/machine"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 37
+    date: "2026-08-17"
+    reason: "_configure, snap install + config, 12 events"
+    source_line: 4823
+    verdict_as_written: "TP"
+    verdict_source_round: 35
+  - slug: "velero-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 22
+    date: "2026-07-20"
+    reason: "Baseline lifecycle triad plus genuine multi-relation storage-backend convergence"
+    source_line: 1055
+    verdict_as_written: "TP"
+  - slug: "vsphere-cloud-provider"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 45
+    date: "2026-09-03"
+    reason: "_merge_config, identical addon-charm shape to gcp-k8s-storage; repo_sha moved since the earlier read, same template, same verdict"
+    source_line: 7167
+    verdict_as_written: "TP"
+    sample: "Task A 12-slug draw, seed 20260903"
+    history:
+      - round: 29
+        date: "2026-07-29"
+        verdict: "TP"
+        reason: "Sixth confirmed instance of the ops.manifests/Collector/_merge_config addon-charm template; same convention that keeps the template safe from follow-up #12's blind spot"
+        source_line: 2629
+        verdict_as_written: "TP"
+  - slug: "wazuh-server-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 30
+    date: "2026-07-30"
+    reason: "Explicit tell — full pebble-layer rebuild plus API-relation-data republish and Prometheus config on any of 2 relations, pebble readiness, or config"
+    source_line: 2844
+    verdict_as_written: "TP"
+  - slug: "wireguard-gateway-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 45
+    date: "2026-09-03"
+    reason: "reconcile (\"Holistic reconciliation method.\") installs packages, walks every wireguard-router relation, applies config, opens ports"
+    source_line: 7168
+    verdict_as_written: "TP"
+    sample: "Task A 12-slug draw, seed 20260903"
+    history:
+      - round: 23
+        date: "2026-07-24"
+        verdict: "TP"
+        reason: "Explicit tell (bare method reconcile), 12 observe() calls collapsing to 7 distinct AST event names"
+        source_line: 1320
+        verdict_as_written: "TP"
+  - slug: "wordpress-k8s-operator"
+    bucket: "reconcile"
+    feature: "architecture:reconcile"
+    verdict: "TP"
+    round: 24
+    date: "2026-07-24"
+    reason: "Explicit tell, richest structural evidence in this batch — a whole family of named sub-reconciliation methods"
+    source_line: 1521
+    verdict_as_written: "TP"
+  - slug: "alertmanager-k8s-operator"
+    bucket: "worth-considering:ops.relation-app-data"
+    feature: "ops.relation-app-data"
+    verdict: "other"
+    round: 17
+    date: "2026-06-13"
+    reason: "FN-suspect resolved: the alias regex matched a function-call arg and the data[var] regex matched a unit-scope access; coincidental co-occurrence"
+    source_line: 670
+    verdict_as_written: "TN (confirmed)"
