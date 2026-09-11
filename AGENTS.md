@@ -189,6 +189,24 @@ negative test in `tests/test_detectors.py`.
 Not part of the pipeline; each is run with `uv run python -m charmtally.tools.X`.
 
 - `audit.py` — calibration sampling over `scored.json`.
+- `calibration_check.py` — asserts the architecture detectors still agree with
+  `calibration-ledger.yaml`, so a detector change that silently re-breaks a
+  charm an earlier round fixed fails CI. Run by `make calibration` and the
+  `calibration` job in `ci.yaml`. Covers the `reconcile` and `delta` buckets
+  only; the rest of the ledger's buckets are 44 rows and down, thin enough that
+  a failure would be as likely to mean the extraction missed a row. Reads the
+  committed `results.json` rather than re-scanning — 236 of the 240 in-scope
+  rows resolve to a charm in it — so it costs seconds, not ~344 clones.
+  Membership comes off the raw `__meta__.architecture` list, **not**
+  `dashboard._primary_arch`: that one picks a single label per charm by
+  priority, so folding `paas_charm` into `component-graph` moved charms out of
+  the *displayed* `reconcile` bucket while the `reconcile` detector went on
+  matching them. Comparing against the displayed label reports three such
+  charms as regressions with no detector change. `delta` has no detector — it
+  is the residual — so membership there is an empty list, which is why
+  `ARCH_PATTERNS` has a test against `features.yaml`: a new pattern landing
+  without being listed would shrink the residual and clear `delta` rows that
+  should have failed.
 - `bindings.py` — dumps every shared-handler binding in a charm tree as JSON,
   with the resolved event set, the relation endpoints the resolvable half
   names, and the first cut that stops it. The `reconcile` detector only
@@ -241,9 +259,33 @@ via `--merge`, which preserves the `Team` and `Notes` columns a human curates
 and never deletes a row that fell out of the search index. Edit those columns
 freely; the sweep will not clobber them.
 
+`calibration-ledger.yaml` and `calibration-exceptions.yaml` are source data
+too. The ledger is a **transcription** of `CALIBRATION.md`'s 48 rounds of
+adjudication, keyed on `(slug, bucket)`; the companion write-up lives in
+canonical-work-queue at `non-roadmap/feature-dashboard/LEDGER-EXTRACTION.md`.
+A row that disagrees with the prose is a transcription bug and should be
+corrected against the prose, never deleted to make a check pass. When
+`calibration_check` reports a disagreement there are three things it can be,
+and it prints the round, date, `source_line`, reason and current detector
+output so you can tell them apart:
+
+- the detector regressed — fix the detector;
+- the ledger row is now stale — update it, moving the current top-level event
+  into its `history` list and writing the new verdict, `round`, `date`,
+  `reason` and `source_line` in its place;
+- the charm changed upstream, or a later round moved it between buckets — add
+  an entry to `calibration-exceptions.yaml` with a reason and a citation.
+
+Exceptions name the verdict they were written against, so correcting a ledger
+row invalidates its exception rather than carrying it over, and the check
+reports entries that no longer accept anything so the list shrinks as the gaps
+close. The 17 false-positive entries in it are the open detector gaps behind
+LEDGER-EXTRACTION.md's live-bucket census of 120 TP / 133; each names the
+follow-up that tracks it.
+
 ## Workflows
 
-- `ci.yaml` — pytest matrix (3.10 / 3.12) + `make lint`.
+- `ci.yaml` — pytest matrix (3.10 / 3.12) + `make lint` + `make calibration`.
 - `zizmor.yaml` + `actionlint.yaml` — audit workflow files.
 - `dependency-review.yaml` — PR-only gate on new dependency CVEs / licences.
 - `rocks.yaml` — weekly cron + `workflow_dispatch`. Re-runs `rockfind` and

@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help lint format unit coverage pre-commit clean
+.PHONY: help lint format unit coverage calibration pre-commit clean
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
@@ -24,6 +24,12 @@ unit:  ## Run the unit tests
 # of a 2-second suite is that you run it without thinking about it.
 coverage:  ## Run the unit tests with a coverage floor
 	uv run --group dev pytest --cov --cov-report=term-missing
+
+# Reads the committed results.json rather than re-scanning, so it costs a
+# couple of seconds. Not folded into `unit`: it would put 14MB of JSON in
+# front of a suite whose whole point is that it finishes before you look away.
+calibration:  ## Check the detectors still agree with the calibration ledger
+	uv run --group dev python -m charmtally.tools.calibration_check
 
 pre-commit:  ## Run all pre-commit hooks against every file
 	uv run --group dev pre-commit run --all-files

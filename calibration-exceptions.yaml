@@ -1,0 +1,238 @@
+# Accepted divergences between `calibration-ledger.yaml` and the detectors.
+#
+# Read by `charmtally.tools.calibration_check`. Every entry silences exactly one
+# (slug, bucket) row, in exactly one direction, and only while the ledger still
+# records the verdict named in `ledger_verdict` — so correcting the ledger row
+# (the other way to accept a change) invalidates the exception rather than
+# quietly carrying it over.
+#
+# This is a known-defects list, not a suppression list. An entry needs a reason
+# and a citation, and the check reports entries that have gone stale so the
+# file shrinks as the gaps close.
+#
+# Fields:
+#   slug, bucket     the ledger row this accepts
+#   ledger_verdict   TP or FP, as the ledger currently records it
+#   accepted         the date the divergence was accepted
+#   reason           why the detector is right and the ledger row is not, or
+#                    why the miscall is known and open
+#   source           where to read the argument in full
+#
+# ---------------------------------------------------------------------------
+# Group 1: a later round moved the charm between buckets.
+#
+# The ledger records what a round said about a charm, not which bucket the
+# charm sat in at each weekly scan — LEDGER-EXTRACTION.md lists "bucket
+# membership at a point in time" among the things it cannot capture. These two
+# rows are the cases where that gap shows: the verdict stands, the charm has
+# since moved, and both moves are recorded in CALIBRATION.md itself.
+# ---------------------------------------------------------------------------
+version: 1
+exceptions:
+  - slug: "charm-kube-virt"
+    bucket: "reconcile"
+    ledger_verdict: "TP"
+    accepted: "2026-09-11"
+    reason: >-
+      Left the reconcile bucket before #27, which records the departure in its
+      own dropout table: 13 slugs dropped out against the new 106-slug bucket,
+      "12 of the 13 are FPs dropping out exactly as intended" and this is the
+      thirteenth, listed as "TP* (flagged false-negative, follow-up #12)". #26
+      had already flagged it that way — the two directly-observed handlers are
+      cut-#1 relation-scoped shims delegating to a shared _merge_config, so
+      cut #1 removes them and the charm-wide convergence underneath goes unseen.
+      The detector matching nothing here is the known false negative follow-up
+      #12 tracks, not a regression against #26's reading.
+    source: "CALIBRATION.md:2196-2215 (#27 dropout table), CALIBRATION.md:1999 (#26)"
+
+  - slug: "github-runner-operators/charms/planner-operator"
+    bucket: "delta"
+    ledger_verdict: "TP"
+    accepted: "2026-09-11"
+    reason: >-
+      Correctly delta on the delta/reconcile axis when #38 read it (4 handlers,
+      1 event each), and still is — no shared-handler pattern matches. It has
+      since left the delta bucket the other way: #42 sized paas_charm
+      corpus-wide and folded it into `component-graph` as that pattern's fourth
+      member, detected by base class through each file's own import table. #43
+      predicted this charm would move delta -> component-graph and #44's
+      confirmation table ticks it. Since `delta` is the residual — no
+      architecture pattern matched — any charm gaining its first pattern leaves
+      it, and a delta verdict cannot survive that by construction.
+    source: "CALIBRATION.md:6633 (#43 prediction), CALIBRATION.md:6858 (#44 confirmed)"
+
+  # -------------------------------------------------------------------------
+  # Group 2: false positives the ledger recorded and no cut has yet removed.
+  #
+  # An FP verdict says a human read the charm and judged the label wrong. It
+  # does NOT say the detector was then fixed — several were, and those rows now
+  # agree and need no entry here, but these have not been. Each one names the
+  # follow-up that tracks it, so this list doubles as the open-gap tally.
+  #
+  # The thirteen `reconcile` entries are exactly the thirteen false positives
+  # behind LEDGER-EXTRACTION.md's live-bucket census of 120 TP / 133: the ten
+  # survivors it names at #32, plus content-cache and valkey arriving at #40 and
+  # juju-controller at #45. If that count moves, this list is the thing to
+  # reconcile it against.
+  # -------------------------------------------------------------------------
+  - slug: "cos-registration-server-k8s-operator"
+    bucket: "reconcile"
+    ledger_verdict: "FP"
+    accepted: "2026-09-11"
+    reason: >-
+      Narrow purpose — pushes existing auth-device keys into relation data on 3
+      unrelated triggers — but it clears the 3-event floor, and no cut
+      distinguishes a write-once task from charm-wide reconfiguration.
+    source: "CALIBRATION.md:856 (#21)"
+
+  - slug: "ros2bag-fileserver-k8s-operator"
+    bucket: "reconcile"
+    ledger_verdict: "FP"
+    accepted: "2026-09-11"
+    reason: >-
+      Byte-identical duplicate of cos-registration-server-k8s-operator's
+      auth_devices_keys.py, so it survives for the same reason that one does.
+    source: "CALIBRATION.md:1058 (#22)"
+
+  - slug: "sunbeam-charms/charms/keystone-k8s"
+    bucket: "reconcile"
+    ledger_verdict: "FP"
+    accepted: "2026-09-11"
+    reason: >-
+      Single-integration-scoped convergence rather than charm-wide reconcile.
+      Logged as follow-up #10, still open.
+    source: "CALIBRATION.md:1519 (#24)"
+
+  - slug: "kube-state-metrics-operator"
+    bucket: "reconcile"
+    ledger_verdict: "FP"
+    accepted: "2026-09-11"
+    reason: >-
+      Single-container "(re)apply the one Pebble layer" boilerplate. Logged as
+      follow-up #11, still open.
+    source: "CALIBRATION.md:1526 (#24)"
+
+  - slug: "testflinger/server/charm"
+    bucket: "reconcile"
+    ledger_verdict: "FP"
+    accepted: "2026-09-11"
+    reason: >-
+      Both qualifying handlers are narrow single-integration relays, with no
+      charm-wide convergence signal anywhere in the file.
+    source: "CALIBRATION.md:1528 (#24)"
+
+  - slug: "charm-microk8s"
+    bucket: "reconcile"
+    ledger_verdict: "FP"
+    accepted: "2026-09-11"
+    reason: >-
+      Properly delta-architected; the false qualification comes from several
+      different narrow single-purpose methods each observed from >=3 unrelated
+      trigger points.
+    source: "CALIBRATION.md:2001 (#26)"
+
+  - slug: "CI-testing-grafana-agent-fork"
+    bucket: "reconcile"
+    ledger_verdict: "FP"
+    accepted: "2026-09-11"
+    reason: >-
+      _metrics_alerts only calls update_alerts_rules(...) — a narrow
+      single-purpose alert-rule sync, not charm-wide reconfiguration.
+    source: "CALIBRATION.md:2637 (#29)"
+
+  - slug: "infra-backup-operator"
+    bucket: "reconcile"
+    ledger_verdict: "FP"
+    accepted: "2026-09-11"
+    reason: >-
+      Handler body only checks setup_failure and relation presence then sets
+      Blocked/Active status — no manifest, pebble layer or config write. Second
+      instance of follow-up #13, still open.
+    source: "CALIBRATION.md:3087 (#31)"
+
+  - slug: "observability-libs"
+    bucket: "reconcile"
+    ledger_verdict: "FP"
+    accepted: "2026-09-11"
+    reason: >-
+      Third confirmed instance of follow-up #11's apply-layer boilerplate, in a
+      synthetic library test-fixture charm (container named "placeholder").
+    source: "CALIBRATION.md:3093 (#31)"
+
+  - slug: "charm-ubuntu"
+    bucket: "reconcile"
+    ledger_verdict: "FP"
+    accepted: "2026-09-11"
+    reason: >-
+      _set_version sets ActiveStatus and reports the Ubuntu release; no
+      self.config reference, no relation, manifest or pebble touch. Third
+      instance of follow-up #13, still open.
+    source: "CALIBRATION.md:3336 (#32)"
+
+  - slug: "content-cache-operator/content-cache"
+    bucket: "reconcile"
+    ledger_verdict: "FP"
+    accepted: "2026-09-11"
+    reason: >-
+      All four triggers belong to one relation endpoint (certificate-transfer,
+      observed twice over) — relation-scoped plumbing the cut cannot see.
+      Follow-up #18, still open.
+    source: "CALIBRATION.md:5612 (#40)"
+
+  - slug: "valkey-operator"
+    bucket: "reconcile"
+    ledger_verdict: "FP"
+    accepted: "2026-09-11"
+    reason: >-
+      Narrow single-purpose restore-workflow handler bound across heterogeneous
+      triggers. Fourth instance of follow-up #13, still open.
+    source: "CALIBRATION.md:5656 (#40)"
+
+  - slug: "juju-controller"
+    bucket: "reconcile"
+    ledger_verdict: "FP"
+    accepted: "2026-09-11"
+    reason: >-
+      _on_metrics_reconcile is a self-contained credential-rotation routine for
+      one subsystem wired to three heterogeneous triggers. Fifth instance of
+      follow-up #13, still open.
+    source: "CALIBRATION.md:7207 (#45)"
+
+  - slug: "mongo-single-kernel-library/single_kernel_mongo"
+    bucket: "delta"
+    ledger_verdict: "FP"
+    accepted: "2026-09-11"
+    reason: >-
+      Not a deployable charm at all — the shared library repo, scanned only
+      because a charmcraft.yaml exists inside the library tree. A corpus-hygiene
+      issue rather than a detector one, and it is still in the corpus.
+    source: "CALIBRATION.md:3820 (#34)"
+
+  - slug: "airflow-core-operators/charms/triggerer"
+    bucket: "delta"
+    ledger_verdict: "FP"
+    accepted: "2026-09-11"
+    reason: >-
+      Genuine holistic _reconcile reached through a vendored library that
+      observes it via method calls returning a list, so the bindings are
+      invisible to the AST detector. Follow-up #16, still open.
+    source: "CALIBRATION.md:5307 (#39)"
+
+  - slug: "airflow-core-operators/charms/scheduler"
+    bucket: "delta"
+    ledger_verdict: "FP"
+    accepted: "2026-09-11"
+    reason: >-
+      Same shape and same vendored library as triggerer — the second
+      independent instance of follow-up #16.
+    source: "CALIBRATION.md:5309 (#39)"
+
+  - slug: "mysql-router-operators/kubernetes"
+    bucket: "delta"
+    ledger_verdict: "FP"
+    accepted: "2026-09-11"
+    reason: >-
+      The canonical reconcile-all idiom lives in common/common/, a directory
+      sibling to the sub-charm root and so invisible to _SRC_DIRS. A fresh read
+      of an already-documented gap.
+    source: "CALIBRATION.md:7756 (#47)"

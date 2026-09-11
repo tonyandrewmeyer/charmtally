@@ -1518,16 +1518,6 @@ records:
     reason: "40 distinct _on_* methods across 14 files; the two shared handlers cap at 2 events each. Textbook delta: one handler per event, no shared reconciler"
     source_line: 3813
     verdict_as_written: "TP"
-  - slug: "postgresql-test-app"
-    bucket: "delta"
-    feature: "architecture:delta"
-    verdict: "TP"
-    round: 36
-    date: "2026-08-15"
-    reason: "_on_relation_broken spans 4 distinct relations via literal-string subscripts — genuine charm-wide convergence; considered and rejected as a corpus-hygiene exclusion"
-    source_line: 4368
-    verdict_as_written: "Kept as a genuine TP"
-    counts_toward_precision: false
   - slug: "prometheus-scrape-config-k8s-operator"
     bucket: "delta"
     feature: "architecture:delta"
@@ -2989,6 +2979,19 @@ records:
     source_line: 4829
     verdict_as_written: "TP"
     verdict_source_round: 36
+    history:
+      # Transcribed as a `delta` record in the 2026-09-10 extraction, corrected
+      # 2026-09-11. #36's table column reads "0 → 4 (not reconcile →
+      # reconcile)": the round adjudicated the charm's new `reconcile` label,
+      # and `delta` was only where it started. #37 re-records the same verdict
+      # in the reconcile bucket at line 4829, which is the row above.
+      - round: 36
+        date: "2026-08-15"
+        verdict: "TP"
+        reason: "_on_relation_broken spans 4 distinct relations via literal-string subscripts — genuine charm-wide convergence; considered and rejected as a corpus-hygiene exclusion"
+        source_line: 4368
+        verdict_as_written: "Kept as a genuine TP"
+        counts_toward_precision: false
   - slug: "prometheus-k8s-operator"
     bucket: "reconcile"
     feature: "architecture:reconcile"
