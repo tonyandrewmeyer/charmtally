@@ -50,6 +50,25 @@ jobs:
       - run: uv sync
       - run: make coverage
 
+  calibration:
+    # Its own job rather than a pytest case: it reads the committed
+    # results.json, and loading 14MB of JSON into a suite that otherwise runs
+    # in about a second is a bad trade. The unit tests for the check itself
+    # use small fixtures and do run under pytest.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d  # v10.0.1
+        with:
+          enable-cache: true
+      - run: uv sync
+      - run: make calibration
+
   lint:
     runs-on: ubuntu-latest
     steps:
