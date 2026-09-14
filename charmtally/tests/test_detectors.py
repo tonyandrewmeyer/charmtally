@@ -2477,3 +2477,82 @@ def test_ops_tracing_catalogue_feature_fires_on_either_spelling(tmp_path: Path) 
 
     (tmp_path / "requirements.txt").write_text("ops ~= 2.21\n")
     assert detect_feature(tmp_path, feature) == []
+
+
+# ── call-kwarg ───────────────────────────────────────────────────────────────
+
+
+def _write_unit_test(tmp_path: Path, code: str) -> Path:
+    tests = tmp_path / "tests" / "unit"
+    tests.mkdir(parents=True)
+    (tests / "test_charm.py").write_text(code)
+    (tmp_path / "charmcraft.yaml").write_text("type: charm\nname: t\n")
+    return tmp_path
+
+
+def test_call_kwarg_with_equals_matches_only_the_listed_value(tmp_path: Path) -> None:
+    _write_charm(tmp_path, "load_config(Config, errors='blocked')\n")
+    ev = detect_feature(
+        tmp_path, _feature("call-kwarg", attr="load_config", keyword="errors", equals=["blocked"])
+    )
+    assert len(ev) == 1
+    assert ev[0].detector_kind == "call-kwarg"
+
+
+def test_call_kwarg_with_equals_ignores_another_value(tmp_path: Path) -> None:
+    _write_charm(tmp_path, "load_config(Config, errors='raise')\n")
+    ev = detect_feature(
+        tmp_path, _feature("call-kwarg", attr="load_config", keyword="errors", equals=["blocked"])
+    )
+    assert ev == []
+
+
+def test_call_kwarg_with_equals_ignores_a_non_literal_value(tmp_path: Path) -> None:
+    """The value isn't visible without resolution a scan doesn't do."""
+    _write_charm(tmp_path, "load_config(Config, errors=self._mode)\n")
+    ev = detect_feature(
+        tmp_path, _feature("call-kwarg", attr="load_config", keyword="errors", equals=["blocked"])
+    )
+    assert ev == []
+
+
+def test_call_kwarg_without_equals_matches_any_value(tmp_path: Path) -> None:
+    _write_charm(tmp_path, "Context(MyCharm, app_name='postgresql')\n")
+    ev = detect_feature(tmp_path, _feature("call-kwarg", attr="Context", keyword="app_name"))
+    assert len(ev) == 1
+    assert "app_name" in ev[0].snippet
+
+
+def test_call_kwarg_without_equals_matches_a_non_literal_value(tmp_path: Path) -> None:
+    """Presence is the signal, so an unresolvable value is still a yes."""
+    _write_charm(tmp_path, "Context(MyCharm, unit_id=index)\n")
+    ev = detect_feature(tmp_path, _feature("call-kwarg", attr="Context", keyword="unit_id"))
+    assert len(ev) == 1
+
+
+def test_call_kwarg_without_equals_ignores_another_keyword(tmp_path: Path) -> None:
+    _write_charm(tmp_path, "Context(MyCharm, juju_version='3.6')\n")
+    ev = detect_feature(tmp_path, _feature("call-kwarg", attr="Context", keyword="app_name"))
+    assert ev == []
+
+
+def test_call_kwarg_without_equals_ignores_a_kwargs_splat(tmp_path: Path) -> None:
+    """`**kwargs` names no keyword the scan can see, so it counts as neither."""
+    _write_charm(tmp_path, "Context(MyCharm, **identity)\n")
+    ev = detect_feature(tmp_path, _feature("call-kwarg", attr="Context", keyword="app_name"))
+    assert ev == []
+
+
+def test_context_identity_catalogue_feature_fires_on_either_keyword(tmp_path: Path) -> None:
+    """End-to-end against the shipped `features.yaml` feature, both arms."""
+    feature = _catalogue_feature("ops-scenario.context-identity")
+    _write_unit_test(tmp_path, "ctx = testing.Context(MyCharm, app_name='postgresql')\n")
+    assert detect_feature(tmp_path, feature)
+
+    (tmp_path / "tests" / "unit" / "test_charm.py").write_text(
+        "ctx = Context(MyCharm, unit_id=2)\n"
+    )
+    assert detect_feature(tmp_path, feature)
+
+    (tmp_path / "tests" / "unit" / "test_charm.py").write_text("ctx = Context(MyCharm)\n")
+    assert detect_feature(tmp_path, feature) == []
