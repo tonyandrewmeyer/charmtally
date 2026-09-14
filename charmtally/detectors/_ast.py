@@ -715,26 +715,37 @@ def _detect_ast_subclass_of(src: SourceFile, cfg: dict) -> Iterator[ast.ClassDef
 
 
 def _detect_call_kwarg(src: SourceFile, cfg: dict) -> Iterator[ast.Call]:
-    """Match `call`-style calls that pass a keyword argument with a listed value.
+    """Match `call`-style calls that pass a configured keyword argument.
 
-    Config is `call`'s `attr`, plus `keyword` and `equals` (a list of
-    literals). Used where the call itself is not the signal — the argument
-    that decides what the call *does* is: `load_config(C, errors='blocked')`
+    Config is `call`'s `attr`, plus `keyword` and an optional `equals`.
+    Used where the call itself is not the signal — the argument that
+    decides what the call *does* is: `load_config(C, errors='blocked')`
     handles a bad config, `load_config(C)` lets it reach the hook boundary,
     and both are the same call.
 
-    A keyword passed as anything but a literal — a variable, or splatted in
-    from a dict — is deliberately not yielded. Its value isn't visible
-    without resolution a scan doesn't do, and counting it either way would
-    be a guess; absent evidence reads as "not shown to do this", which is
-    what it is.
+    With `equals` (a list of literals) the keyword has to carry one of those
+    values. A keyword passed as anything but a literal — a variable, or
+    splatted in from a dict — is then deliberately not yielded: its value
+    isn't visible without resolution a scan doesn't do, and counting it
+    either way would be a guess; absent evidence reads as "not shown to do
+    this", which is what it is.
+
+    Without `equals` the keyword being passed *at all* is the signal, so any
+    value counts, non-literals included — the question is whether the charm
+    reached for the argument, and a `Context(app_name=name)` did. A `**kwargs`
+    splat still doesn't count either way, since it names no keyword we can see.
     """
     keyword = cfg["keyword"]
-    wanted = cfg["equals"]
+    wanted = cfg.get("equals")
     for call in _detect_call(src, cfg):
         for kw in call.keywords:
-            if kw.arg != keyword or not isinstance(kw.value, ast.Constant):
+            if kw.arg != keyword:
                 continue
-            if any(kw.value.value == want for want in wanted):
+            if wanted is None:
+                yield call
+                break
+            if isinstance(kw.value, ast.Constant) and any(
+                kw.value.value == want for want in wanted
+            ):
                 yield call
                 break

@@ -10,9 +10,12 @@
 #                   import:        module (str) + optional names (list)
 #                   observe-event: event class name(s)
 #                   call:          dotted attribute call (e.g. unit.open_port)
-#                   call-kwarg:    as `call`, plus keyword: + equals: — matches
-#                                  only when that keyword is passed one of the
-#                                  listed literal values
+#                   call-kwarg:    as `call`, plus keyword: and an optional
+#                                  equals: — with equals:, matches only when
+#                                  that keyword is passed one of the listed
+#                                  literal values; without it, matches when
+#                                  the keyword is passed at all, whatever
+#                                  its value
 #                   yaml-key:      key path in a yaml literal under `files`
 #                   regex:         raw pattern (last resort; prefer AST)
 #                   pytest-config-key: scan root pyproject.toml / pytest.ini /
@@ -399,6 +402,37 @@ features:
       import alone doesn't strictly confirm Scenario use, but combined
       with `testing.Context(` in the file it is the right signal —
       acceptable imprecision for v1.
+    verified: []
+    negative: []
+
+  - name: ops-scenario.context-identity
+    library: ops-scenario
+    summary: Unit tests name the app or unit under test via Context(app_name=/unit_id=).
+    scope: tests
+    expected_rare: true
+    detect:
+      - kind: call-kwarg
+        attr: Context
+        keyword: app_name
+      - kind: call-kwarg
+        attr: Context
+        keyword: unit_id
+    notes: |
+      `testing.Context` grew `app_name` and `unit_id` so a test can pin the
+      identity the charm sees. Without them the Context invents one, which
+      is fine until the charm's own behaviour depends on its name or unit
+      number — leader-only paths keyed off unit 0, resources named after the
+      app, log lines asserted on.
+
+      Matched on the keyword being present rather than on its value: the
+      value is whatever the test wants to call itself, and any of them is
+      the same adoption fact. `attr: Context` catches both the bare
+      `Context(...)` and the `testing.Context(...)` module-import form,
+      which the `.scenario` row above shows is the common spelling.
+
+      A flat percentage over the corpus mostly measures how old everyone's
+      `ops` pin is, since these arguments are recent. Read it against
+      `ops_min_version` (#74) rather than against the whole corpus.
     verified: []
     negative: []
 
