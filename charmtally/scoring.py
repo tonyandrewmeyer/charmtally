@@ -196,6 +196,16 @@ def score_absent(
             )
         return Score(SCORE_NOT_APPLICABLE, "no integration tests present")
 
+    if feature_name == "ops.typed-config.params":
+        # A breakdown row rather than a recommendation: a charm that types
+        # neither half is `ops.typed-config`'s finding, and a charm with no
+        # actions has nothing to type here — which the scan cannot see, so
+        # absence is reported rather than scored either way.
+        return Score(
+            SCORE_NOT_APPLICABLE,
+            "typed action parameters are reported, not scored — the charm may have no actions",
+        )
+
     if feature_name == "ops.typed-config.handled-errors":
         # Only meaningful for a charm that calls the typed-data API at all;
         # for anything else the absence is `ops.typed-config`'s finding, not

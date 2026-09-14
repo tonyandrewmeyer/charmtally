@@ -867,7 +867,38 @@ features:
 
       Deliberately one feature covering both calls: a charm that types its
       config but not its action parameters has still adopted the API, and the
-      adoption scorecard asks the OR of the two anyway.
+      adoption scorecard asks the OR of the two anyway. The action half is
+      also counted on its own as `ops.typed-config.params`, for the feature
+      view, which wants the two apart; this row stays the OR, so the
+      scorecard reads the same number it always has.
+    verified: []
+    negative: []
+
+  - name: ops.typed-config.params
+    library: ops
+    summary: Charm uses ops load_params typed-action-parameter API.
+    scope: src
+    expected_rare: true
+    detect:
+      - kind: regex
+        pattern: '\bload_params\s*\(\s*[A-Z]\w+'
+    notes: |
+      The action arm of `ops.typed-config`, broken out because typed config
+      and typed action parameters are separate questions to anyone reading
+      the feature view, and the parent row — deliberately the OR of the two —
+      cannot answer either alone.
+
+      Same detector as the parent's second arm, capitalised first argument
+      and all, so a charm cannot be present here and absent there.
+
+      Reading the pair: this row is typed *actions*; typed *config* is the
+      parent minus the charms that appear here and call no `load_config`.
+      That remainder is empty across the corpus today, which is why there is
+      no third row for it — a charm that types its action parameters and
+      leaves its config untyped would be the first.
+
+      `expected_rare: true` because the parent is a young API with a handful
+      of adopters, and the action half is the smaller part of that handful.
     verified: []
     negative: []
 
