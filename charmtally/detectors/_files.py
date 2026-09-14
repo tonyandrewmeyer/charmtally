@@ -10,6 +10,7 @@ are in `_config`.
 from __future__ import annotations
 
 import ast
+import re
 import warnings
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, TypeVar, overload
@@ -113,6 +114,22 @@ def _parse(path: Path) -> ast.Module | None:
     return _parse_text(_read_text(path), path)
 
 
+# `ast` numbers lines by splitting on \n, \r and \r\n and on nothing else —
+# notably not on the form feeds and exotic separators `str.splitlines` also
+# breaks at — so a line list indexed by a node's `lineno` has to split the
+# same way. Each match keeps its own terminator, as `ast` keeps them.
+_AST_LINE_RE = re.compile(r"[^\r\n]*(?:\r\n|\r|\n)")
+
+
+def _ast_lines(text: str) -> list[str]:
+    """Split `text` into lines the way `ast` numbers them, terminators kept."""
+    lines = _AST_LINE_RE.findall(text)
+    tail = len(text) - sum(len(line) for line in lines)
+    if tail:
+        lines.append(text[-tail:])
+    return lines
+
+
 def _read_text(path: Path) -> str:
     """Read `path` as text, or "" if it isn't readable."""
     try:
@@ -128,6 +145,7 @@ class SourceFile:
     """One Python file, read and parsed at most once per charm scan."""
 
     __slots__ = (
+        "_ast_lines",
         "_buckets",
         "_lines",
         "_queries",
@@ -145,6 +163,7 @@ class SourceFile:
         self.text = path.read_text(encoding="utf-8", errors="replace")
         self.tree = _parse_text(self.text, path)
         self._lines: list[str] | None = None
+        self._ast_lines: list[str] | None = None
         self._walk: list[ast.AST] | None = None
         self._buckets: dict[type[ast.AST], list[ast.AST]] | None = None
         self._queries: dict[tuple[type[ast.AST], ...], list] = {}
@@ -161,6 +180,43 @@ class SourceFile:
         if 1 <= lineno <= len(self._lines):
             return self._lines[lineno - 1].strip()
         return ""
+
+    def segment_head(self, node: ast.AST) -> str:
+        """Return the first line of `node`'s own source text, as `ast` cuts it.
+
+        Exactly `ast.get_source_segment(self.text, node).splitlines()[0]` —
+        the node's text from its `col_offset`, stopping at its
+        `end_col_offset` when it is a one-line node, so a trailing comment or
+        a second statement on the line is not swept in. That function splits
+        the whole file for every call, which made it the single most
+        expensive thing in a scan once the walks were indexed: an `import`
+        detector asks it per matching node, and every match re-split the
+        file. The split is cached here instead.
+
+        A node carrying no end position — which no statement `ast.parse`
+        produces does — gets "" rather than the `None` that function returns.
+        """
+        lineno = getattr(node, "lineno", None)
+        end_lineno = getattr(node, "end_lineno", None)
+        col = getattr(node, "col_offset", None)
+        end_col = getattr(node, "end_col_offset", None)
+        if not (
+            isinstance(lineno, int)
+            and isinstance(end_lineno, int)
+            and isinstance(col, int)
+            and isinstance(end_col, int)
+        ):
+            return ""
+        lines = self._ast_lines
+        if lines is None:
+            lines = self._ast_lines = _ast_lines(self.text)
+        if not 1 <= lineno <= len(lines):
+            return ""
+        # `col_offset` counts UTF-8 bytes, not characters.
+        raw = lines[lineno - 1].encode()
+        segment = (raw[col:end_col] if end_lineno == lineno else raw[col:]).decode()
+        head = segment.splitlines()
+        return head[0] if head else ""
 
     def _index(self) -> tuple[list[ast.AST], dict[type[ast.AST], list[ast.AST]]]:
         """Walk the tree once, bucketing every node by its own type.

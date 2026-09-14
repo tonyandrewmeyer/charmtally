@@ -2145,6 +2145,45 @@ def test_source_file_nodes_answers_repeat_queries_without_rewalking(
     assert len(walks) == 1
 
 
+def test_source_file_segment_head_matches_get_source_segment(tmp_path: Path) -> None:
+    """`segment_head` replaces `ast.get_source_segment(...).splitlines()[0]`,
+    which re-split the whole file per node. Same answer, cached split."""
+    from ..detectors import SourceFile
+
+    sources = [
+        "import ops\n",
+        "import ops  # noqa: F401\n",
+        "def f():\n    import ops\n",
+        "if True: import ops\n",
+        "from ops import (\n    CharmBase,\n    main,\n)\n",
+        "import ops;import json\n",
+        "# ☃ a snowman\nimport ops\n",
+        "x = '\fform feed'\nimport ops\n",
+        "import a\r\nimport b\r\n",
+        "import a\rimport b\r",
+        "import ops",
+    ]
+    for i, code in enumerate(sources):
+        path = tmp_path / f"f{i}.py"
+        path.write_bytes(code.encode())
+        src = SourceFile(path, tmp_path)
+        assert src.tree is not None, code
+        for node in ast.walk(src.tree):
+            if not isinstance(node, (ast.Import, ast.ImportFrom)):
+                continue
+            segment = (ast.get_source_segment(src.text, node) or "").splitlines()
+            assert src.segment_head(node) == (segment[0] if segment else ""), (code, node.lineno)
+
+
+def test_source_file_segment_head_is_bounds_safe(tmp_path: Path) -> None:
+    from ..detectors import SourceFile
+
+    (tmp_path / "f.py").write_text("import ops\n")
+    src = SourceFile(tmp_path / "f.py", tmp_path)
+    assert src.segment_head(ast.Module(body=[], type_ignores=[])) == ""
+    assert src.segment_head(ast.parse("import ops", mode="exec").body[0]) == "import ops"
+
+
 # ── the shared `framework.observe` resolution tables ─────────────────────────
 
 
