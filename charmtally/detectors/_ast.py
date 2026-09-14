@@ -113,13 +113,8 @@ def _detect_ast_init_call(src: SourceFile, cfg: dict) -> Iterator[ast.Call]:
     good enough on charm source where __init__ is almost exclusively the
     charm class).
     """
-    tree = src.tree
-    if tree is None:
-        return
     attrs = set(cfg["attrs"])
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.ClassDef):
-            continue
+    for node in src.nodes(ast.ClassDef):
         for item in node.body:
             if isinstance(item, ast.FunctionDef) and item.name == "__init__":
                 yield from _self_attr_calls(item.body, attrs)
@@ -245,9 +240,9 @@ def _is_baseline_lifecycle_only(events: set[str]) -> bool:
     return bool(events) and events <= _BASELINE_LIFECYCLE_EVENTS
 
 
-def _build_parent_map(tree: ast.Module) -> dict[ast.AST, ast.AST]:
+def _build_parent_map(src: SourceFile) -> dict[ast.AST, ast.AST]:
     parent_map: dict[ast.AST, ast.AST] = {}
-    for parent in ast.walk(tree):
+    for parent in src.nodes():
         for child in ast.iter_child_nodes(parent):
             parent_map[child] = parent
     return parent_map
@@ -287,7 +282,7 @@ def _enclosing_for_with_target(
 
 
 def _resolve_observe_aliases(
-    tree: ast.Module, parent_map: dict[ast.AST, ast.AST]
+    src: SourceFile, parent_map: dict[ast.AST, ast.AST]
 ) -> dict[tuple[int, str], None]:
     """Return `(enclosing_function_id, name)` keys for local variables bound.
 
@@ -300,8 +295,8 @@ def _resolve_observe_aliases(
     file can't accidentally alias into this.
     """
     aliases: dict[tuple[int, str], None] = {}
-    for node in ast.walk(tree):
-        if not (isinstance(node, ast.Assign) and len(node.targets) == 1):
+    for node in src.nodes(ast.Assign):
+        if len(node.targets) != 1:
             continue
         target = node.targets[0]
         value = node.value
@@ -318,7 +313,7 @@ def _resolve_observe_aliases(
     return aliases
 
 
-def _resolve_relation_names(tree: ast.Module) -> dict[int, dict[str, str]]:
+def _resolve_relation_names(src: SourceFile) -> dict[int, dict[str, str]]:
     """Map each `ClassDef`'s id to `{name: literal_value}`, resolved from.
 
     class-body literal assignments (`prometheus_relation_name = "prometheus-config"`)
@@ -349,9 +344,7 @@ def _resolve_relation_names(tree: ast.Module) -> dict[int, dict[str, str]]:
       it only ever sees one file's tree.
     """
     result: dict[int, dict[str, str]] = {}
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.ClassDef):
-            continue
+    for node in src.nodes(ast.ClassDef):
         mapping: dict[str, str] = {}
         for item in node.body:
             if (
@@ -438,6 +431,115 @@ def _event_name(node: ast.expr, relation_names: dict[str, str] | None = None) ->
 # is a real, verified-negative shape this exclusion is required to catch.
 _LOOP_ACTION_SUFFIX = "_action"
 
+# Key under which the resolution tables are cached on a `SourceFile`.
+_OBSERVE_ANALYSIS = "observe"
+
+
+class ObserveContext:
+    """The tables `framework.observe(...)` resolution needs, built once per file.
+
+    Every one of them is a fact about the file alone — which locals alias
+    `framework.observe`, which class attributes are literal relation names,
+    which `for` loops iterate a literal event list — so none of them depends
+    on the `reconcile` pattern's own config (`min_events`, `exclude_suffixes`).
+    Building them per file rather than per detector is what lets the audit
+    tool in `tools/bindings.py` ask for the same tables the detector uses
+    instead of restating how to build them.
+    """
+
+    __slots__ = ("aliases", "loop_elements", "parent_map", "relation_names_by_class")
+
+    def __init__(self, src: SourceFile) -> None:
+        self.parent_map = _build_parent_map(src)
+        self.aliases = _resolve_observe_aliases(src, self.parent_map)
+        self.relation_names_by_class = _resolve_relation_names(src)
+
+        # Same-function `NAME = [literal, ...]` assignments, for resolving a
+        # for-loop whose `.iter` is a bare Name rather than an inline literal.
+        list_assigns: dict[tuple[int, str], ast.List | ast.Tuple] = {}
+        for node in src.nodes(ast.Assign):
+            if (
+                len(node.targets) == 1
+                and isinstance(node.targets[0], ast.Name)
+                and isinstance(node.value, (ast.List, ast.Tuple))
+            ):
+                func = _enclosing_function(node, self.parent_map)
+                list_assigns[id(func), node.targets[0].id] = node.value
+
+        # Per for-loop (keyed by node id, not variable name, so two loops using
+        # the same variable name in different scopes don't collide) — the
+        # resolved literal element list, inline or one hop through a variable.
+        self.loop_elements: dict[int, list[ast.expr]] = {}
+        for node in src.nodes(ast.For):
+            if not isinstance(node.target, ast.Name):
+                continue
+            iter_node: ast.expr | None = node.iter
+            if isinstance(iter_node, ast.Name):
+                func = _enclosing_function(node, self.parent_map)
+                iter_node = list_assigns.get((id(func), iter_node.id))
+            if isinstance(iter_node, (ast.List, ast.Tuple)):
+                self.loop_elements[id(node)] = list(iter_node.elts)
+
+
+def build_observe_context(src: SourceFile) -> ObserveContext:
+    """Return `src`'s observe-resolution tables, building them at most once."""
+    cached = src.analysis.get(_OBSERVE_ANALYSIS)
+    if isinstance(cached, ObserveContext):
+        return cached
+    ctx = ObserveContext(src)
+    src.analysis[_OBSERVE_ANALYSIS] = ctx
+    return ctx
+
+
+def iter_observe_bindings(
+    src: SourceFile, ctx: ObserveContext, exclude_suffixes: tuple[str, ...]
+) -> Iterator[tuple[str, str, ast.Call]]:
+    """Yield every `(event, handler, call)` binding `framework.observe` makes.
+
+    The accumulation half of `_detect_ast_observe_shared_handler`: direct
+    `observe()` calls, calls through a local alias of
+    `self.framework.observe`, and loop variables bound over a literal event
+    list (inline or one hop through a same-function variable). The detector
+    counts these and applies its cuts; `tools/bindings.py` reports all of
+    them. Neither restates how a binding is found — an audit sweep that
+    re-implements this quietly stops agreeing with the detector it measures.
+    """
+    parent_map = ctx.parent_map
+    for node in src.nodes(ast.Call):
+        func = node.func
+        is_observe = (isinstance(func, ast.Attribute) and func.attr == "observe") or (
+            isinstance(func, ast.Name)
+            and (id(_enclosing_function(node, parent_map)), func.id) in ctx.aliases
+        )
+        if not is_observe:
+            continue
+        if len(node.args) < 2:
+            continue
+        # A second argument that isn't an attribute access names no handler,
+        # and a binding with no handler was never recorded either way.
+        if not isinstance(node.args[1], ast.Attribute):
+            continue
+        handler = node.args[1].attr
+        cls = _enclosing_class(node, parent_map)
+        relation_names = ctx.relation_names_by_class.get(id(cls), {})
+        first_arg = node.args[0]
+        direct_event = _event_name(first_arg, relation_names)
+        if direct_event is not None:
+            if not direct_event.endswith(exclude_suffixes):
+                yield direct_event, handler, node
+            continue
+        if not isinstance(first_arg, ast.Name):
+            continue
+        enclosing_for = _enclosing_for_with_target(node, parent_map, first_arg.id)
+        if enclosing_for is None:
+            continue
+        for element in ctx.loop_elements.get(id(enclosing_for), []):
+            ev = _event_name(element, relation_names)
+            if ev is None or ev.endswith(_LOOP_ACTION_SUFFIX):
+                continue
+            if not ev.endswith(exclude_suffixes):
+                yield ev, handler, node
+
 
 def _detect_ast_observe_shared_handler(src: SourceFile, cfg: dict) -> Iterator[ast.Call]:
     """Match the holistic `reconcile` pattern: a single handler method is.
@@ -484,83 +586,15 @@ def _detect_ast_observe_shared_handler(src: SourceFile, cfg: dict) -> Iterator[a
     relation it's for. A runtime-supplied key (e.g. a constructor
     parameter) stays unresolved, same as before.
     """
-    tree = src.tree
-    if tree is None:
-        return
     min_events = int(cfg.get("min_events", 3))
     exclude_suffixes = tuple(cfg.get("exclude_suffixes", ["_error"]))
-
-    parent_map = _build_parent_map(tree)
-    aliases = _resolve_observe_aliases(tree, parent_map)
-    relation_names_by_class = _resolve_relation_names(tree)
-
-    # Same-function `NAME = [literal, ...]` assignments, for resolving a
-    # for-loop whose `.iter` is a bare Name rather than an inline literal.
-    list_assigns: dict[tuple[int, str], ast.List | ast.Tuple] = {}
-    for node in ast.walk(tree):
-        if (
-            isinstance(node, ast.Assign)
-            and len(node.targets) == 1
-            and isinstance(node.targets[0], ast.Name)
-            and isinstance(node.value, (ast.List, ast.Tuple))
-        ):
-            func = _enclosing_function(node, parent_map)
-            list_assigns[id(func), node.targets[0].id] = node.value
-
-    # Per for-loop (keyed by node id, not variable name, so two loops using
-    # the same variable name in different scopes don't collide) — the
-    # resolved literal element list, inline or one hop through a variable.
-    loop_elements: dict[int, list[ast.expr]] = {}
-    for node in ast.walk(tree):
-        if not (isinstance(node, ast.For) and isinstance(node.target, ast.Name)):
-            continue
-        iter_node = node.iter
-        if isinstance(iter_node, ast.Name):
-            func = _enclosing_function(node, parent_map)
-            iter_node = list_assigns.get((id(func), iter_node.id))
-        if isinstance(iter_node, (ast.List, ast.Tuple)):
-            loop_elements[id(node)] = list(iter_node.elts)
+    ctx = build_observe_context(src)
 
     per_handler_events: dict[str, set[str]] = {}
     per_handler_calls: dict[str, list[ast.Call]] = {}
-
-    def _record(event: str | None, handler: str | None, call_node: ast.Call) -> None:
-        if event is None or handler is None:
-            return
-        if event.endswith(exclude_suffixes):
-            return
+    for event, handler, call in iter_observe_bindings(src, ctx, exclude_suffixes):
         per_handler_events.setdefault(handler, set()).add(event)
-        per_handler_calls.setdefault(handler, []).append(call_node)
-
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Call):
-            continue
-        func = node.func
-        is_observe = (isinstance(func, ast.Attribute) and func.attr == "observe") or (
-            isinstance(func, ast.Name)
-            and (id(_enclosing_function(node, parent_map)), func.id) in aliases
-        )
-        if not is_observe:
-            continue
-        if len(node.args) < 2:
-            continue
-        handler = node.args[1].attr if isinstance(node.args[1], ast.Attribute) else None
-        relation_names = relation_names_by_class.get(id(_enclosing_class(node, parent_map)), {})
-        first_arg = node.args[0]
-        direct_event = _event_name(first_arg, relation_names)
-        if direct_event is not None:
-            _record(direct_event, handler, node)
-            continue
-        if not isinstance(first_arg, ast.Name):
-            continue
-        enclosing_for = _enclosing_for_with_target(node, parent_map, first_arg.id)
-        if enclosing_for is None:
-            continue
-        for element in loop_elements.get(id(enclosing_for), []):
-            ev = _event_name(element, relation_names)
-            if ev is None or ev.endswith(_LOOP_ACTION_SUFFIX):
-                continue
-            _record(ev, handler, node)
+        per_handler_calls.setdefault(handler, []).append(call)
 
     for handler, events in per_handler_events.items():
         if len(events) < min_events:
@@ -584,16 +618,11 @@ def _detect_ast_shared_method(src: SourceFile, cfg: dict) -> Iterator[ast.Call]:
     `self.X(...)` where X is in `cfg["attrs"]`. Yields one ast.Call node
     per qualifying caller so evidence lines are reported per handler.
     """
-    tree = src.tree
-    if tree is None:
-        return
     attrs = set(cfg["attrs"])
     min_callers = int(cfg.get("min_callers", 2))
     handler_re = re.compile(cfg.get("handler_re", r"^_on_"))
 
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.ClassDef):
-            continue
+    for node in src.nodes(ast.ClassDef):
         callers: list[ast.Call] = []
         for item in node.body:
             if not isinstance(item, ast.FunctionDef):
@@ -610,7 +639,7 @@ def _detect_ast_shared_method(src: SourceFile, cfg: dict) -> Iterator[ast.Call]:
 # ── AST: base-class-through-import-table detector (component-graph axis) ───
 
 
-def _resolve_import_table(tree: ast.Module) -> dict[str, str]:
+def _resolve_import_table(src: SourceFile) -> dict[str, str]:
     """Map each name this file binds via import to its full dotted source path.
 
     `import a.b.c` binds the name `a` (not `a.b.c`, unless aliased) to `a`
@@ -621,7 +650,7 @@ def _resolve_import_table(tree: ast.Module) -> dict[str, str]:
     path to record and is skipped.
     """
     table: dict[str, str] = {}
-    for node in ast.walk(tree):
+    for node in src.imports:
         if isinstance(node, ast.Import):
             for alias in node.names:
                 if alias.asname:
@@ -673,16 +702,11 @@ def _detect_ast_subclass_of(src: SourceFile, cfg: dict) -> Iterator[ast.ClassDef
     `paas_charm.go.Charm` and `paas_charm.app.App`) still only makes the
     pattern present, since presence is a boolean over all evidence.
     """
-    tree = src.tree
-    if tree is None:
-        return
     module = cfg["module"]
-    import_table = _resolve_import_table(tree)
+    import_table = _resolve_import_table(src)
     if not import_table:
         return
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.ClassDef):
-            continue
+    for node in src.nodes(ast.ClassDef):
         for base in node.bases:
             resolved = _resolve_base_dotted_path(base, import_table)
             if resolved is not None and (resolved == module or resolved.startswith(module + ".")):

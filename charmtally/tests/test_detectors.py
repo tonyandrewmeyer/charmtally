@@ -2089,6 +2089,161 @@ def test_charm_source_sweeps_and_parses_yaml_once(tmp_path: Path, monkeypatch) -
     assert len(parses) == 1
 
 
+def test_source_file_nodes_preserves_walk_order_for_every_kind(tmp_path: Path) -> None:
+    """`nodes()` stands in for a filtered `ast.walk`, so it must return the same
+    nodes in the same order — evidence order is part of the scan's output."""
+    from ..detectors import SourceFile
+
+    code = (
+        "import a\n"
+        "X = [1, 2]\n"
+        "class C:\n"
+        "    n = 'x'\n"
+        "    def __init__(self):\n"
+        "        for e in X:\n"
+        "            self.observe(e, self.h)\n"
+        "class D(C):\n"
+        "    def f(self):\n"
+        "        for q in (1,):\n"
+        "            g(h())\n"
+    )
+    (tmp_path / "f.py").write_text(code)
+    src = SourceFile(tmp_path / "f.py", tmp_path)
+
+    assert src.tree is not None
+    walked = list(ast.walk(src.tree))
+    for kinds in [
+        (ast.ClassDef,),
+        (ast.Assign,),
+        (ast.For,),
+        (ast.Call,),
+        (ast.Name,),
+        (ast.Import, ast.ImportFrom),
+        (ast.FunctionDef, ast.AsyncFunctionDef),
+        (ast.For, ast.ClassDef, ast.Call),
+    ]:
+        assert src.nodes(*kinds) == [n for n in walked if isinstance(n, kinds)], kinds
+    assert src.nodes() == walked
+    assert src.nodes(ast.Global) == []
+
+
+def test_source_file_nodes_answers_repeat_queries_without_rewalking(
+    tmp_path: Path, monkeypatch
+) -> None:
+    from ..detectors import SourceFile
+
+    (tmp_path / "f.py").write_text("class C:\n    pass\n")
+    src = SourceFile(tmp_path / "f.py", tmp_path)
+
+    walks: list[object] = []
+    real = ast.walk
+    monkeypatch.setattr(ast, "walk", lambda tree: walks.append(tree) or real(tree))
+
+    for _ in range(5):
+        assert len(src.nodes(ast.ClassDef)) == 1
+        assert src.nodes(ast.Import, ast.ImportFrom) == []
+    assert len(walks) == 1
+
+
+def test_source_file_segment_head_matches_get_source_segment(tmp_path: Path) -> None:
+    """`segment_head` replaces `ast.get_source_segment(...).splitlines()[0]`,
+    which re-split the whole file per node. Same answer, cached split."""
+    from ..detectors import SourceFile
+
+    sources = [
+        "import ops\n",
+        "import ops  # noqa: F401\n",
+        "def f():\n    import ops\n",
+        "if True: import ops\n",
+        "from ops import (\n    CharmBase,\n    main,\n)\n",
+        "import ops;import json\n",
+        "# ☃ a snowman\nimport ops\n",
+        "x = '\fform feed'\nimport ops\n",
+        "import a\r\nimport b\r\n",
+        "import a\rimport b\r",
+        "import ops",
+    ]
+    for i, code in enumerate(sources):
+        path = tmp_path / f"f{i}.py"
+        path.write_bytes(code.encode())
+        src = SourceFile(path, tmp_path)
+        assert src.tree is not None, code
+        for node in ast.walk(src.tree):
+            if not isinstance(node, (ast.Import, ast.ImportFrom)):
+                continue
+            segment = (ast.get_source_segment(src.text, node) or "").splitlines()
+            assert src.segment_head(node) == (segment[0] if segment else ""), (code, node.lineno)
+
+
+def test_source_file_segment_head_is_bounds_safe(tmp_path: Path) -> None:
+    from ..detectors import SourceFile
+
+    (tmp_path / "f.py").write_text("import ops\n")
+    src = SourceFile(tmp_path / "f.py", tmp_path)
+    assert src.segment_head(ast.Module(body=[], type_ignores=[])) == ""
+    assert src.segment_head(ast.parse("import ops", mode="exec").body[0]) == "import ops"
+
+
+# ── the shared `framework.observe` resolution tables ─────────────────────────
+
+
+def test_observe_context_is_built_once_per_file(tmp_path: Path, monkeypatch) -> None:
+    """The resolution tables are a fact about the file, not about the pattern's
+    config, so they are built per file rather than per detector run."""
+    from .. import detectors
+    from ..detectors import _ast as _ast_kinds
+
+    _write_charm(
+        tmp_path,
+        "import ops\n"
+        "class C(ops.CharmBase):\n"
+        "    def __init__(self, f):\n"
+        "        self.framework.observe(self.on.install, self._go)\n"
+        "        self.framework.observe(self.on.start, self._go)\n"
+        "        self.framework.observe(self.on.my_relation_changed, self._go)\n",
+    )
+
+    built: list[object] = []
+    real = _ast_kinds._build_parent_map
+    monkeypatch.setattr(
+        _ast_kinds, "_build_parent_map", lambda src: built.append(src) or real(src)
+    )
+
+    source = detectors.CharmSource(tmp_path)
+    for _ in range(5):
+        assert detect_feature(tmp_path, _reconcile_feature(), source)
+    assert len(built) == 1
+
+
+def test_bindings_tool_agrees_with_the_reconcile_detector(tmp_path: Path) -> None:
+    """The audit tool reports every binding; the detector yields the survivors.
+    Both read the same accumulation, so the survivors must be a subset."""
+    from ..detectors import CharmSource
+    from ..tools import bindings
+
+    _write_charm(
+        tmp_path,
+        "import ops\n"
+        "class C(ops.CharmBase):\n"
+        "    def __init__(self, f):\n"
+        "        observe = self.framework.observe\n"
+        "        for e in [self.on.install, self.on.start, self.on.db_relation_joined]:\n"
+        "            observe(e, self._go)\n"
+        "        observe(self.on.update_status, self._later_error)\n",
+    )
+
+    source = CharmSource(tmp_path)
+    rows = bindings.scan_root(tmp_path, 3, ("_error",))
+    by_handler = {row["handler"]: row for row in rows}
+    assert by_handler["_go"]["events"] == ["db_relation_joined", "install", "start"]
+    assert by_handler["_go"]["qualifies"] is True
+    assert by_handler["_later_error"]["cut"] == "below-floor"
+
+    evidence = detect_feature(tmp_path, _reconcile_feature(), source)
+    assert evidence
+    assert all(e.detector_kind == "ast-observe-shared-handler" for e in evidence)
+
+
 def test_source_file_line_is_bounds_safe(tmp_path: Path) -> None:
     from ..detectors import SourceFile
 

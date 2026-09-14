@@ -159,10 +159,29 @@ builds one `CharmSource` and passes it to every `detect_feature` call;
 each file is read and parsed once per charm, not once per feature. New
 per-file detector kinds must read from the `SourceFile` they're handed
 rather than re-reading the path. That extends to the *tree*: `SourceFile`
-walks it once and hands out `imports` / `calls` indices, and `CharmSource`
-caches the metadata glob, the YAML sweep and every parse. A detector that
-re-walks or re-globs for itself pays that cost once per detector per file,
-which is what made the scan 5x slower than it needed to be.
+walks it once into a type-bucketed index and hands out any slice of it via
+`src.nodes(ast.ClassDef, ...)` (`imports` and `calls` are the two named
+shorthands), and `CharmSource` caches the metadata glob, the YAML sweep and
+every parse. A detector that re-walks or re-globs for itself pays that cost
+once per detector per file, which is what made the scan 5x slower than it
+needed to be.
+
+`nodes()` returns what a filtered `ast.walk` returns, **order included** —
+evidence order is part of the scan's output, so an index that returned the
+right set in the wrong order would be a silent output change. Two things
+follow. Ask for the concrete node classes `ast.parse` produces, never the
+deprecated `ast.Num` / `ast.Str` aliases, whose `isinstance` answer no
+subclass relation backs. And never walk a whole file for yourself; a
+sub-tree walk (one method body, say) is still fine, since the index is
+per file.
+
+Anything derived from one file that several detectors want goes in
+`src.analysis`, keyed by whichever detector module owns it — `_ast`'s
+`build_observe_context` is the one that does, holding the parent map, the
+`framework.observe` aliases, the class-literal relation names and the
+loop-literal event lists. Those are facts about the file rather than about
+any pattern's config, which is why `tools/bindings.py` can ask for the same
+tables the `reconcile` detector uses instead of rebuilding them and drifting.
 
 The package is laid out along those three groups. `_files.py` selects, reads
 and parses what the detectors run over (`_select_files`, `SourceFile`,
@@ -213,10 +232,11 @@ Not part of the pipeline; each is run with `uv run python -m charmtally.tools.X`
   *yields* the bindings that survive its three cuts, which is right for a scan
   and wrong for auditing one, so calibration rounds kept writing throwaway
   re-implementations of its accumulation logic — and a sweep that restates the
-  detector quietly stops agreeing with it. This imports `detectors._ast`'s own
-  private helpers and re-runs `_detect_ast_observe_shared_handler`'s
-  accumulation verbatim instead. Keep it that way: if the detector's
-  accumulation changes, this must follow by importing, never by copying.
+  detector quietly stops agreeing with it. This calls the accumulation the
+  detector calls instead — `detectors._ast.iter_observe_bindings`, over the
+  per-file tables `build_observe_context` hands the detector — and only
+  reports more of what comes back. Keep it that way: the accumulation has
+  one implementation, and both callers are on it.
 - `backfill.py` — recomputes `snapshots/scored-<date>.json` for weeks that
   were never scanned, by full-cloning each corpus repo and checking it out at
   its last commit before each date's 02:00 UTC cutoff. Separate workdir from

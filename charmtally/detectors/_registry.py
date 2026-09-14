@@ -14,7 +14,6 @@ its detector for this charm. Adding a kind is one entry in one registry.
 
 from __future__ import annotations
 
-import ast
 import re
 from typing import TYPE_CHECKING
 
@@ -29,6 +28,7 @@ from ._config import (
 from ._files import CharmSource, Evidence, _charm_provides_lib
 
 if TYPE_CHECKING:
+    import ast
     from collections.abc import Callable, Iterator
     from pathlib import Path
 
@@ -108,8 +108,7 @@ def _prepare_import(kind: str, config: dict, source: CharmSource) -> _Runner | N
         if src.tree is None:
             return
         for imp in _ast_kinds._detect_import(src, config):
-            line = ast.get_source_segment(src.text, imp) or ""
-            yield Evidence(src.rel, imp.lineno, kind, line.splitlines()[0][:_SNIPPET])
+            yield Evidence(src.rel, imp.lineno, kind, src.segment_head(imp)[:_SNIPPET])
 
     return run
 
