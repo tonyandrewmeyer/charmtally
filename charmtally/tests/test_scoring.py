@@ -428,3 +428,18 @@ def test_handled_errors_gap_only_for_a_typed_config_charm():
 def test_handled_errors_not_applicable_without_typed_config():
     s = score_absent("ops.typed-config.handled-errors", {}, _meta())
     assert s.label == SCORE_NOT_APPLICABLE
+
+
+# ── ops.tracing.manual ─────────────────────────────────────────────────────────
+
+
+def test_manual_tracing_gap_only_for_a_charm_with_tracing_enabled():
+    features = {"ops.tracing": {"present": True}}
+    s = score_absent("ops.tracing.manual", features, _meta())
+    assert s.label == SCORE_WORTH_CONSIDERING
+    assert "tracing is enabled" in s.rationale
+
+
+def test_manual_tracing_not_applicable_without_the_dependency():
+    s = score_absent("ops.tracing.manual", {}, _meta())
+    assert s.label == SCORE_NOT_APPLICABLE
