@@ -12,7 +12,7 @@ from __future__ import annotations
 import ast
 import warnings
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar, overload
 
 import yaml
 
@@ -20,6 +20,8 @@ from .. import metadata as _metadata
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+_Node = TypeVar("_Node", bound=ast.AST)
 
 
 # libyaml's C loader where the wheel ships it (it is 12x faster than the
@@ -125,7 +127,17 @@ def _read_text(path: Path) -> str:
 class SourceFile:
     """One Python file, read and parsed at most once per charm scan."""
 
-    __slots__ = ("_calls", "_imports", "_lines", "path", "rel", "text", "tree")
+    __slots__ = (
+        "_buckets",
+        "_lines",
+        "_queries",
+        "_walk",
+        "analysis",
+        "path",
+        "rel",
+        "text",
+        "tree",
+    )
 
     def __init__(self, path: Path, charm_root: Path) -> None:
         self.path = path
@@ -133,8 +145,14 @@ class SourceFile:
         self.text = path.read_text(encoding="utf-8", errors="replace")
         self.tree = _parse_text(self.text, path)
         self._lines: list[str] | None = None
-        self._imports: list[ast.Import | ast.ImportFrom] | None = None
-        self._calls: list[ast.Call] | None = None
+        self._walk: list[ast.AST] | None = None
+        self._buckets: dict[type[ast.AST], list[ast.AST]] | None = None
+        self._queries: dict[tuple[type[ast.AST], ...], list] = {}
+        # Derived per-file tables the detector modules own and key for
+        # themselves — `_ast`'s `framework.observe` resolution tables live
+        # here, so that building them is a per-file cost rather than a
+        # per-detector one. `_files` knows nothing about what is in it.
+        self.analysis: dict[str, object] = {}
 
     def line(self, lineno: int) -> str:
         """Return the 1-indexed source line `lineno`, stripped, or "" if out of range."""
@@ -144,36 +162,85 @@ class SourceFile:
             return self._lines[lineno - 1].strip()
         return ""
 
-    def _index(self) -> tuple[list[ast.Import | ast.ImportFrom], list[ast.Call]]:
-        """Walk the tree once, collecting the node types the hot detectors want.
+    def _index(self) -> tuple[list[ast.AST], dict[type[ast.AST], list[ast.AST]]]:
+        """Walk the tree once, bucketing every node by its own type.
 
-        The catalogue has 31 `import` and 10 `call`/`call-kwarg` detectors, and
-        each used to `ast.walk` the whole module for itself — 41 full walks per
-        file, which measured as most of a scan's CPU. One walk collecting both
-        node lists answers all of them by iteration. Collection order is
-        `ast.walk` order, so each detector still yields exactly what it did.
+        The catalogue has 53 `import` and 10 `call`/`call-kwarg` detectors,
+        and the architecture patterns re-walk for `ClassDef`, `Assign`, `For`
+        and `Call` on top of that — each detector used to `ast.walk` the whole
+        module for itself, which measured as most of a scan's CPU. One walk
+        answers all of them.
+
+        `_walk` keeps the full walk order so a query spanning several node
+        types can be answered without a second walk; `_buckets` makes a
+        single-type query a dict lookup.
         """
-        imports: list[ast.Import | ast.ImportFrom] = []
-        calls: list[ast.Call] = []
+        walk: list[ast.AST] = []
+        buckets: dict[type[ast.AST], list[ast.AST]] = {}
         if self.tree is not None:
             for node in ast.walk(self.tree):
-                if isinstance(node, (ast.Import, ast.ImportFrom)):
-                    imports.append(node)
-                elif isinstance(node, ast.Call):
-                    calls.append(node)
-        self._imports = imports
-        self._calls = calls
-        return imports, calls
+                walk.append(node)
+                bucket = buckets.get(node.__class__)
+                if bucket is None:
+                    bucket = buckets[node.__class__] = []
+                bucket.append(node)
+        self._walk = walk
+        self._buckets = buckets
+        return walk, buckets
+
+    @overload
+    def nodes(self) -> list[ast.AST]: ...
+
+    @overload
+    def nodes(self, *types: type[_Node]) -> list[_Node]: ...
+
+    def nodes(self, *types: type[ast.AST]) -> list[ast.AST]:
+        """Every node of the given `types`, in `ast.walk` order.
+
+        Exactly what `[n for n in ast.walk(tree) if isinstance(n, types)]`
+        returns, order included — evidence order is part of the scan's output,
+        so a right-set-wrong-order index would be a silent output change.
+        Call with no types for the whole walk.
+
+        The returned list is the cache: iterate it, do not mutate it.
+
+        Buckets are keyed on each node's concrete class and matched with
+        `issubclass`, which agrees with `isinstance` for every node `ast.parse`
+        produces. The deprecated `ast.Num` / `ast.Str` / `ast.Bytes` aliases
+        are the exception — they answer `isinstance` for `Constant` nodes
+        through a custom check no subclass relation backs — so ask for
+        `ast.Constant`, not for those.
+        """
+        cached = self._queries.get(types)
+        if cached is not None:
+            return cached
+        walk, buckets = self._walk, self._buckets
+        if walk is None or buckets is None:
+            walk, buckets = self._index()
+        if not types:
+            result = walk
+        else:
+            matched = [b for cls, b in buckets.items() if issubclass(cls, types)]
+            if not matched:
+                result = []
+            elif len(matched) == 1:
+                result = matched[0]
+            else:
+                # More than one concrete type answers the query, so walk order
+                # across them comes from `_walk` rather than from the buckets.
+                result = [n for n in walk if isinstance(n, types)]
+        self._queries[types] = result
+        return result
 
     @property
     def imports(self) -> list[ast.Import | ast.ImportFrom]:
         """Every import statement in the file, in `ast.walk` order."""
-        return self._imports if self._imports is not None else self._index()[0]
+        return self.nodes(ast.Import, ast.ImportFrom)
 
     @property
     def calls(self) -> list[ast.Call]:
         """Every call expression in the file, in `ast.walk` order."""
-        return self._calls if self._calls is not None else self._index()[1]
+        return self.nodes(ast.Call)
 
 
 class CharmSource:

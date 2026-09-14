@@ -13,8 +13,9 @@ sweep quietly stops agreeing with the detector it is meant to be measuring
 (CALIBRATION #41 hit exactly that risk and avoided it by importing the
 detector's helpers instead).
 
-So this reuses `_detect_ast_observe_shared_handler`'s own accumulation
-verbatim, private helpers and all, and differs only in reporting every
+So this *calls* the accumulation the detector calls —
+`detectors._ast.iter_observe_bindings`, over the per-file resolution tables
+`build_observe_context` builds — and differs only in reporting every
 binding rather than the survivors. It emits JSON: one row per
 (charm, file, handler) binding, carrying the resolved event set, which
 events `_relation_prefix` could resolve and which it could not, the
@@ -34,106 +35,47 @@ pattern. Pass `--min-events` to sweep against a different floor.
 from __future__ import annotations
 
 import argparse
-import ast
 import json
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from ..detectors import CharmSource
 from ..detectors._ast import (
-    _LOOP_ACTION_SUFFIX,
-    _build_parent_map,
-    _enclosing_class,
-    _enclosing_for_with_target,
-    _enclosing_function,
-    _event_name,
     _is_baseline_lifecycle_only,
     _is_relation_scoped_binding,
     _is_symmetric_resource_fanout,
     _relation_prefix,
-    _resolve_observe_aliases,
-    _resolve_relation_names,
+    build_observe_context,
+    iter_observe_bindings,
 )
+
+if TYPE_CHECKING:
+    from ..detectors._files import SourceFile
 
 _DEFAULT_MIN_EVENTS = 3
 _DEFAULT_EXCLUDE_SUFFIXES = ("_error",)
 
 
-def bindings_in_tree(
-    tree: ast.Module, exclude_suffixes: tuple[str, ...] = _DEFAULT_EXCLUDE_SUFFIXES
+def bindings_in_file(
+    src: SourceFile, exclude_suffixes: tuple[str, ...] = _DEFAULT_EXCLUDE_SUFFIXES
 ) -> dict[str, dict]:
-    """Return ``{handler: {"events": set[str], "lines": list[int]}}`` for one module.
+    """Return ``{handler: {"events": set[str], "lines": list[int]}}`` for one file.
 
-    A verbatim re-run of `_detect_ast_observe_shared_handler`'s accumulation
-    half: direct `observe()` calls, calls through a local alias of
-    `self.framework.observe`, and loop variables bound over a literal event
-    list (inline or one hop through a same-function variable). Kept in step
-    with the detector by importing its helpers rather than restating them.
+    The detector's own accumulation, called rather than restated:
+    `iter_observe_bindings` yields every `(event, handler, call)` binding
+    `_detect_ast_observe_shared_handler` counts, over the same per-file
+    resolution tables `build_observe_context` gives the detector. All this
+    adds is the reporting — the detector goes on to apply its cuts, and this
+    keeps every binding so a calibration round can see the ones that did not
+    survive them.
     """
-    parent_map = _build_parent_map(tree)
-    aliases = _resolve_observe_aliases(tree, parent_map)
-    relation_names_by_class = _resolve_relation_names(tree)
-
-    list_assigns: dict[tuple[int, str], ast.List | ast.Tuple] = {}
-    for node in ast.walk(tree):
-        if (
-            isinstance(node, ast.Assign)
-            and len(node.targets) == 1
-            and isinstance(node.targets[0], ast.Name)
-            and isinstance(node.value, (ast.List, ast.Tuple))
-        ):
-            func = _enclosing_function(node, parent_map)
-            list_assigns[id(func), node.targets[0].id] = node.value
-
-    loop_elements: dict[int, list[ast.expr]] = {}
-    for node in ast.walk(tree):
-        if not (isinstance(node, ast.For) and isinstance(node.target, ast.Name)):
-            continue
-        iter_node: ast.expr | None = node.iter
-        if isinstance(iter_node, ast.Name):
-            func = _enclosing_function(node, parent_map)
-            iter_node = list_assigns.get((id(func), iter_node.id))
-        if isinstance(iter_node, (ast.List, ast.Tuple)):
-            loop_elements[id(node)] = list(iter_node.elts)
-
     out: dict[str, dict] = {}
-
-    def record(event: str | None, handler: str | None, call: ast.Call) -> None:
-        if event is None or handler is None:
-            return
-        if event.endswith(exclude_suffixes):
-            return
+    ctx = build_observe_context(src)
+    for event, handler, call in iter_observe_bindings(src, ctx, exclude_suffixes):
         rec = out.setdefault(handler, {"events": set(), "lines": []})
         rec["events"].add(event)
         rec["lines"].append(call.lineno)
-
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Call):
-            continue
-        func_node = node.func
-        is_observe = (isinstance(func_node, ast.Attribute) and func_node.attr == "observe") or (
-            isinstance(func_node, ast.Name)
-            and (id(_enclosing_function(node, parent_map)), func_node.id) in aliases
-        )
-        if not is_observe or len(node.args) < 2:
-            continue
-        handler = node.args[1].attr if isinstance(node.args[1], ast.Attribute) else None
-        relation_names = relation_names_by_class.get(id(_enclosing_class(node, parent_map)), {})
-        first_arg = node.args[0]
-        direct_event = _event_name(first_arg, relation_names)
-        if direct_event is not None:
-            record(direct_event, handler, node)
-            continue
-        if not isinstance(first_arg, ast.Name):
-            continue
-        enclosing_for = _enclosing_for_with_target(node, parent_map, first_arg.id)
-        if enclosing_for is None:
-            continue
-        for element in loop_elements.get(id(enclosing_for), []):
-            ev = _event_name(element, relation_names)
-            if ev is None or ev.endswith(_LOOP_ACTION_SUFFIX):
-                continue
-            record(ev, handler, node)
     return out
 
 
@@ -172,7 +114,7 @@ def scan_root(charm_root: Path, min_events: int, exclude_suffixes: tuple[str, ..
     for src in CharmSource(charm_root).files("src"):
         if src.tree is None:
             continue
-        for handler, rec in bindings_in_tree(src.tree, exclude_suffixes).items():
+        for handler, rec in bindings_in_file(src, exclude_suffixes).items():
             rows.append({
                 "charm_root": str(charm_root),
                 "file": src.rel,
