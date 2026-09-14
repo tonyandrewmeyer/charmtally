@@ -1637,6 +1637,41 @@ def _setup(self):
     assert detect_feature(tmp_path, _catalogue_feature("ops.typed-config")) == []
 
 
+def test_typed_config_params_fires_on_load_params(tmp_path: Path) -> None:
+    _write_charm(
+        tmp_path,
+        """
+def _on_backup(self, event):
+    params = event.load_params(BackupParams)
+""",
+    )
+    assert len(detect_feature(tmp_path, _catalogue_feature("ops.typed-config.params"))) == 1
+
+
+def test_typed_config_params_absent_on_load_config_alone(tmp_path: Path) -> None:
+    """The point of the row: the config arm must not land in the action one."""
+    _write_charm(
+        tmp_path,
+        """
+def __init__(self, framework):
+    self.config_ = self.load_config(MyConfig)
+""",
+    )
+    assert detect_feature(tmp_path, _catalogue_feature("ops.typed-config.params")) == []
+
+
+def test_typed_config_params_ignores_a_same_named_helper(tmp_path: Path) -> None:
+    """Inherits the parent's cut: a capitalised first argument marks the ops call."""
+    _write_charm(
+        tmp_path,
+        """
+def _on_backup(self, event):
+    params = load_params(self.config)
+""",
+    )
+    assert detect_feature(tmp_path, _catalogue_feature("ops.typed-config.params")) == []
+
+
 def test_handled_errors_fires_on_load_config_blocked(tmp_path: Path) -> None:
     _write_charm(
         tmp_path,

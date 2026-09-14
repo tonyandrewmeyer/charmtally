@@ -404,6 +404,17 @@ def test_secrets_none_typed_still_clear_gap():
     assert s.label == SCORE_CLEAR_GAP
 
 
+# ── ops.typed-config.params ───────────────────────────────────────────────────
+
+
+def test_typed_config_params_is_never_a_gap() -> None:
+    """A breakdown row: absence is reported, not recommended against."""
+    for features in ({}, {"ops.typed-config": {"present": True}}):
+        s = score_absent("ops.typed-config.params", features, _meta())
+        assert s.label == SCORE_NOT_APPLICABLE
+        assert "no rule defined" not in s.rationale
+
+
 # ── ops.typed-config.handled-errors ────────────────────────────────────────────
 
 
