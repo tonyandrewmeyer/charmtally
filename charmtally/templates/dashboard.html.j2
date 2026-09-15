@@ -265,6 +265,7 @@
       <th data-sort="num">Worth considering</th>
       <th data-sort="num">N/A</th>
       <th>By architecture</th>
+      <th title="Adoption within each cohort of charms, bucketed by the ops major version their dependencies ask for">By ops pin</th>
       <th>Exemplars</th>
     </tr>
   </thead>
@@ -302,6 +303,17 @@
               {%- elif a.pct >= 80 %} pct-hi
               {%- elif a.pct >= 40 %} pct-mid
               {%- else %} pct-lo{% endif %}">{{ a.label }}</span>
+          </span>
+        {%- endfor %}
+      </td>
+      <td>
+        {% for o in f.ops_adoption -%}
+          <span class="arch-pct" title="{{ o.tooltip }}">
+            <span class="name">{{ o.cohort }}</span>
+            <span class="pct
+              {%- if o.pct >= 80 %} pct-hi
+              {%- elif o.pct >= 40 %} pct-mid
+              {%- else %} pct-lo{% endif %}">{{ o.label }}</span>
           </span>
         {%- endfor %}
       </td>

@@ -4,7 +4,7 @@ precision-floor annotation added with the scan-detector follow-ups."""
 from __future__ import annotations
 
 from ..catalogue import Detector, Feature
-from ..dashboard import render
+from ..dashboard import _ops_cohort, _ops_cohort_order, render
 
 
 def _empty_meta() -> dict:
@@ -400,3 +400,67 @@ def test_juju_ceiling_alone_is_shown() -> None:
 
     charm = _charm("c1", present_features=set(), all_features=["thing"])
     assert "juju&nbsp;" not in render({charm["name"]: charm}, feats)
+
+
+def _pinned(name: str, requirement: str | None, floor: str | None, *, has: bool, **meta) -> dict:
+    return _charm(
+        name,
+        present_features={"thing"} if has else set(),
+        all_features=["thing"],
+        meta={"ops_requirement": requirement, "ops_min_version": floor, **meta},
+    )
+
+
+def test_ops_cohort_buckets_a_charm_by_the_major_it_asks_for() -> None:
+    assert _ops_cohort({"ops_requirement": ">=2.17", "ops_min_version": "2.17"}) == "ops 2"
+    assert _ops_cohort({"ops_requirement": ">=3.8.2", "ops_min_version": "3.8.2"}) == "ops 3"
+
+
+def test_unpinned_ops_is_its_own_cohort_not_unknown() -> None:
+    """Bare `ops` resolves to the newest release; that is a reading, not a gap."""
+    assert _ops_cohort({"ops_requirement": "", "ops_min_version": None}) == "unpinned"
+    assert _ops_cohort({}) == "unknown"
+
+
+def test_a_specifier_with_no_lower_bound_is_unknown() -> None:
+    """`<4` asks for something, but names no oldest release to bucket on."""
+    assert _ops_cohort({"ops_requirement": "<4", "ops_min_version": None}) == "unknown"
+
+
+def test_ops_cohorts_sort_by_major_with_the_others_last() -> None:
+    order = _ops_cohort_order(["unknown", "ops 3", "unpinned", "ops 1", "ops 2"])
+    assert order == ["ops 1", "ops 2", "ops 3", "unpinned", "unknown"]
+
+
+def test_ops_cohort_order_grows_a_new_major_rather_than_dropping_it() -> None:
+    assert _ops_cohort_order(["ops 4", "ops 2"]) == ["ops 2", "ops 4"]
+
+
+def test_ops_cohort_order_omits_cohorts_with_no_charms() -> None:
+    assert _ops_cohort_order(["ops 2"]) == ["ops 2"]
+
+
+def test_feature_row_reports_adoption_per_ops_cohort() -> None:
+    """The point of the column: a row that climbs with the major is a pin gap."""
+    feats = [_feature("thing")]
+    charms = [
+        _pinned("old0", ">=2.1", "2.1", has=False),
+        _pinned("old1", ">=2.1", "2.1", has=False),
+        _pinned("new0", ">=3.8", "3.8", has=True),
+        _pinned("new1", ">=3.8", "3.8", has=False),
+    ]
+    html = render({c["name"]: c for c in charms}, feats)
+    assert "0 / 2 charms in the ops 2 cohort have this feature" in html
+    assert "1 / 2 charms in the ops 3 cohort have this feature" in html
+
+
+def test_ops_cohorts_exclude_charms_whose_scores_are_not_applicable() -> None:
+    """A reactive charm's feature scores short-circuit, so its pin says nothing."""
+    feats = [_feature("thing")]
+    charms = [
+        _pinned("plain", ">=2.1", "2.1", has=True),
+        _pinned("react", ">=2.1", "2.1", has=False, is_reactive=True),
+        _pinned("classic", ">=2.1", "2.1", has=False, is_legacy_classic=True),
+    ]
+    html = render({c["name"]: c for c in charms}, feats)
+    assert "1 / 1 charms in the ops 2 cohort have this feature" in html

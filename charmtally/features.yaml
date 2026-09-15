@@ -431,8 +431,11 @@ features:
       which the `.scenario` row above shows is the common spelling.
 
       A flat percentage over the corpus mostly measures how old everyone's
-      `ops` pin is, since these arguments are recent. Read it against
-      `ops_min_version` (#74) rather than against the whole corpus.
+      `ops` pin is, since these arguments are recent, so read the row's
+      by-ops-pin cells rather than its corpus total (#74). Those cells
+      bucket on `ops`, and this is an `ops-scenario` API, so they are a
+      proxy here rather than the gate itself — the two move together in
+      practice, since a charm bumps its test pin when it bumps `ops`.
     verified: []
     negative: []
 
