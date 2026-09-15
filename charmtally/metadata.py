@@ -57,6 +57,18 @@ Descriptive facts surfaced for the dashboard (no scoring rules attached):
                             never reads as consuming one
     library_names         — the same set, by name (used by pair detection
                             to spot k8s/machine pairs sharing a charmlib)
+    library_versions      — the `LIBAPI.LIBPATCH` each vendored library
+                            module declares, keyed `<libname>.<module>`
+                            (`loki_k8s.loki_push_api` → "1.4"). A vendored
+                            copy is pinned per charm, so this is the only
+                            way to tell which consumers of a library are on
+                            a revision a fix has not reached. Keyed per
+                            module rather than per library because one
+                            `lib/charms/<libname>/` can hold several, each
+                            with its own LIBPATCH. A module that declares
+                            neither constant is not a Charmhub library and
+                            is omitted, so this is a subset of
+                            `library_names`, not a parallel list
     src_modules           — module and package names directly under `src/`,
                             minus the `charm.py` entry point. Used by pair
                             detection to tell a same-repo k8s/machine pair
@@ -68,6 +80,13 @@ Descriptive facts surfaced for the dashboard (no scoring rules attached):
                             `interfaces.tls`, ...). The PyPI charmlibs, not
                             the vendored Charmhub libs above; the adoption
                             dashboard divides one by the other.
+    charmlibs_specifiers  — the version specifier each of those was declared
+                            with, as written (">=1.0", "==0.3", "" for a
+                            bare name), keyed by the same normalised name.
+                            Only the ones a dependency file declares: a
+                            charmlib reached by import alone has no
+                            specifier to record, so it is absent here while
+                            still counting in `charmlibs_names`.
     provides_own_library  — true if lib/charms/<charm_name>/ exists; this is
                             where a published library is reported, since
                             library_names excludes it
@@ -112,7 +131,23 @@ _CHARMLIBS_FROM = re.compile(r"\bfrom\s+charmlibs(\.[\w.]+)?\s+import\s+(\([^)]*
 _CHARMLIBS_IMPORT = re.compile(r"^\s*import\s+charmlibs\.([\w.]+)", re.MULTILINE)
 # `charmlibs-pathops`, `charmlibs_interfaces_tls_certificates`, ... as spelled
 # in a requirements file or a pyproject dependency list.
-_CHARMLIBS_REQUIREMENT = re.compile(r"\bcharmlibs[-_]([A-Za-z0-9][\w.-]*)")
+# The distribution name, any extras, and the version specifier that follows
+# it. The specifier is spelled out as a PEP 440 specifier *set* rather than
+# "everything up to a delimiter", so the same pattern reads a requirements.txt
+# line, a TOML dependency string and a YAML list item without knowing which it
+# is looking at: a clause has to start with an operator, which ends the match
+# at a trailing `# comment` or the next item of a flow sequence while still
+# taking both halves of `>=1.0,<2`.
+_SPECIFIER_CLAUSE = r"[<>=!~]=?\s*[0-9A-Za-z.*+!-]+"
+_CHARMLIBS_REQUIREMENT = re.compile(
+    r"\bcharmlibs[-_]([A-Za-z0-9][\w.-]*)(?:\[[^\]]*\])?\s*"
+    rf"({_SPECIFIER_CLAUSE}(?:\s*,\s*{_SPECIFIER_CLAUSE})*)?"
+)
+# `LIBAPI = 1` / `LIBPATCH = 4` in a vendored Charmhub library's header.
+# Module-level assignments by convention, so a text match is enough and the
+# file never has to be parsed.
+_LIBAPI = re.compile(r"^LIBAPI\s*=\s*(\d+)", re.MULTILINE)
+_LIBPATCH = re.compile(r"^LIBPATCH\s*=\s*(\d+)", re.MULTILINE)
 # `ops` as spelled in a requirements file or a PEP 508 dependency string:
 # the name, optional extras, then the specifier. The specifier group has to
 # start with an operator (or be empty) so `ops-scenario>=7` and `opslib-foo`
@@ -133,6 +168,18 @@ class Relation:
     name: str
     role: str  # provides | requires | peers
     interface: str
+
+
+def _pairs(raw: object) -> tuple[tuple[str, str], ...]:
+    """Read a `__meta__` mapping back as the sorted pairs a frozen field holds.
+
+    Values are stringified: a lib whose `LIBPATCH` was written unquoted in a
+    hand-edited snapshot would otherwise come back as an int and compare
+    unequal to the same reading from a scan.
+    """
+    if not isinstance(raw, dict):
+        return ()
+    return tuple(sorted((str(k), str(v)) for k, v in raw.items()))
 
 
 @dataclass(frozen=True)
@@ -161,9 +208,11 @@ class CharmMeta:
     charm_user: str | None = None
     library_count: int = 0
     library_names: tuple[str, ...] = ()
+    library_versions: tuple[tuple[str, str], ...] = ()
     src_modules: tuple[str, ...] = ()
     charmlibs_count: int = 0
     charmlibs_names: tuple[str, ...] = ()
+    charmlibs_specifiers: tuple[tuple[str, str], ...] = ()
     provides_own_library: bool = False
     has_terraform_module: bool = False
     tooling: tuple[str, ...] = ()
@@ -206,9 +255,11 @@ class CharmMeta:
             "charm_user": self.charm_user,
             "library_count": self.library_count,
             "library_names": list(self.library_names),
+            "library_versions": dict(self.library_versions),
             "src_modules": list(self.src_modules),
             "charmlibs_count": self.charmlibs_count,
             "charmlibs_names": list(self.charmlibs_names),
+            "charmlibs_specifiers": dict(self.charmlibs_specifiers),
             "provides_own_library": self.provides_own_library,
             "has_terraform_module": self.has_terraform_module,
             "tooling": list(self.tooling),
@@ -247,9 +298,11 @@ class CharmMeta:
             charm_user=raw.get("charm_user"),
             library_count=int(raw.get("library_count", 0)),
             library_names=tuple(raw.get("library_names") or []),
+            library_versions=_pairs(raw.get("library_versions")),
             src_modules=tuple(raw.get("src_modules") or []),
             charmlibs_count=int(raw.get("charmlibs_count", 0)),
             charmlibs_names=tuple(raw.get("charmlibs_names") or []),
+            charmlibs_specifiers=_pairs(raw.get("charmlibs_specifiers")),
             provides_own_library=bool(raw.get("provides_own_library")),
             has_terraform_module=bool(raw.get("has_terraform_module")),
             tooling=tuple(raw.get("tooling") or []),
@@ -404,8 +457,8 @@ def _has_pebble_layer_evidence(charm_root: Path) -> bool:
     return False
 
 
-def _charmlibs_names(charm_root: Path) -> list[str]:
-    """Return the distinct `charmlibs` packages this charm uses, sorted.
+def _charmlibs(charm_root: Path) -> tuple[list[str], dict[str, str]]:
+    """Return the distinct `charmlibs` packages this charm uses, and their specifiers.
 
     Two signals, unioned:
       * an import of the `charmlibs` namespace package in any Python file
@@ -446,10 +499,14 @@ def _charmlibs_names(charm_root: Path) -> list[str]:
         for sub in _CHARMLIBS_IMPORT.findall(text):
             names.add(_normalise_charmlib(sub))
 
+    specifiers: dict[str, str] = {}
     for path in dependency_files(charm_root):
-        names.update(_charmlibs_requirements(path))
+        declared = _charmlibs_requirements(path)
+        names.update(declared)
+        for name, specifier in declared.items():
+            specifiers.setdefault(name, specifier)
 
-    return sorted(names)
+    return sorted(names), specifiers
 
 
 def _src_modules(charm_root: Path) -> list[str]:
@@ -514,22 +571,53 @@ def _normalise_charmlib(dotted: str) -> str:
     return parts[0]
 
 
-def _charmlibs_requirements(path: Path) -> set[str]:
-    """Extract `charmlibs-*` distribution names declared in a dependency file."""
+def _charmlibs_requirements(path: Path) -> dict[str, str]:
+    """Map each `charmlibs-*` package declared in a dependency file to its specifier.
+
+    The specifier is kept as written (">=1.0", "==0.3,<1", "" for a bare
+    name) rather than resolved: a range is what the charm asks for, and
+    narrowing it to one version here would invent a fact the file doesn't
+    carry. Two files declaring the same package disagree rarely enough that
+    the first reading wins.
+    """
     try:
         text = path.read_text(encoding="utf-8", errors="replace")
     except OSError:
-        return set()
+        return {}
     if "charmlibs" not in text:
-        return set()
-    out: set[str] = set()
-    for raw in _CHARMLIBS_REQUIREMENT.findall(text):
-        # Strip any version specifier the regex's trailing class swallowed,
-        # then read the distribution suffix as a dotted package path.
-        dist = re.split(r"[<>=!~\[]", raw)[0].strip().rstrip("-_.")
+        return {}
+    out: dict[str, str] = {}
+    for raw, specifier in _CHARMLIBS_REQUIREMENT.findall(text):
+        dist = raw.strip().rstrip("-_.")
         normalised = _normalise_charmlib(dist.replace("-", ".").replace("_", "."))
         if normalised:
-            out.add(normalised)
+            out.setdefault(normalised, specifier.strip().rstrip(","))
+    return out
+
+
+def _library_versions(lib_root: Path, library_names: list[str]) -> dict[str, str]:
+    """Map each vendored library module to the `LIBAPI.LIBPATCH` it declares.
+
+    Keyed `<libname>.<module>`, because one `lib/charms/<libname>/` can hold
+    several modules and each carries its own LIBPATCH. `LIBAPI` comes from
+    the assignment rather than the `v<N>` directory it sits in: the two agree
+    in a library `charmcraft fetch-lib` placed, and where they don't the file
+    is what gets imported.
+
+    A module declaring neither constant isn't a Charmhub library — an
+    `__init__.py`, a helper module a library ships alongside itself — and is
+    omitted rather than recorded with a missing version.
+    """
+    out: dict[str, str] = {}
+    for name in library_names:
+        for py in sorted((lib_root / name).rglob("*.py")):
+            text = _read_text(py)
+            if text is None:
+                continue
+            api = _LIBAPI.search(text)
+            patch = _LIBPATCH.search(text)
+            if api and patch:
+                out[f"{name}.{py.stem}"] = f"{api.group(1)}.{patch.group(1)}"
     return out
 
 
@@ -816,7 +904,7 @@ def read(charm_root: Path) -> CharmMeta:
 
     # PyPI `charmlibs` namespace packages — the replacement for the vendored
     # libs above, and the numerator of the adoption dashboard's charmlibs share.
-    charmlibs_names = _charmlibs_names(charm_root)
+    charmlibs_names, charmlibs_specifiers = _charmlibs(charm_root)
 
     provides_own_library = bool(own_lib and (lib_root / own_lib).is_dir())
 
@@ -876,9 +964,11 @@ def read(charm_root: Path) -> CharmMeta:
         charm_user=charm_user,
         library_count=library_count,
         library_names=tuple(library_names),
+        library_versions=tuple(sorted(_library_versions(lib_root, library_names).items())),
         src_modules=tuple(_src_modules(charm_root)),
         charmlibs_count=len(charmlibs_names),
         charmlibs_names=tuple(charmlibs_names),
+        charmlibs_specifiers=tuple(sorted(charmlibs_specifiers.items())),
         provides_own_library=provides_own_library,
         has_terraform_module=has_terraform_module,
         tooling=tuple(tooling),
