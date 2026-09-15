@@ -102,6 +102,10 @@ Descriptive facts surfaced for the dashboard (no scoring rules attached):
                             tox.ini / Makefile / justfile presence
     repo_sha              — commit the charm was scanned at, or None when the
                             charm root isn't a git checkout
+    last_commit           — ISO-8601 committer date of that commit, or None
+                            when the charm root isn't a git checkout. Dates
+                            the repo, not the charm directory; see
+                            `scan.head_commit_date`
     stale                 — true when that commit is last run's, because the
                             clone could not be refreshed
 
@@ -232,6 +236,11 @@ class CharmMeta:
     # or None for a working tree that isn't a git checkout. Used to build
     # permalinks in the dashboard and to key the LLM verdict cache.
     repo_sha: str | None = None
+    # ISO-8601 committer date of `repo_sha`, or None for a working tree that
+    # isn't a git checkout. How `adoption.eligible_charms` tells a charm
+    # someone still maintains from one abandoned years ago; None means the
+    # scan did not look, not that the charm is dormant.
+    last_commit: str | None = None
     # True when the clone this reading came from could not be refreshed, so
     # `repo_sha` is an older commit than the remote's tip rather than the
     # charm's current state. Set by the scan, not read off the charm.
@@ -277,6 +286,7 @@ class CharmMeta:
             "has_terraform_module": self.has_terraform_module,
             "tooling": list(self.tooling),
             "repo_sha": self.repo_sha,
+            "last_commit": self.last_commit,
             "stale": self.stale,
         }
 
@@ -321,6 +331,7 @@ class CharmMeta:
             has_terraform_module=bool(raw.get("has_terraform_module")),
             tooling=tuple(raw.get("tooling") or []),
             repo_sha=raw.get("repo_sha"),
+            last_commit=raw.get("last_commit"),
             stale=bool(raw.get("stale")),
         )
 

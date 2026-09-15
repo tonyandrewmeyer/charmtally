@@ -397,3 +397,138 @@ class TestMergeRocksBlock:
             ),
         )
         assert backfill.has_rocks_block(path) is True
+
+
+class TestCommitDates:
+    """`--commit-dates`: dating readings the snapshots already recorded."""
+
+    def _snapshot_file(self, tmp_path: Path, repo_url: str, shas: dict[str, str]) -> Path:
+        """Write a snapshot whose charms point at `{slug: repo_sha}`."""
+        snap: dict = {"__thin__": True}
+        for slug, sha in shas.items():
+            snap[slug] = {
+                "name": slug,
+                "team": "t",
+                "repo_url": repo_url,
+                "features": {"__meta__": {"repo_sha": sha}},
+            }
+        path = tmp_path / "scored-2026-05-04.json"
+        path.write_text(json.dumps(snap, indent=2) + "\n")
+        return path
+
+    def test_resolves_a_sha_to_its_committer_date(self, tmp_path: Path):
+        origin = _repo(tmp_path / "origin")
+        sha = backfill._git_out(["rev-parse", "HEAD"], origin)
+        assert sha is not None
+
+        found = backfill.commit_dates(origin, [sha])
+
+        assert found[sha].startswith("2026-04-01")
+
+    def test_unknown_shas_are_dropped_not_fatal(self, tmp_path: Path):
+        """A force-push drops commits the snapshots still name; the rest survive."""
+        origin = _repo(tmp_path / "origin")
+        sha = backfill._git_out(["rev-parse", "HEAD"], origin)
+        assert sha is not None
+
+        found = backfill.commit_dates(origin, [sha, "0" * 40])
+
+        assert set(found) == {sha}
+
+    def test_merge_writes_the_key_even_when_undatable(self, tmp_path: Path):
+        """Key presence is how `adoption` tells "filtered" from "never looked"."""
+        path = self._snapshot_file(tmp_path, "https://x/demo", {"a": "beef" * 10})
+
+        dated, undatable = backfill.merge_commit_dates(path, {})
+
+        assert (dated, undatable) == (0, 1)
+        snap = json.loads(path.read_text())
+        assert snap["a"]["features"]["__meta__"]["last_commit"] is None
+        assert backfill.has_commit_dates(path)
+
+    def test_monorepo_sub_charms_share_the_repo_date(self, tmp_path: Path):
+        path = self._snapshot_file(tmp_path, "https://x/demo", {"a": "abc", "b": "abc"})
+
+        dated, undatable = backfill.merge_commit_dates(
+            path, {("https://x/demo", "abc"): "2026-04-01T00:00:00+00:00"}
+        )
+
+        assert (dated, undatable) == (2, 0)
+        snap = json.loads(path.read_text())
+        assert snap["a"]["features"]["__meta__"]["last_commit"] == "2026-04-01T00:00:00+00:00"
+        assert snap["b"]["features"]["__meta__"]["last_commit"] == "2026-04-01T00:00:00+00:00"
+
+    def test_end_to_end_over_a_real_clone(self, tmp_path: Path):
+        origin = _repo(tmp_path / "origin")
+        sha = backfill._git_out(["rev-parse", "HEAD"], origin)
+        assert sha is not None
+        repo_url = str(origin)
+        path = self._snapshot_file(tmp_path, repo_url, {"demo": sha})
+        clones = tmp_path / "clones"
+        backfill.ensure_full_clone(repo_url, clones / backfill.repo_slug(repo_url), branch="main")
+
+        resolved = backfill.resolve_commit_dates({repo_url: {sha}}, clones)
+        backfill.merge_commit_dates(path, resolved)
+
+        snap = json.loads(path.read_text())
+        assert snap["demo"]["features"]["__meta__"]["last_commit"].startswith("2026-04-01")
+
+    def test_last_commit_lands_where_a_fresh_scan_writes_it(self, tmp_path: Path):
+        """Backfilled `__meta__` must match a scanned one key-for-key, in order."""
+        path = tmp_path / "scored-2026-05-04.json"
+        path.write_text(
+            json.dumps({
+                "a": {
+                    "repo_url": "https://x/demo",
+                    "features": {
+                        "__meta__": {"charm_name": "demo", "repo_sha": "abc", "stale": False}
+                    },
+                }
+            })
+        )
+
+        backfill.merge_commit_dates(path, {("https://x/demo", "abc"): "2026-04-01T00:00:00+00:00"})
+
+        meta = json.loads(path.read_text())["a"]["features"]["__meta__"]
+        assert list(meta) == ["charm_name", "repo_sha", "last_commit", "stale"]
+
+    def test_rerunning_moves_rather_than_duplicates_the_key(self, tmp_path: Path):
+        path = tmp_path / "scored-2026-05-04.json"
+        path.write_text(
+            json.dumps({
+                "a": {
+                    "repo_url": "https://x/demo",
+                    "features": {
+                        "__meta__": {"repo_sha": "abc", "stale": False, "last_commit": None}
+                    },
+                }
+            })
+        )
+
+        backfill.merge_commit_dates(path, {("https://x/demo", "abc"): "2026-04-01T00:00:00+00:00"})
+
+        meta = json.loads(path.read_text())["a"]["features"]["__meta__"]
+        assert list(meta) == ["repo_sha", "last_commit", "stale"]
+        assert meta["last_commit"] == "2026-04-01T00:00:00+00:00"
+
+    def test_blobless_clone_still_dates_every_commit(self, tmp_path: Path):
+        """`--commit-dates` reads %cI only, so it never needs the trees."""
+        origin = _repo(tmp_path / "origin")
+        sha = backfill._git_out(["rev-parse", "HEAD"], origin)
+        assert sha is not None
+
+        clone = backfill.ensure_full_clone(
+            str(origin), tmp_path / "clone", branch="main", blobless=True
+        )
+        assert clone is not None
+
+        assert backfill.commit_dates(clone, [sha])[sha].startswith("2026-04-01")
+
+    def test_snapshot_shas_skips_dunder_keys_and_undated_charms(self, tmp_path: Path):
+        snap = {
+            "__rocks__": {"anything": True},
+            "dated": {"repo_url": "https://x/a", "features": {"__meta__": {"repo_sha": "aa"}}},
+            "undated": {"repo_url": "https://x/b", "features": {"__meta__": {}}},
+        }
+
+        assert backfill.snapshot_shas(snap) == {"https://x/a": {"aa"}}

@@ -27,9 +27,19 @@ def _charm(
         "is_reactive": False,
         "is_legacy_classic": False,
         "has_integration_tests": False,
+        # A recent commit by default, so a charm is active unless a test says
+        # otherwise. Pass `last_commit` to age it; use `_undated` to model a
+        # snapshot taken before the scan recorded the field at all.
+        "last_commit": "2026-06-01T09:00:00+00:00",
         **(meta or {}),
     }
     return {"name": "c", "team": "t", "repo_url": "https://x/c", "features": feature_block}
+
+
+def _undated(charm: dict) -> dict:
+    """The same charm as scanned before `last_commit` existed: no key at all."""
+    charm["features"]["__meta__"].pop("last_commit", None)
+    return charm
 
 
 def _snapshot(charms: dict, date: str = "2026-06-11") -> trend.Snapshot:
@@ -52,6 +62,95 @@ def test_eligible_excludes_reactive_and_legacy_classic() -> None:
     })
 
     assert set(adoption.eligible_charms(snap)) == {"modern"}
+
+
+def test_active_excludes_charms_dormant_for_two_years() -> None:
+    snap = _snapshot(
+        {
+            "fresh": _charm(meta={"last_commit": "2026-05-01T09:00:00+00:00"}),
+            "just-inside": _charm(meta={"last_commit": "2024-07-01T09:00:00+00:00"}),
+            "dormant": _charm(meta={"last_commit": "2023-01-05T09:00:00+00:00"}),
+        },
+        date="2026-06-11",
+    )
+
+    assert set(adoption.active_charms(snap)) == {"fresh", "just-inside"}
+
+
+def test_dormancy_is_measured_against_the_snapshot_not_today() -> None:
+    """The same charm is active in an old snapshot and dormant in a new one."""
+    charm = {"c": _charm(meta={"last_commit": "2022-03-01T09:00:00+00:00"})}
+
+    assert set(adoption.active_charms(_snapshot(charm, date="2023-06-11"))) == {"c"}
+    assert adoption.active_charms(_snapshot(charm, date="2026-06-11")) == {}
+
+
+def test_charms_without_a_commit_date_stay_in_the_denominator() -> None:
+    """A missing `last_commit` means the scan did not look, not "dormant"."""
+    snap = _snapshot({"unknown": _undated(_charm()), "null": _charm(meta={"last_commit": None})})
+
+    assert set(adoption.active_charms(snap)) == {"unknown", "null"}
+    assert not adoption.has_commit_dates(_snapshot({"unknown": _undated(_charm())}))
+    assert adoption.has_commit_dates(snap)
+
+
+def test_dormant_charm_leaves_the_eligible_denominator() -> None:
+    snap = _snapshot(
+        {
+            "a": _charm(
+                features={"ops.typed-relation": True, "ops.typed-config": False},
+                meta={"last_commit": "2026-05-01"},
+            ),
+            "b": _charm(
+                features={"ops.typed-relation": False, "ops.typed-config": False},
+                meta={"last_commit": "2020-01-01"},
+            ),
+        },
+        date="2026-06-11",
+    )
+
+    point = adoption.compute_typed_relation(snap)
+    assert point is not None
+    assert point["denominator"] == 1
+    assert point["value"] == 100.0
+    assert point["partial"] == ""
+
+
+def test_snapshot_without_commit_dates_is_flagged_partial() -> None:
+    snap = _snapshot({
+        "a": _undated(_charm(features={"ops.typed-relation": True, "ops.typed-config": False}))
+    })
+
+    point = adoption.compute_typed_relation(snap)
+    assert point is not None
+    assert point["denominator"] == 1
+    assert adoption.DORMANT_UNKNOWN in point["partial"]
+
+
+def test_integration_testing_drops_dormant_charms_too() -> None:
+    """Jubilant ignores eligibility, but not activity."""
+    snap = _snapshot(
+        {
+            "live": _charm(
+                features={"jubilant.integration-tests": True},
+                meta={"last_commit": "2026-05-01"},
+            ),
+            "reactive": _charm(
+                features={"jubilant.integration-tests": False},
+                meta={"is_reactive": True, "last_commit": "2026-05-01"},
+            ),
+            "dormant": _charm(
+                features={"jubilant.integration-tests": False},
+                meta={"last_commit": "2019-01-01"},
+            ),
+        },
+        date="2026-06-11",
+    )
+
+    point = adoption.compute_integration_testing(snap)
+    assert point is not None
+    assert point["denominator"] == 2  # the reactive charm stays, the dormant one goes
+    assert point["counts"]["jubilant"] == 1
 
 
 def test_reactive_charms_are_out_of_the_denominator() -> None:
@@ -430,7 +529,7 @@ def test_render_adoption_does_not_escape_authored_markup() -> None:
 
     assert "&lt;code&gt;" not in html
     assert "<code>run-user</code>" in html  # a rootless caveat
-    assert "<em>all</em> scanned charms" in html  # the jubilant detail
+    assert "actively-maintained charms" in html  # the jubilant detail
     assert "not just eligible charms" in html  # the jubilant denominator_note
 
 

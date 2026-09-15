@@ -19,15 +19,26 @@ history page reads, so a metric is only as old as the data behind it:
     inputs, only some of which are that old, keeps its history and marks the
     thin points `partial` instead — see `compute_integration_testing` and
     `compute_typed_relation`.
+  - **Activity.** A charm whose repo has seen no commit in two years is not
+    one anybody is going to migrate, and counting it caps every metric for
+    reasons no adoption work could shift. `active_charms` drops those, and
+    it underlies *every* denominator on the page — unlike eligibility below,
+    the question it asks ("would anyone bother?") applies whatever the
+    charm is built on. Dormancy is measured against the snapshot's own date,
+    so each point reports the corpus as it stood then. A snapshot with no
+    `last_commit` data cannot be filtered at all; its points are flagged
+    `partial` rather than quietly reported on a wider denominator than
+    their neighbours.
   - **Eligibility.** Reactive and legacy-classic charms pre-date ops entirely
     (see `scoring.score_absent`, which scores every ops feature
     `not-applicable` for them). Counting them in a denominator would make
-    adoption look permanently stuck, so `eligible_charms` is the denominator
-    for every metric measuring adoption of an *ops-era API*. It is not a
-    universal denominator: a metric about tooling that works regardless of
-    charm framework — Jubilant drives a deployed Juju model and neither
-    knows nor cares what the charm is built on — measures against the whole
-    corpus, and says so in its `denominator_note`.
+    adoption look permanently stuck, so `eligible_charms` — `active_charms`
+    minus those two — is the denominator for every metric measuring adoption
+    of an *ops-era API*. It is not a universal denominator: a metric about
+    tooling that works regardless of charm framework — Jubilant drives a
+    deployed Juju model and neither knows nor cares what the charm is built
+    on — measures against all active charms, and says so in its
+    `denominator_note`.
 
 A metric's `compute` returns None when its inputs are missing; the series
 simply skips that date.
@@ -36,6 +47,7 @@ simply skips that date.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import date, timedelta
 from typing import TYPE_CHECKING
 
 from . import rocks
@@ -92,18 +104,95 @@ def _meta(charm: dict) -> dict:
     return meta if isinstance(meta, dict) else {}
 
 
+#: How long a charm's repo can go untouched before we stop counting it. Two
+#: years is a deliberately generous line: a charm released once a cycle and
+#: left alone is still maintained, whereas nothing that has seen no commit in
+#: two years is going to be migrated to an API that did not exist when it was
+#: last touched. 74 of the 604 otherwise-eligible charms are past it, 39 of
+#: them by more than three years.
+DORMANT_AFTER_DAYS = 730
+
+#: Flagged on any point computed from a snapshot with no `last_commit` data,
+#: because that point's denominator still holds charms a later point drops.
+DORMANT_UNKNOWN = "last_commit not yet scanned — dormant charms still counted"
+
+
+def _commit_date(charm: dict) -> date | None:
+    """Date of the commit this reading came from, or None if not recorded.
+
+    `last_commit` is a full ISO-8601 timestamp; only the date half is used,
+    which sidesteps comparing a tz-aware instant against a snapshot's bare
+    `YYYY-MM-DD`. It also sidesteps the offset, which git writes as `Z` on
+    some versions and `+00:00` on others — so the committed snapshots hold
+    both spellings, and `datetime.fromisoformat` did not accept `Z` until
+    3.11, which this package still supports. Dating by the commit's own local
+    day can be a few hours out either way; against a two-year threshold that
+    does not matter.
+    """
+    raw = _meta(charm).get("last_commit")
+    if not isinstance(raw, str) or not raw:
+        return None
+    try:
+        return date.fromisoformat(raw[:10])
+    except ValueError:
+        return None
+
+
+def has_commit_dates(snapshot: Snapshot) -> bool:
+    """Whether this snapshot's `__meta__` carries `last_commit` at all.
+
+    Key presence, not value, for the same reason as `_has_charmlibs_data`:
+    a charm scanned outside a git checkout legitimately has None, so None
+    cannot distinguish that from "this scan didn't look".
+    """
+    return any("last_commit" in _meta(charm) for charm in snapshot.charms.values())
+
+
+def active_charms(snapshot: Snapshot) -> dict[str, dict]:
+    """Charms someone still works on, as of this snapshot's own date.
+
+    Dormancy is measured against `snapshot.date` rather than today, so a
+    charm abandoned in 2024 leaves the denominator at the 2026 snapshots and
+    stays in the 2023 ones — the series reports what was true at the time
+    instead of retro-fitting today's corpus onto every past point.
+
+    A charm with no `last_commit` recorded is *kept*: a missing key means the
+    scan did not look, and dropping those would silently empty the
+    denominator of every snapshot taken before the field existed.
+    """
+    cutoff = date.fromisoformat(snapshot.date) - timedelta(days=DORMANT_AFTER_DAYS)
+    out = {}
+    for slug, charm in snapshot.charms.items():
+        committed = _commit_date(charm)
+        if committed is None or committed >= cutoff:
+            out[slug] = charm
+    return out
+
+
 def eligible_charms(snapshot: Snapshot) -> dict[str, dict]:
     """Charms a charm-tech adoption number can fairly be measured against.
 
-    Excludes reactive and legacy-classic charms: neither can adopt an ops
-    API, so leaving them in the denominator would cap every metric below
-    100% for reasons no amount of adoption work could shift.
+    Excludes reactive and legacy-classic charms on top of `active_charms`:
+    neither can adopt an ops API, so leaving them in the denominator would
+    cap every metric below 100% for reasons no amount of adoption work could
+    shift. The two cuts answer different questions — *could* this charm adopt
+    the API, and would anyone *bother* — and a metric measuring a
+    framework-agnostic tool wants the second without the first, which is why
+    `active_charms` stands on its own.
     """
     return {
         slug: charm
-        for slug, charm in snapshot.charms.items()
+        for slug, charm in active_charms(snapshot).items()
         if not _meta(charm).get("is_reactive") and not _meta(charm).get("is_legacy_classic")
     }
+
+
+def _partial(snapshot: Snapshot, *notes: str) -> str:
+    """Join the reasons a point is thin, dormancy included."""
+    reasons = [n for n in notes if n]
+    if not has_commit_dates(snapshot):
+        reasons.append(DORMANT_UNKNOWN)
+    return "; ".join(reasons)
 
 
 def _present(charm: dict, feature: str) -> bool:
@@ -176,7 +265,7 @@ def compute_typed_relation(snapshot: Snapshot) -> dict | None:
             "untyped": _percent(len(charms) - users, len(charms)),
         },
         counts={"typed": users, "untyped": len(charms) - users},
-        partial="" if scanned_config else "ops.typed-config not yet scanned",
+        partial=_partial(snapshot, "" if scanned_config else "ops.typed-config not yet scanned"),
     )
 
 
@@ -191,11 +280,12 @@ _NO_TESTS = "no-integration-tests"
 def compute_integration_testing(snapshot: Snapshot) -> dict | None:
     """How charms drive their integration tests, as four shares.
 
-    Measured against the **whole corpus**, not `eligible_charms`: jubilant
+    Measured against **all active charms**, not `eligible_charms`: jubilant
     talks to a deployed Juju model over the CLI, so a reactive or
     legacy-classic charm can adopt it as readily as an ops charm. Excluding
     them here would hide real adopters (there is already one) for a reason
-    that only holds for ops-API metrics.
+    that only holds for ops-API metrics. Dormant charms still go, because
+    that cut is about whether anyone is still writing tests at all.
 
     A charm mid-migration can hit both framework detectors; jubilant is
     counted first, so a part-migrated charm reads as adopted rather than as
@@ -209,7 +299,7 @@ def compute_integration_testing(snapshot: Snapshot) -> dict | None:
     """
     if "jubilant.integration-tests" not in snapshot.feature_names:
         return None
-    charms = snapshot.charms
+    charms = active_charms(snapshot)
     if not charms:
         return None
     scanned_pytest_operator = "testing.pytest-operator" in snapshot.feature_names
@@ -238,7 +328,10 @@ def compute_integration_testing(snapshot: Snapshot) -> dict | None:
         denominator=total,
         breakdown={k: _percent(v, total) for k, v in counts.items()},
         counts=counts,
-        partial="" if scanned_pytest_operator else "testing.pytest-operator not yet scanned",
+        partial=_partial(
+            snapshot,
+            "" if scanned_pytest_operator else "testing.pytest-operator not yet scanned",
+        ),
     )
 
 
@@ -313,6 +406,7 @@ def compute_charmlibs_share(snapshot: Snapshot) -> dict | None:
             "charms-using-any-charmlib": with_any_charmlib,
             _NO_LIBS: no_libs,
         },
+        partial=_partial(snapshot),
     )
 
 
@@ -383,7 +477,7 @@ def compute_rootless(snapshot: Snapshot) -> dict | None:
         if not record.get("readable"):
             continue
         counts[_rock_bucket(record)] += 1
-    for charm in snapshot.charms.values():
+    for charm in active_charms(snapshot).values():
         meta = _meta(charm)
         if not meta.get("has_containers"):
             continue
@@ -400,6 +494,7 @@ def compute_rootless(snapshot: Snapshot) -> dict | None:
         denominator=total,
         breakdown={k: _percent(v, total) for k, v in counts.items()},
         counts=counts,
+        partial=_partial(snapshot),
     )
 
 
@@ -429,15 +524,15 @@ METRICS: tuple[Metric, ...] = (
         compute=compute_integration_testing,
         breakdown_keys=(_JUBILANT, _PYTEST_OPERATOR, _OTHER_TESTS, _NO_TESTS),
         detail=(
-            "Percent of <em>all</em> scanned charms whose integration tests "
+            "Percent of all actively-maintained charms whose integration tests "
             "import <code>jubilant</code>, split against pytest-operator, "
             "other harnesses, and charms with no integration tests found at "
             "all."
         ),
         denominator_note=(
-            "the whole scanned corpus, not just eligible charms — jubilant "
-            "drives a deployed model, so a reactive or legacy-classic charm "
-            "can use it too"
+            "every actively-maintained charm, not just eligible charms — "
+            "jubilant drives a deployed model, so a reactive or legacy-classic "
+            "charm can use it too"
         ),
         caveats=(
             "A charm hitting both framework detectors is counted as jubilant — "
@@ -485,7 +580,8 @@ METRICS: tuple[Metric, ...] = (
             "root, which is the default on both sides."
         ),
         denominator_note=(
-            "rocks plus Kubernetes charms, not just eligible charms — "
+            "rocks plus actively-maintained Kubernetes charms, not just "
+            "eligible charms — "
             "<code>run-user</code> is a rock key and <code>charm-user</code> "
             "only affects k8s charms, so machine charms can adopt neither"
         ),

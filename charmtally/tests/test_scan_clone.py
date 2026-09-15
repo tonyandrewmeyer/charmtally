@@ -7,12 +7,13 @@ local repos so the suite stays fast.
 
 from __future__ import annotations
 
+import datetime as dt
 import shutil
 import subprocess
 from typing import TYPE_CHECKING
 
 from ..corpus import CharmRef
-from ..scan import ensure_clone, head_sha, refresh_clone, scan_charm
+from ..scan import ensure_clone, head_commit_date, head_sha, refresh_clone, scan_charm
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -73,6 +74,29 @@ class TestHeadSha:
         # tmp_path genuinely isn't inside one.
         if head_sha(tmp_path) is None:
             assert head_sha(plain) is None
+
+
+class TestHeadCommitDate:
+    def test_dates_the_repo_from_root_and_subdirectory(self, tmp_path: Path) -> None:
+        """A monorepo sub-charm is dated by its repo, so both agree."""
+        repo = tmp_path / "repo"
+        _init_repo(repo)
+        sub = repo / "charms" / "foo"
+        sub.mkdir(parents=True)
+        stamp = head_commit_date(repo)
+        assert stamp is not None
+        # Assert the contract `adoption._commit_date` relies on: the first ten
+        # characters are a date. Not the whole stamp — git writes the offset as
+        # `Z` or as `+00:00` depending on version and config, and
+        # `datetime.fromisoformat` only learnt to accept `Z` in 3.11.
+        assert dt.date.fromisoformat(stamp[:10]) == dt.date.today()
+        assert head_commit_date(sub) == stamp
+
+    def test_returns_none_outside_a_checkout(self, tmp_path: Path) -> None:
+        plain = tmp_path / "plain"
+        plain.mkdir()
+        if head_sha(tmp_path) is None:
+            assert head_commit_date(plain) is None
 
 
 class TestEnsureClone:
