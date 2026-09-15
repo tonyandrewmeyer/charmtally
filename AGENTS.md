@@ -315,7 +315,7 @@ output so you can tell them apart:
 Exceptions name the verdict they were written against, so correcting a ledger
 row invalidates its exception rather than carrying it over, and the check
 reports entries that no longer accept anything so the list shrinks as the gaps
-close. The 17 false-positive entries in it are the open detector gaps behind
+close. The 16 false-positive entries in it are the open detector gaps behind
 LEDGER-EXTRACTION.md's live-bucket census of 120 TP / 133; each names the
 follow-up that tracks it.
 

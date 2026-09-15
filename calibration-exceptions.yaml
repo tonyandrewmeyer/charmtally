@@ -69,10 +69,15 @@ exceptions:
   # agree and need no entry here, but these have not been. Each one names the
   # follow-up that tracks it, so this list doubles as the open-gap tally.
   #
-  # The thirteen `reconcile` entries are exactly the thirteen false positives
-  # behind LEDGER-EXTRACTION.md's live-bucket census of 120 TP / 133: the ten
-  # survivors it names at #32, plus content-cache and valkey arriving at #40 and
-  # juju-controller at #45. If that count moves, this list is the thing to
+  # The twelve `reconcile` entries are the false positives behind
+  # LEDGER-EXTRACTION.md's live-bucket census of 120 TP / 133: the ten survivors
+  # it names at #32, plus content-cache and valkey arriving at #40 and
+  # juju-controller at #45 — less `observability-libs`, which left the corpus
+  # entirely in the 2026-09-14 scan (the library repo's own test-fixture charm,
+  # no charmcraft.yaml at HEAD; it sits in `__skipped__` now). `ranger-k8s-operator`
+  # arrived in the same scan and keeps the bucket at 133, so the census now reads
+  # 120 TP + 1 unadjudicated entrant / 133 — the TP side wants a re-read, not an
+  # arithmetic bump. If that count moves again, this list is the thing to
   # reconcile it against.
   # -------------------------------------------------------------------------
   - slug: "cos-registration-server-k8s-operator"
@@ -108,9 +113,19 @@ exceptions:
     ledger_verdict: "FP"
     accepted: "2026-09-11"
     reason: >-
-      Single-container "(re)apply the one Pebble layer" boilerplate. Logged as
-      follow-up #11, still open.
-    source: "CALIBRATION.md:1526 (#24)"
+      Single-container "(re)apply the one Pebble layer" boilerplate — the
+      `{<container>_pebble_ready, config_changed, upgrade_charm}` shape follow-up
+      #11 logged. Follow-up #11 is sized and settled, not an open question: #25's
+      sweep (b) checked every remaining slug in the then-128-slug bucket and a
+      2026-09-15 re-sweep read every `.py` file of all 68 charms currently in the
+      bucket with `ops.pebble-ready` present (the other 65 cannot match — the
+      shape needs a pebble-ready event). Both came back with this charm as the
+      only surviving instance. One instance is below the 2-charm bar #24 used to
+      land the baseline-lifecycle cut, so the detector keeps calling it, by
+      decision rather than by omission. Reopen the question if a second
+      organically-authored instance appears.
+    source: "CALIBRATION.md:1526 (#24), CALIBRATION.md:1763-1840 (#25 sweep b),
+      CALIBRATION.md:3098 (#31); 2026-09-15 re-sweep in tonyandrewmeyer/charmtally#108"
 
   - slug: "testflinger/server/charm"
     bucket: "reconcile"
@@ -149,15 +164,6 @@ exceptions:
       Blocked/Active status — no manifest, pebble layer or config write. Second
       instance of follow-up #13, still open.
     source: "CALIBRATION.md:3087 (#31)"
-
-  - slug: "observability-libs"
-    bucket: "reconcile"
-    ledger_verdict: "FP"
-    accepted: "2026-09-11"
-    reason: >-
-      Third confirmed instance of follow-up #11's apply-layer boilerplate, in a
-      synthetic library test-fixture charm (container named "placeholder").
-    source: "CALIBRATION.md:3093 (#31)"
 
   - slug: "charm-ubuntu"
     bucket: "reconcile"
