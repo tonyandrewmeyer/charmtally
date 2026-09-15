@@ -85,6 +85,7 @@ from . import rocks as _rocks
 from . import scoring as _scoring
 from . import snapshot as _snapshot
 from . import trend as _trend
+from . import workflows as _workflows
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -190,16 +191,22 @@ _POOL_FEATS: list[catalogue.Feature] = []
 _POOL_PATS: list[catalogue.Pattern] = []
 
 
-def _scan_pool_init(features: Path, only: list[str] | None) -> None:
-    """Load the catalogue once per worker process.
+def _scan_pool_init(
+    features: Path, only: list[str] | None, uses_cache: Path | None = None
+) -> None:
+    """Load the catalogue once per worker process, and point it at the caches.
 
     The pool is handed a `_ScanUnit` and nothing else, so `Feature` and
     `Pattern` objects never cross the process boundary — each worker builds
-    its own copy here rather than paying to pickle them on every task.
+    its own copy here rather than paying to pickle them on every task. The
+    reusable-workflow cache is installed the same way and for the same reason:
+    a `WorkflowCache` is process state, and the directory it reads is the one
+    thing about it a worker has to be told.
     """
     global _POOL_FEATS, _POOL_PATS
     _POOL_FEATS = _filter(catalogue.load(features), only)
     _POOL_PATS = catalogue.load_patterns(features)
+    _workflows.configure(uses_cache)
 
 
 def _scan_pool_task(unit: _ScanUnit) -> dict:
@@ -291,6 +298,13 @@ def cmd_scan(args: argparse.Namespace) -> int:
     jobs = args.jobs if args.jobs > 0 else (os.cpu_count() or 1)
     skipped: dict[str, str] = {}
 
+    # Reusable-workflow resolution is off unless this run enables it, so the
+    # only code path that reaches the network for a *detector* is this one.
+    # Cached under the workdir because CI already caches that directory, which
+    # makes a weekly run start warm rather than re-fetching the same seven
+    # files; `--no-follow-uses` is for an offline or deliberately hermetic run.
+    uses_cache = None if args.no_follow_uses else args.workdir / "workflow-cache"
+
     # Overrides are applied here, in the parent, so a CorpusOverrides never has
     # to survive a trip out to a worker.
     wanted: list[corpus.CharmRef] = []
@@ -319,24 +333,28 @@ def cmd_scan(args: argparse.Namespace) -> int:
     print(f"scanning {len(units)} charm roots (jobs={jobs})…", file=sys.stderr)
     results: dict[str, object] = {}
     task = _scan_pool_task if jobs > 1 else (lambda unit: scan.scan_charm(unit.root, feats, pats))
-    for unit, charm_features, exc in _each(
-        task,
-        units,
-        jobs,
-        processes=True,
-        initializer=_scan_pool_init,
-        initargs=(args.features, args.only),
-    ):
-        if exc is not None or charm_features is None:
-            print(f"  {unit.slug}: scan failed: {exc!r}", file=sys.stderr)
-            skipped[unit.slug] = f"scan failed: {exc!r}"
-            continue
-        if unit.stale:
-            # Alongside __meta__.repo_sha, which records *which* commit was
-            # read: this records that it is not necessarily the current one.
-            charm_features.setdefault("__meta__", {})["stale"] = True
-        _apply_feature_excludes(charm_features, overrides, unit.repo_url, unit.sub_path)
-        results[unit.slug] = {**unit.record, "features": charm_features}
+    # Scoped rather than set once for the process: `--jobs 1` scans in this
+    # process, and a command that left the resolver installed on the way out
+    # would hand it to whatever ran next.
+    with _workflows.session(uses_cache):
+        for unit, charm_features, exc in _each(
+            task,
+            units,
+            jobs,
+            processes=True,
+            initializer=_scan_pool_init,
+            initargs=(args.features, args.only, uses_cache),
+        ):
+            if exc is not None or charm_features is None:
+                print(f"  {unit.slug}: scan failed: {exc!r}", file=sys.stderr)
+                skipped[unit.slug] = f"scan failed: {exc!r}"
+                continue
+            if unit.stale:
+                # Alongside __meta__.repo_sha, which records *which* commit was
+                # read: this records that it is not necessarily the current one.
+                charm_features.setdefault("__meta__", {})["stale"] = True
+            _apply_feature_excludes(charm_features, overrides, unit.repo_url, unit.sub_path)
+            results[unit.slug] = {**unit.record, "features": charm_features}
 
     if skipped:
         results["__skipped__"] = skipped
@@ -805,6 +823,13 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Path to corpus-overrides.yaml (exclusions + branch swaps). "
         "Recommended: --overrides ./corpus-overrides.yaml.",
+    )
+    p_scan.add_argument(
+        "--no-follow-uses",
+        action="store_true",
+        help="Don't fetch the reusable workflows a repo's CI delegates to. "
+        "Detectors that ask to follow them read only the checkout, which "
+        "under-reports CI features for charms whose workflows live elsewhere.",
     )
     p_scan.set_defaults(func=cmd_scan)
 

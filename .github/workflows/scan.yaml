@@ -67,7 +67,13 @@ jobs:
       - name: Cache charm workdir
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
         with:
-          path: /tmp/charm-workdir
+          # The reusable-workflow cache lives under the workdir too, but it is
+          # a within-run cache whose entries expire in six hours, so a weekly
+          # run refetches whatever it restored. Excluded rather than carried,
+          # to stop it accumulating in the cache it can never be read from.
+          path: |
+            /tmp/charm-workdir
+            !/tmp/charm-workdir/workflow-cache
           key: charm-workdir-${{ hashFiles('corpus-overrides.yaml') }}-${{ github.run_number }}
           restore-keys: |
             charm-workdir-${{ hashFiles('corpus-overrides.yaml') }}-
