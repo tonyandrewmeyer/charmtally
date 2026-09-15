@@ -2668,3 +2668,104 @@ def _on_config_changed(self, event):
 """,
     )
     assert detect_feature(tmp_path, _catalogue_feature("ops.tracing.manual")) == []
+
+
+# ── repo-file (repo-root scope) ──────────────────────────────────────────────
+
+
+_CONCIERGE_WORKFLOW = """\
+name: ci
+jobs:
+  integration:
+    steps:
+      - name: Setup operator environment
+        run: |
+          sudo snap install concierge --classic
+          sudo concierge prepare --trace
+"""
+
+
+def _write_repo(tmp_path: Path, files: dict[str, str], charm_dir: str = "") -> Path:
+    """Lay out a git checkout and return the charm root inside it.
+
+    The `.git` entry is what `CharmSource.repo_root` walks up to find, so a
+    repo-root detector reading anything at all depends on it being there.
+    """
+    (tmp_path / ".git").mkdir()
+    for rel, text in files.items():
+        path = tmp_path / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+    charm_root = tmp_path / charm_dir if charm_dir else tmp_path
+    charm_root.mkdir(parents=True, exist_ok=True)
+    return _write_charm(charm_root, "import ops\n")
+
+
+def test_repo_file_fires_on_a_workflow_at_the_repo_root(tmp_path: Path) -> None:
+    charm_root = _write_repo(tmp_path, {".github/workflows/ci.yaml": _CONCIERGE_WORKFLOW})
+    ev = detect_feature(charm_root, _catalogue_feature("testing.concierge"))
+    assert [(e.file, e.detector_kind) for e in ev] == [
+        (".github/workflows/ci.yaml", "repo-file"),
+        (".github/workflows/ci.yaml", "repo-file"),
+    ]
+    assert ev[0].snippet == "concierge prepare"
+    assert ev[0].line == 8
+
+
+def test_repo_file_reaches_above_a_monorepo_sub_charm(tmp_path: Path) -> None:
+    """`.github/` belongs to the repo, so a sub-charm only sees it from above."""
+    charm_root = _write_repo(
+        tmp_path, {".github/workflows/ci.yaml": _CONCIERGE_WORKFLOW}, charm_dir="charms/foo"
+    )
+    ev = detect_feature(charm_root, _catalogue_feature("testing.concierge"))
+    assert ev
+    # Charm-root-relative, `..` segments and all: the dashboard re-bases this
+    # onto the repo with the record's `subpath`, and a path claiming to live
+    # inside the charm would re-base to a file that isn't there.
+    assert ev[0].file == "../../.github/workflows/ci.yaml"
+
+
+def test_repo_file_finds_a_committed_concierge_config(tmp_path: Path) -> None:
+    charm_root = _write_repo(tmp_path, {"concierge-k8s.yaml": "juju:\n  channel: 3.6/stable\n"})
+    ev = detect_feature(charm_root, _catalogue_feature("testing.concierge"))
+    assert [(e.file, e.line, e.snippet) for e in ev] == [
+        ("concierge-k8s.yaml", 0, "concierge-k8s.yaml")
+    ]
+
+
+def test_repo_file_absent_for_a_repo_that_does_not_use_concierge(tmp_path: Path) -> None:
+    charm_root = _write_repo(
+        tmp_path,
+        {
+            ".github/workflows/ci.yaml": "jobs:\n  t:\n    steps:\n      - run: tox -e unit\n",
+            "docs/concierge.md": "we should try concierge prepare one day\n",
+        },
+    )
+    assert detect_feature(charm_root, _catalogue_feature("testing.concierge")) == []
+
+
+def test_repo_file_does_not_escape_a_charm_root_outside_a_checkout(tmp_path: Path) -> None:
+    """No `.git` above means the charm root is its own repo root.
+
+    Otherwise `charmtally local` on a plain directory would read whatever
+    checkout happened to be above it.
+    """
+    (tmp_path / ".github" / "workflows").mkdir(parents=True)
+    (tmp_path / ".github/workflows/ci.yaml").write_text(_CONCIERGE_WORKFLOW)
+    plain = tmp_path / "plain"
+    plain.mkdir()
+    charm_root = _write_charm(plain, "import ops\n")
+    assert detect_feature(charm_root, _catalogue_feature("testing.concierge")) == []
+
+
+def test_repo_file_skips_vendored_and_build_trees(tmp_path: Path) -> None:
+    charm_root = _write_repo(
+        tmp_path, {".venv/pkg/concierge.yaml": "x: 1\n", "build/concierge.yaml": "x: 1\n"}
+    )
+    assert detect_feature(charm_root, _catalogue_feature("testing.concierge")) == []
+
+
+def test_repo_file_without_a_pattern_needs_a_glob(tmp_path: Path) -> None:
+    """An empty `files` list matches nothing rather than sweeping the repo."""
+    charm_root = _write_repo(tmp_path, {"concierge.yaml": "x: 1\n"})
+    assert detect_feature(charm_root, _feature("repo-file")) == []

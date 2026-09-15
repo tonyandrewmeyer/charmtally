@@ -333,6 +333,21 @@ def test_evidence_link_of_a_sub_charm_includes_the_subpath() -> None:
     assert "/blob/cafe/charms/bar/src/charm.py#L12" in html
 
 
+def test_evidence_link_of_a_sub_charm_climbs_out_for_repo_root_evidence() -> None:
+    """`repo-file` evidence is above the charm root and says so with `..`.
+
+    Concatenating that onto the subpath would link to
+    `charms/bar/../../.github/...`, which GitHub serves as a 404 rather than
+    resolving.
+    """
+    charm = _charm_with_evidence(
+        "f1", file="../../.github/workflows/ci.yaml", line=8, repo_sha="cafe", subpath="charms/bar"
+    )
+    html = render({"c1": charm}, [_feature("f1")])
+
+    assert "/blob/cafe/.github/workflows/ci.yaml#L8" in html
+
+
 def test_evidence_link_falls_back_to_the_ref_without_a_repo_sha() -> None:
     """`charmtally local` scans a directory that need not be a git checkout,
     so repo_sha is None there."""

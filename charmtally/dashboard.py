@@ -22,6 +22,7 @@ checkout, i.e. `charmtally local`).
 from __future__ import annotations
 
 import datetime as dt
+import posixpath
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -75,9 +76,15 @@ def _repo_path(charm: dict, file_path: str) -> str:
     Monorepo records carry the sub-charm directory as `subpath`; evidence
     paths are relative to that directory, but the blob URL is relative to the
     repo. Single-charm records have no `subpath` and pass through unchanged.
+
+    `repo-file` evidence sits *above* the charm root and says so with `..`
+    segments, so the join is normalised rather than concatenated: a sub-charm
+    at `charms/foo` reporting `../../.github/workflows/ci.yaml` links to
+    `.github/workflows/ci.yaml`, which is where the file actually is.
     """
     subpath = (charm.get("subpath") or "").strip("/")
-    return f"{subpath}/{file_path}" if subpath else file_path
+    joined = f"{subpath}/{file_path}" if subpath else file_path
+    return posixpath.normpath(joined) if ".." in joined else joined
 
 
 def _exemplar(charm: dict, ref: str, evidence: list[dict]) -> dict:

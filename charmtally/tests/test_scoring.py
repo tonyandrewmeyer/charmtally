@@ -190,6 +190,20 @@ def test_jubilant_no_integration_tests_is_na():
     assert s.label == SCORE_NOT_APPLICABLE
 
 
+# ── testing.concierge ─────────────────────────────────────────────────────────
+
+
+def test_concierge_with_integration_tests_is_worth_considering():
+    s = score_absent("testing.concierge", {}, _meta(has_integration_tests=True))
+    assert s.label == SCORE_WORTH_CONSIDERING
+
+
+def test_concierge_without_integration_tests_is_na():
+    # Nothing to provision an environment for, so the absence is not a gap.
+    s = score_absent("testing.concierge", {}, _meta())
+    assert s.label == SCORE_NOT_APPLICABLE
+
+
 # ── ops.stored-state ──────────────────────────────────────────────────────────
 
 

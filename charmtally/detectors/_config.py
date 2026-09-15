@@ -1,10 +1,14 @@
 """The file-independent detector kinds.
 
-These five read the charm root directly rather than the Python files
+These read the charm root directly rather than the Python files
 `_select_files` returns, which makes them the only detectors that can see a
 charm's YAML, INI, TOML and requirements files. They take a `CharmSource` rather than a
 `SourceFile`, run once per charm rather than once per file, and build their
 own `Evidence` — there is no node to point at.
+
+`repo-file` is the one that reads above the charm root, at the repo root,
+because the questions it answers — how is this charm built, tested, and
+released — are answered by files a monorepo sub-charm does not own.
 """
 
 from __future__ import annotations
@@ -141,6 +145,47 @@ def _detect_yaml_key(source: CharmSource, config: dict) -> list[Evidence]:
         match = key_re.search(text)
         line = text.count("\n", 0, match.start()) + 1 if match else 0
         results.append(Evidence(rel, line, "yaml-key", f"{found}:"))
+    return results
+
+
+def _detect_repo_file(source: CharmSource, config: dict) -> list[Evidence]:
+    """Match files at the *repo* root, optionally on their contents.
+
+    config:
+      files:   list of globs relative to the repo root (required). Dotted
+               directories are in scope, unlike every other sweep here.
+      pattern: optional regex matched against each file's text. Omitted, the
+               existence of a matching file is itself the evidence.
+
+    The repo root is the checkout, not the charm root, so in a monorepo every
+    sub-charm sees the same `.github/` — which is the honest reading for a CI
+    question (one workflow does test all five sub-charms) but means the
+    *repo's* decision is counted once per charm it covers. Evidence paths keep
+    their `..` segments so that is visible rather than implied.
+
+    Text matching rather than parsing: a workflow expresses the same fact as a
+    `uses:` value, a `run:` line or an `env:` entry, and the three have no
+    structure in common worth matching against. One hit per file — the
+    question is whether the repo does the thing, not how often.
+    """
+    globs = list(config.get("files") or [])
+    if not globs:
+        return []
+    raw = config.get("pattern")
+    pattern: re.Pattern[str] | None = re.compile(str(raw), flags=re.MULTILINE) if raw else None
+
+    results: list[Evidence] = []
+    for path in source.repo_files(globs):
+        rel = source.rel_to_charm(path)
+        if pattern is None:
+            results.append(Evidence(rel, 0, "repo-file", rel))
+            continue
+        text = source.repo_text(path)
+        match = pattern.search(text)
+        if match is None:
+            continue
+        line = text.count("\n", 0, match.start()) + 1
+        results.append(Evidence(rel, line, "repo-file", match.group(0).strip()[:120]))
     return results
 
 

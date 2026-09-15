@@ -4,23 +4,24 @@
 `CharmSource` make sure each of those is read and parsed once per charm scan
 rather than once per feature. The YAML sweep lives here too, because it is a
 walk of the charm tree like the Python one — the detectors that consume it
-are in `_config`.
+are in `_config`. The repo sweep alongside it walks the *checkout* instead,
+which is the only way to see a monorepo sub-charm's CI configuration: that
+lives in `.github/` at the repo root, above every charm root in the repo.
 """
 
 from __future__ import annotations
 
 import ast
+import os
 import re
 import warnings
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, TypeVar, overload
+from pathlib import Path
+from typing import TypeVar, overload
 
 import yaml
 
 from .. import metadata as _metadata
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 _Node = TypeVar("_Node", bound=ast.AST)
 
@@ -322,6 +323,9 @@ class CharmSource:
         self._yaml_sweeps: dict[tuple[str, ...], list[Path]] = {}
         self._yaml_docs: dict[Path, tuple[str, list[object]]] = {}
         self._dep_files: list[tuple[str, str]] | None = None
+        self._repo_root: Path | None = None
+        self._repo_sweeps: dict[tuple[str, ...], list[Path]] = {}
+        self._repo_texts: dict[Path, str] = {}
 
     @property
     def charm_name(self) -> str | None:
@@ -361,6 +365,54 @@ class CharmSource:
         if path not in self._meta_data:
             self._meta_data[path] = _metadata._load_yaml(path)
         return self._meta_data[path]
+
+    @property
+    def repo_root(self) -> Path:
+        """The git checkout the charm lives in, or the charm root itself.
+
+        A monorepo sub-charm's CI configuration is not under its own root —
+        `.github/` belongs to the repo — so anything asking about how a charm
+        is *built and tested* has to look above `charm_root`. Found by walking
+        up for a `.git` entry, which is how `scan.head_sha` resolves the SHA
+        the same evidence will be linked against; a charm root that is not
+        inside a checkout (`charmtally local` on a plain directory) is its own
+        repo root, so the sweep below degrades to the charm tree rather than
+        escaping into whatever happens to be above it.
+        """
+        if self._repo_root is None:
+            self._repo_root = _find_repo_root(self.charm_root)
+        return self._repo_root
+
+    def repo_files(self, globs: list[str]) -> list[Path]:
+        """Return files matching `globs` relative to the *repo* root, swept once per glob set.
+
+        Unlike `yaml_files` this does not skip dotted directories: `.github/`
+        is the whole point.
+        """
+        key = tuple(globs)
+        cached = self._repo_sweeps.get(key)
+        if cached is None:
+            cached = _repo_files(self.repo_root, globs)
+            self._repo_sweeps[key] = cached
+        return cached
+
+    def repo_text(self, path: Path) -> str:
+        """Return the text of one repo-root file, read at most once per charm."""
+        cached = self._repo_texts.get(path)
+        if cached is None:
+            cached = self._repo_texts[path] = _read_text(path)
+        return cached
+
+    def rel_to_charm(self, path: Path) -> str:
+        """Express `path` relative to the charm root, `..` segments included.
+
+        Evidence paths are charm-root-relative by contract — the dashboard
+        re-bases them onto the repo with the record's `subpath` — so a
+        repo-root file found above a monorepo sub-charm reports as
+        `../../.github/workflows/ci.yaml` rather than silently claiming to
+        live inside the charm.
+        """
+        return Path(os.path.relpath(path, self.charm_root)).as_posix()
 
     def dependency_files(self) -> list[tuple[str, str]]:
         """Return the charm's dependency files as (path relative to the root, text).
@@ -404,6 +456,42 @@ class CharmSource:
 
 
 _YAML_SKIP_DIRS = {".git", ".tox", ".venv", "venv", "node_modules", "build", "dist", "vendor"}
+
+
+def _find_repo_root(charm_root: Path) -> Path:
+    """Walk up from `charm_root` to the directory holding `.git`, else `charm_root`.
+
+    `.git` is matched as an entry rather than a directory: a worktree or a
+    submodule checkout has a `.git` *file* pointing elsewhere, and both are
+    still the top of the tree the evidence paths are relative to.
+
+    Resolved before the walk because `charmtally local .` hands in a relative
+    path, whose `parents` run out at `.` rather than at the filesystem root.
+    """
+    charm_root = charm_root.resolve()
+    for candidate in (charm_root, *charm_root.parents):
+        if (candidate / ".git").exists():
+            return candidate
+    return charm_root
+
+
+def _repo_files(repo_root: Path, globs: list[str]) -> list[Path]:
+    """Files matching `globs` under `repo_root`, minus vendored and build trees.
+
+    Same sweep as `_yaml_files` but without its dotted-directory rule, so
+    `.github/workflows/` is reachable; `.git` itself is still skipped, via
+    `_YAML_SKIP_DIRS`.
+    """
+    out: set[Path] = set()
+    for pattern in globs:
+        for path in repo_root.glob(pattern):
+            if not path.is_file():
+                continue
+            parts = path.relative_to(repo_root).parts
+            if any(p in _YAML_SKIP_DIRS for p in parts[:-1]):
+                continue
+            out.add(path)
+    return sorted(out)
 
 
 def _yaml_files(charm_root: Path, globs: list[str]) -> list[Path]:
