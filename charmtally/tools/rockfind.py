@@ -39,8 +39,13 @@ preserves the hand-edited ``Team`` and ``Notes`` columns.
 
 Columns mirror the charm corpus (``Team``, ``<X> Name``, ``Repository``,
 ``Branch (if not the default)``, ``Source``) so the two CSVs read the same way,
-plus rock-specific and triage columns (``Rockcraft Path``, ``Stars``,
-``Last Push``, ``Archived``, ``Fork``, ``Notes``).
+plus rock-specific and triage columns (``Rockcraft Path``, ``Archived``,
+``Fork``, ``Notes``).
+
+Deliberately *not* recorded: star counts, last-push dates and anything else
+that moves on its own. The charm corpus does not carry them, and a column that
+changes without the corpus changing turns every weekly refresh into a diff of
+hundreds of rows with a handful of new rocks hidden in it.
 """
 
 from __future__ import annotations
@@ -98,8 +103,6 @@ FIELDNAMES = [
     "Branch (if not the default)",
     "Source",
     "Rockcraft Path",
-    "Stars",
-    "Last Push",
     "Archived",
     "Fork",
     "Notes",
@@ -306,8 +309,6 @@ class RockRef:
     repo_url: str
     branch: str | None
     path: str
-    stars: int | None = None
-    last_push: str = ""
     archived: bool = False
     fork: bool = False
     #: "public", "private" or "internal". Only "public" is ever written out —
@@ -335,8 +336,6 @@ class RockRef:
             "Branch (if not the default)": self.branch or "",
             "Source": self.source,
             "Rockcraft Path": self.path,
-            "Stars": "" if self.stars is None else str(self.stars),
-            "Last Push": self.last_push,
             "Archived": "TRUE" if self.archived else "FALSE",
             "Fork": "TRUE" if self.fork else "FALSE",
             "Notes": self.notes,
@@ -348,15 +347,12 @@ class RockRef:
         repo = (row.get("Repository") or "").strip()
         if not repo:
             return None
-        stars = (row.get("Stars") or "").strip()
         return cls(
             team=(row.get("Team") or "").strip(),
             name=(row.get("Rock Name") or "").strip(),
             repo_url=repo,
             branch=(row.get("Branch (if not the default)") or "").strip() or None,
             path=(row.get("Rockcraft Path") or "").strip(),
-            stars=int(stars) if stars.isdigit() else None,
-            last_push=(row.get("Last Push") or "").strip(),
             archived=(row.get("Archived") or "").strip().upper() == "TRUE",
             fork=(row.get("Fork") or "").strip().upper() == "TRUE",
             source=(row.get("Source") or SOURCE).strip(),
@@ -415,11 +411,11 @@ def enrich(
     *,
     log: Callable[[str], None] = _noop,
 ) -> list[RockRef]:
-    """Fill in stars / last push / archived / fork from the repos endpoint.
+    """Fill in archived / fork / visibility from the repos endpoint.
 
     One request per distinct repo, not per rock, so a monorepo shipping twenty
-    rocks costs one call. A repo that fails to fetch is kept as-is: a missing
-    star count is not worth dropping a candidate over.
+    rocks costs one call. A repo that fails to fetch is kept as-is: an unknown
+    archived/fork flag is not worth dropping a candidate over.
     """
     cache: dict[str, dict] = {}
     out: list[RockRef] = []
@@ -435,8 +431,6 @@ def enrich(
         out.append(
             replace(
                 ref,
-                stars=meta.get("stargazers_count", ref.stars),
-                last_push=(meta.get("pushed_at") or ref.last_push or "")[:10],
                 archived=bool(meta.get("archived", ref.archived)),
                 fork=bool(meta.get("fork", ref.fork)),
                 visibility=_visibility(meta, ref.visibility),
