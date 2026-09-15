@@ -85,8 +85,11 @@ class TestHeadCommitDate:
         sub.mkdir(parents=True)
         stamp = head_commit_date(repo)
         assert stamp is not None
-        # ISO-8601, parseable, and the date half is what `adoption` reads.
-        assert dt.datetime.fromisoformat(stamp).date() == dt.date.today()
+        # Assert the contract `adoption._commit_date` relies on: the first ten
+        # characters are a date. Not the whole stamp — git writes the offset as
+        # `Z` or as `+00:00` depending on version and config, and
+        # `datetime.fromisoformat` only learnt to accept `Z` in 3.11.
+        assert dt.date.fromisoformat(stamp[:10]) == dt.date.today()
         assert head_commit_date(sub) == stamp
 
     def test_returns_none_outside_a_checkout(self, tmp_path: Path) -> None:

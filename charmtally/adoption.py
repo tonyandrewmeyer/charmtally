@@ -122,7 +122,12 @@ def _commit_date(charm: dict) -> date | None:
 
     `last_commit` is a full ISO-8601 timestamp; only the date half is used,
     which sidesteps comparing a tz-aware instant against a snapshot's bare
-    `YYYY-MM-DD`.
+    `YYYY-MM-DD`. It also sidesteps the offset, which git writes as `Z` on
+    some versions and `+00:00` on others — so the committed snapshots hold
+    both spellings, and `datetime.fromisoformat` did not accept `Z` until
+    3.11, which this package still supports. Dating by the commit's own local
+    day can be a few hours out either way; against a two-year threshold that
+    does not matter.
     """
     raw = _meta(charm).get("last_commit")
     if not isinstance(raw, str) or not raw:
