@@ -637,3 +637,118 @@ def test_ops_requirement_round_trips_through_meta_dict(tmp_path: Path) -> None:
     # Empty string must survive: "unpinned" is not "unknown".
     assert meta.ops_requirement == ""
     assert meta.ops_min_version is None
+
+
+def test_library_versions_read_from_the_lib_header(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    d = tmp_path / "lib" / "charms" / "loki_k8s" / "v1"
+    d.mkdir(parents=True)
+    (d / "loki_push_api.py").write_text(
+        'LIBID = "abc123"\nLIBAPI = 1\nLIBPATCH = 4\n\nclass LokiPushApiProvider: ...\n'
+    )
+    assert read(tmp_path).library_versions == (("loki_k8s.loki_push_api", "1.4"),)
+
+
+def test_library_versions_key_each_module_separately(tmp_path: Path) -> None:
+    """One `lib/charms/<libname>/` can hold several modules, each with its own LIBPATCH."""
+    _ops_charm(tmp_path)
+    d = tmp_path / "lib" / "charms" / "observability_libs" / "v0"
+    d.mkdir(parents=True)
+    (d / "cert_handler.py").write_text("LIBAPI = 0\nLIBPATCH = 17\n")
+    (d / "juju_topology.py").write_text("LIBAPI = 0\nLIBPATCH = 6\n")
+
+    assert read(tmp_path).library_versions == (
+        ("observability_libs.cert_handler", "0.17"),
+        ("observability_libs.juju_topology", "0.6"),
+    )
+
+
+def test_library_versions_prefer_libapi_over_the_directory(tmp_path: Path) -> None:
+    """The assignment is what gets imported; the `v<N>` directory is only where it sits."""
+    _ops_charm(tmp_path)
+    d = tmp_path / "lib" / "charms" / "grafana_k8s" / "v0"
+    d.mkdir(parents=True)
+    (d / "grafana_dashboard.py").write_text("LIBAPI = 2\nLIBPATCH = 1\n")
+    assert read(tmp_path).library_versions == (("grafana_k8s.grafana_dashboard", "2.1"),)
+
+
+def test_library_versions_skip_modules_that_declare_no_version(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    d = tmp_path / "lib" / "charms" / "some_lib" / "v0"
+    d.mkdir(parents=True)
+    (d / "__init__.py").write_text("")
+    (d / "helpers.py").write_text("LIBAPI = 0\n")  # no LIBPATCH: not a library
+    meta = read(tmp_path)
+    assert meta.library_names == ("some_lib",)
+    assert meta.library_versions == ()
+
+
+def test_library_versions_exclude_the_charms_own_published_lib(tmp_path: Path) -> None:
+    """Publishing a library is not consuming one, the same as `library_names`."""
+    (tmp_path / "charmcraft.yaml").write_text("type: charm\nname: my-charm\n")
+    for lib in ("my_charm", "grafana_k8s"):
+        d = tmp_path / "lib" / "charms" / lib / "v0"
+        d.mkdir(parents=True)
+        (d / f"{lib}.py").write_text("LIBAPI = 0\nLIBPATCH = 3\n")
+
+    assert read(tmp_path).library_versions == (("grafana_k8s.grafana_k8s", "0.3"),)
+
+
+def test_library_versions_round_trip_through_meta_dict(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    d = tmp_path / "lib" / "charms" / "loki_k8s" / "v1"
+    d.mkdir(parents=True)
+    (d / "loki_push_api.py").write_text("LIBAPI = 1\nLIBPATCH = 4\n")
+    meta = read(tmp_path)
+    assert CharmMeta.from_dict(meta.to_dict()) == meta
+
+
+def test_charmlibs_specifiers_kept_as_written(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    (tmp_path / "requirements.txt").write_text(
+        "ops>=2.17\ncharmlibs-pathops>=1.0,<2\ncharmlibs_interfaces_ingress==0.3\ncharmlibs-apt\n"
+    )
+    meta = read(tmp_path)
+    assert meta.charmlibs_names == ("apt", "interfaces.ingress", "pathops")
+    assert meta.charmlibs_specifiers == (
+        ("apt", ""),
+        ("interfaces.ingress", "==0.3"),
+        ("pathops", ">=1.0,<2"),
+    )
+
+
+def test_charmlibs_specifiers_read_from_pyproject(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "x"\ndependencies = ["ops>=2.17", "charmlibs-pathops>=1.0"]\n'
+    )
+    assert read(tmp_path).charmlibs_specifiers == (("pathops", ">=1.0"),)
+
+
+def test_charmlibs_specifiers_handle_extras(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    (tmp_path / "requirements.txt").write_text("charmlibs-pathops[test]>=1.0\n")
+    assert read(tmp_path).charmlibs_specifiers == (("pathops", ">=1.0"),)
+
+
+def test_charmlibs_reached_only_by_import_have_no_specifier(tmp_path: Path) -> None:
+    """An import is a name and nothing else; absence here is not a bare requirement."""
+    _ops_charm(tmp_path)
+    _src(tmp_path, "from charmlibs import pathops\n")
+    meta = read(tmp_path)
+    assert meta.charmlibs_names == ("pathops",)
+    assert meta.charmlibs_specifiers == ()
+
+
+def test_charmlibs_specifier_stops_at_a_trailing_comment(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    (tmp_path / "requirements.txt").write_text("charmlibs-pathops>=1.0  # pinned by hand\n")
+    assert read(tmp_path).charmlibs_specifiers == (("pathops", ">=1.0"),)
+
+
+def test_charmlibs_specifier_stops_at_the_next_item_of_a_flow_sequence(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    (tmp_path / "charmcraft.yaml").write_text(
+        "type: charm\nname: x\nparts:\n  charm:\n    python-packages: [charmlibs-apt>=1, ops]\n"
+    )
+    assert read(tmp_path).charmlibs_specifiers == (("apt", ">=1"),)
