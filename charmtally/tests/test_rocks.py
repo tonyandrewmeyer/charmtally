@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 _HEADER = (
     "Team,Rock Name,Repository,Branch (if not the default),Source,"
-    "Rockcraft Path,Stars,Last Push,Archived,Fork,Notes\n"
+    "Rockcraft Path,Archived,Fork,Notes\n"
 )
 
 
@@ -27,7 +27,7 @@ def test_load_csv_reads_a_row(tmp_path: Path) -> None:
     path = _csv(
         tmp_path,
         "canonical,foo,https://github.com/canonical/foo,,github-code-search,"
-        "rockcraft.yaml,3,2026-01-01,FALSE,FALSE,",
+        "rockcraft.yaml,FALSE,FALSE,",
     )
 
     refs = rocks.load_csv(path)
@@ -38,9 +38,9 @@ def test_load_csv_reads_a_row(tmp_path: Path) -> None:
 def test_load_csv_drops_archived_and_forks(tmp_path: Path) -> None:
     path = _csv(
         tmp_path,
-        "c,live,https://github.com/c/live,,s,rockcraft.yaml,0,2026-01-01,FALSE,FALSE,",
-        "c,dead,https://github.com/c/dead,,s,rockcraft.yaml,0,2020-01-01,TRUE,FALSE,",
-        "c,forked,https://github.com/c/forked,,s,rockcraft.yaml,0,2026-01-01,FALSE,TRUE,",
+        "c,live,https://github.com/c/live,,s,rockcraft.yaml,FALSE,FALSE,",
+        "c,dead,https://github.com/c/dead,,s,rockcraft.yaml,TRUE,FALSE,",
+        "c,forked,https://github.com/c/forked,,s,rockcraft.yaml,FALSE,TRUE,",
     )
 
     assert [r.name for r in rocks.load_csv(path)] == ["live"]
@@ -49,8 +49,8 @@ def test_load_csv_drops_archived_and_forks(tmp_path: Path) -> None:
 def test_load_csv_drops_rows_without_a_repo_or_path(tmp_path: Path) -> None:
     path = _csv(
         tmp_path,
-        "c,norepo,,,s,rockcraft.yaml,0,2026-01-01,FALSE,FALSE,",
-        "c,nopath,https://github.com/c/nopath,,s,,0,2026-01-01,FALSE,FALSE,",
+        "c,norepo,,,s,rockcraft.yaml,FALSE,FALSE,",
+        "c,nopath,https://github.com/c/nopath,,s,,FALSE,FALSE,",
     )
 
     assert rocks.load_csv(path) == []

@@ -196,9 +196,8 @@ def test_enrich_one_request_per_repo():
         }
     )
     out = rockfind.enrich(client, refs)
-    assert [r.stars for r in out] == [7, 7]
-    assert out[0].last_push == "2026-08-01"
     assert out[0].archived is True
+    assert out[1].archived is True
     assert len([c for c in client.calls if c[0] == "/repos/o/r"]) == 1
 
 
@@ -263,7 +262,6 @@ def test_merge_preserves_curated_columns():
             repo_url="https://github.com/o/r",
             branch=None,
             path="rockcraft.yaml",
-            stars=12,
         ),
         rockfind.RockRef(
             team="o",
@@ -276,8 +274,7 @@ def test_merge_preserves_curated_columns():
     merged = {ref.key: ref for ref in rockfind.merge(existing, found)}
     kept = merged["https://github.com/o/r", "rockcraft.yaml"]
     assert (kept.team, kept.notes, kept.branch) == ("charm-tech", "reviewed", "main")
-    assert kept.stars == 12  # fresh data still wins for the search-derived columns
-    assert kept.name == "r"
+    assert kept.name == "r"  # fresh data still wins for the search-derived columns
     assert ("https://github.com/o/new", "rockcraft.yaml") in merged
     assert ("https://github.com/o/gone", "r.yaml") in merged  # not deleted
 
@@ -373,7 +370,6 @@ def test_cmd_search_end_to_end(tmp_path, monkeypatch, capsys):
     refs = rockfind.load(out)
     assert len(refs) == 1  # the fork is dropped
     assert refs[0].name == "mysql-rock"
-    assert refs[0].stars == 42
     assert refs[0].team == "canonical"
     assert "wrote 1 rows" in capsys.readouterr().err
 
