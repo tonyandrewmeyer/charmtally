@@ -24,20 +24,35 @@ Sub-metrics (v1)
 
 * `same_repo` — both members share the same `repo_url` (after
   stripping the `.git` suffix). True monorepo, no clone needed.
-* `shares_charmlib` — either member's `library_names` (the `lib/charms/<n>/`
-  vendored set, surfaced via `__meta__`) contains a name normalised
-  to the other side's name root. Strong signal that a shared
-  charmlib mediates between the two. `library_names` excludes the
-  charm's own published library, so a charm that merely publishes
-  `lib/charms/<own_name>/` no longer matches its pair partner's root
-  on the strength of publishing alone — the chip means one side
-  actually vendors the other's lib.
+* `sharing_mechanism` — how the two members share code, as one of
+  three values:
 
-Deferred to v2 (out of scope here)
+  * `charmlib` — either member's `library_names` (the `lib/charms/<n>/`
+    vendored set, surfaced via `__meta__`) contains a name normalised
+    to the other side's name root. Strong signal that a shared
+    charmlib mediates between the two. `library_names` excludes the
+    charm's own published library, so a charm that merely publishes
+    `lib/charms/<own_name>/` no longer matches its pair partner's root
+    on the strength of publishing alone — the value means one side
+    actually vendors the other's lib.
+  * `shared-src` — the two are in the same repo and their `src/`
+    trees name a module in common (`charm.py` excluded, since every
+    charm has one). Read off `src_modules` in `__meta__`, so this is
+    still a function of the scanned JSON rather than of the clones.
+  * `copy-paste` — the residual. Not a positive detection: it is what
+    is left when neither of the above fires, and covers both a genuine
+    copy-paste and any sharing these two signals cannot see.
 
-* `shared-src` vs `copy-paste` distinction within the same repo —
-  needs the clones plus a source diff.
+  `charmlib` wins over `shared-src` when both hold — it is the named,
+  intentional mechanism, and a monorepo pair mediated by a charmlib
+  usually shares module names too.
+
+Deferred (out of scope here)
+
 * `% unique code` — needs the clones plus a clone-aware metric.
+* A content-level `shared-src`: module names are compared, not module
+  bodies, so a same-repo pair that copied a module rather than sharing
+  one reads as `shared-src`.
 
 The detector is conservative on ambiguous roots (e.g.
 `prometheus-scrape-config-k8s` shouldn't pair with
@@ -65,7 +80,7 @@ class Pair:
     machine_repo_url: str
     confidence: str  # "high" | "medium"
     same_repo: bool
-    shares_charmlib: bool
+    sharing_mechanism: str  # "charmlib" | "shared-src" | "copy-paste"
 
 
 def _strip_suffix(name: str, suffixes: tuple[str, ...]) -> str:
@@ -137,6 +152,28 @@ def _shares_charmlib(
     return any(_normalise_lib_to_root(lib) == a_root for lib in b_libs)
 
 
+def _sharing_mechanism(
+    k: dict,
+    m: dict,
+    k_root: str,
+    m_root: str,
+    *,
+    same_repo: bool,
+) -> str:
+    """Classify how a pair shares code: charmlib, shared-src, or copy-paste.
+
+    The order is a precedence, not a search: `charmlib` is the named
+    mechanism and wins outright, `shared-src` only applies inside one
+    repo, and `copy-paste` is what is left over rather than something
+    detected.
+    """
+    if _shares_charmlib(k["libs"], m["libs"], k_root, m_root):
+        return "charmlib"
+    if same_repo and set(k["src_modules"]) & set(m["src_modules"]):
+        return "shared-src"
+    return "copy-paste"
+
+
 def find_pairs(results: dict) -> list[Pair]:
     """Return the list of k8s/machine pairs in the scanned corpus.
 
@@ -155,6 +192,7 @@ def find_pairs(results: dict) -> list[Pair]:
             "name": name,
             "repo_url": record.get("repo_url", ""),
             "libs": tuple(meta.get("library_names") or ()),
+            "src_modules": tuple(meta.get("src_modules") or ()),
         }
         if meta.get("has_containers"):
             entry["root"] = _normalise_k8s(name)
@@ -188,7 +226,7 @@ def find_pairs(results: dict) -> list[Pair]:
             same_repo = bool(k["repo_url"]) and _strip_dot_git(k["repo_url"]) == _strip_dot_git(
                 m["repo_url"]
             )
-            shares = _shares_charmlib(k["libs"], m["libs"], root, m["root"])
+            mechanism = _sharing_mechanism(k, m, root, m["root"], same_repo=same_repo)
             pairs.append(
                 Pair(
                     root=root,
@@ -198,7 +236,7 @@ def find_pairs(results: dict) -> list[Pair]:
                     machine_repo_url=m["repo_url"],
                     confidence=confidence,
                     same_repo=same_repo,
-                    shares_charmlib=shares,
+                    sharing_mechanism=mechanism,
                 )
             )
     pairs.sort(key=lambda p: (p.confidence != "high", p.root, p.k8s_name))

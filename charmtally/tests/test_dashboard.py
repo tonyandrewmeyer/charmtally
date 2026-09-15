@@ -128,13 +128,41 @@ def test_pairs_view_renders_when_pairs_passed() -> None:
             "machine_repo_url": "https://x/p",
             "confidence": "high",
             "same_repo": False,
-            "shares_charmlib": True,
+            "sharing_mechanism": "charmlib",
         },
     ]
     html = render({c["name"]: c for c in charms}, feats, pairs=pairs)
     assert 'id="pairs-view"' in html
     assert "postgresql-k8s" in html
-    assert "shared lib" in html
+    assert ">charmlib</span>" in html
+
+
+def test_pairs_view_renders_each_sharing_mechanism() -> None:
+    """All three values reach the page as their own chip, copy-paste included."""
+    feats = [_feature("f1")]
+    charms = [_charm("c1", present_features={"f1"}, all_features=["f1"])]
+
+    def _pair(root: str, mechanism: str) -> dict:
+        return {
+            "root": root,
+            "k8s_name": f"{root}-k8s",
+            "machine_name": root,
+            "k8s_repo_url": f"https://x/{root}-k8s",
+            "machine_repo_url": f"https://x/{root}",
+            "confidence": "high",
+            "same_repo": mechanism == "shared-src",
+            "sharing_mechanism": mechanism,
+        }
+
+    pairs = [
+        _pair("alpha", "charmlib"),
+        _pair("beta", "shared-src"),
+        _pair("gamma", "copy-paste"),
+    ]
+    html = render({c["name"]: c for c in charms}, feats, pairs=pairs)
+    assert ">charmlib</span>" in html
+    assert ">shared-src</span>" in html
+    assert ">copy-paste</span>" in html
 
 
 # ── filter bars ──────────────────────────────────────────────────────────────

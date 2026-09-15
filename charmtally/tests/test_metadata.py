@@ -204,6 +204,40 @@ def test_library_count_excludes_the_charms_own_published_lib(tmp_path: Path) -> 
     assert meta.provides_own_library is True
 
 
+def test_src_modules_lists_modules_and_packages_beside_charm_py(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "charm.py").write_text("# entry point\n")
+    (src / "manager.py").write_text("# workload manager\n")
+    (src / "constants.py").write_text("X = 1\n")
+    pkg = src / "workload"
+    pkg.mkdir()
+    (pkg / "__init__.py").write_text("")
+
+    assert read(tmp_path).src_modules == ("constants", "manager", "workload")
+
+
+def test_src_modules_skips_non_python_and_non_package_dirs(tmp_path: Path) -> None:
+    """`__pycache__` and a data directory are not modules the pair view cares about."""
+    _ops_charm(tmp_path)
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "charm.py").write_text("# entry point\n")
+    (src / "templates").mkdir()
+    (src / "templates" / "nginx.conf.j2").write_text("# not python\n")
+    (src / "__pycache__").mkdir()
+    (src / "__pycache__" / "charm.cpython-312.pyc").write_bytes(b"\x00")
+    (src / "README.md").write_text("# docs\n")
+
+    assert read(tmp_path).src_modules == ()
+
+
+def test_src_modules_empty_when_charm_has_no_src_dir(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    assert read(tmp_path).src_modules == ()
+
+
 def test_provides_own_library_true(tmp_path: Path) -> None:
     (tmp_path / "charmcraft.yaml").write_text("type: charm\nname: my-charm\n")
     own = tmp_path / "lib" / "charms" / "my_charm" / "v0"
@@ -404,6 +438,7 @@ def test_charm_meta_dict_round_trip() -> None:
         min_juju_version="3.6",
         library_count=2,
         library_names=("foo", "bar"),
+        src_modules=("manager", "workload"),
         provides_own_library=True,
         has_terraform_module=True,
         tooling=("tox", "just"),
