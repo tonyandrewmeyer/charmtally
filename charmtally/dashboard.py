@@ -30,7 +30,7 @@ import jinja2
 from . import adoption as _adoption
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterable, Sequence
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
 
@@ -136,6 +136,58 @@ def _primary_arch(meta: dict) -> str:
     return "delta"
 
 
+# Charms whose feature scores short-circuit to not-applicable, and so say
+# nothing about whether an `ops` pin was what held a feature back.
+_SCORING_NA_ARCH = ("reactive", "legacy-classic")
+
+# Where an unreadable pin and an unpinned one sort, after the numbered
+# majors. Two buckets rather than one: a charm that asks for bare `ops`
+# resolves to the newest release and could hold any feature in the
+# catalogue, whereas one we could not read a requirement for is a charm we
+# know nothing about. Collapsing them would report the first as ignorance.
+_OPS_UNPINNED = "unpinned"
+_OPS_UNKNOWN = "unknown"
+
+
+def _ops_cohort(meta: dict) -> str:
+    """Bucket a charm by the `ops` major version its dependencies ask for.
+
+    The major is the boundary because that is where `ops` itself breaks API;
+    any finer split would be a number we picked rather than one the library
+    draws. `ops_min_version` is a lower bound, so a cohort reads as "this
+    charm will not resolve an `ops` older than major N" — one pinned
+    `>=2.17` may well be running 3.x, and that is the point: it is allowed
+    to, so a feature it lacks is a feature it declined rather than one its
+    pin withheld.
+    """
+    requirement = meta.get("ops_requirement")
+    if requirement is None:
+        return _OPS_UNKNOWN
+    if not requirement:
+        return _OPS_UNPINNED
+    floor = meta.get("ops_min_version")
+    if not floor:
+        # A specifier with no lower bound at all (`<4`, `!=2.9`): the charm
+        # asked for something, but for nothing that names an oldest release.
+        return _OPS_UNKNOWN
+    return f"ops {floor.split('.')[0]}"
+
+
+def _ops_cohort_order(cohorts: Iterable[str]) -> list[str]:
+    """Display order for the cohorts present: majors ascending, then the other two.
+
+    Derived from the data rather than hardcoded, so the day a charm pins
+    `ops>=4` the dashboard grows a cohort instead of filing it under
+    unknown.
+    """
+    seen = set(cohorts)
+    majors = sorted(
+        (c for c in seen if c not in (_OPS_UNPINNED, _OPS_UNKNOWN)),
+        key=lambda c: int(c.split()[1]),
+    )
+    return [*majors, *(c for c in (_OPS_UNPINNED, _OPS_UNKNOWN) if c in seen)]
+
+
 def _juju_assertion(meta: dict) -> str | None:
     """Render a charm's `assumes:` Juju bounds as one specifier.
 
@@ -157,6 +209,17 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
 
     # Pre-bucket each charm into its primary architecture (single pick).
     arch_of_charm = {c["name"]: _primary_arch(c["features"].get("__meta__", {})) for c in charms}
+    # And by the `ops` major its dependencies ask for (#74). Reactive and
+    # legacy-classic charms are left out rather than bucketed: their feature
+    # scores are not-applicable by construction, so counting them would put
+    # a floor under every cohort they land in that has nothing to do with
+    # anyone's pin.
+    ops_cohort_of_charm = {
+        c["name"]: _ops_cohort(c["features"].get("__meta__", {}))
+        for c in charms
+        if arch_of_charm[c["name"]] not in _SCORING_NA_ARCH
+    }
+    ops_cohort_names = _ops_cohort_order(ops_cohort_of_charm.values())
 
     # Feature view rows.
     feature_rows: list[dict[str, Any]] = []
@@ -174,13 +237,21 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
         by_arch: dict[str, dict[str, int]] = {
             a: {"present": 0, "total": 0} for a in _ARCH_PRIORITY
         }
+        by_ops: dict[str, dict[str, int]] = {
+            c: {"present": 0, "total": 0} for c in ops_cohort_names
+        }
         for c in charms:
             rec = c["features"].get(fname, {})
             arch = arch_of_charm[c["name"]]
             by_arch[arch]["total"] += 1
+            cohort = ops_cohort_of_charm.get(c["name"])
+            if cohort is not None:
+                by_ops[cohort]["total"] += 1
             if rec.get("present"):
                 present += 1
                 by_arch[arch]["present"] += 1
+                if cohort is not None:
+                    by_ops[cohort]["present"] += 1
                 if len(exemplars) < 5:
                     exemplars.append(_exemplar(c, ref, rec.get("evidence", [])))
             else:
@@ -227,6 +298,26 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
                     "is_na": False,
                     "pct": pct,
                 })
+        # The same cells again, over the `ops` pin instead of the architecture
+        # (#74). A row that is low everywhere says the API went unused; one
+        # that climbs with the major says the charms without it are on an
+        # `ops` that predates it, which is a dependency bump rather than a
+        # decision anyone made about the API.
+        ops_adoption = []
+        for cohort in ops_cohort_names:
+            stats = by_ops[cohort]
+            if stats["total"] == 0:
+                continue
+            pct = 100 * stats["present"] // stats["total"]
+            ops_adoption.append({
+                "cohort": cohort,
+                "label": f"{pct}%",
+                "tooltip": (
+                    f"{stats['present']} / {stats['total']} charms "
+                    f"in the {cohort} cohort have this feature"
+                ),
+                "pct": pct,
+            })
         # Low-count flag: a feature with fewer than PRECISION_FLOOR positive
         # hits across the whole corpus is suspicious — usually it means the
         # detector is too strict. Suppress for features explicitly marked
@@ -242,6 +333,7 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
             "na": na,
             "exemplars": exemplars,
             "arch_adoption": arch_adoption,
+            "ops_adoption": ops_adoption,
             "low_count": low_count,
         })
 
