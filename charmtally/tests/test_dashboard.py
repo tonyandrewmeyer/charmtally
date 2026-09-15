@@ -19,6 +19,7 @@ def _empty_meta() -> dict:
         "charmcraft_plugins": [],
         "bases": [],
         "min_juju_version": None,
+        "max_juju_version": None,
         "library_count": 0,
         "provides_own_library": False,
         "has_terraform_module": False,
@@ -374,3 +375,28 @@ def test_unpinned_ops_is_shown_rather_than_omitted() -> None:
 
     charm = _charm("c1", present_features=set(), all_features=["thing"])
     assert "ops&nbsp;" not in render({charm["name"]: charm}, feats)
+
+
+def test_juju_range_shown_in_the_stack_column() -> None:
+    feats = [_feature("thing")]
+    charm = _charm(
+        "c0",
+        present_features=set(),
+        all_features=["thing"],
+        meta={"min_juju_version": "3.4", "max_juju_version": "4.0.0"},
+    )
+    html = render({charm["name"]: charm}, feats)
+    assert "juju&nbsp;&gt;=3.4,&lt;4.0.0" in html
+
+
+def test_juju_ceiling_alone_is_shown() -> None:
+    """A charm asserting only `juju < 4.0.0` used to read as asserting nothing."""
+    feats = [_feature("thing")]
+    charm = _charm(
+        "c0", present_features=set(), all_features=["thing"], meta={"max_juju_version": "4.0.0"}
+    )
+    html = render({charm["name"]: charm}, feats)
+    assert "juju&nbsp;&lt;4.0.0" in html
+
+    charm = _charm("c1", present_features=set(), all_features=["thing"])
+    assert "juju&nbsp;" not in render({charm["name"]: charm}, feats)

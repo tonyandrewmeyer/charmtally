@@ -33,7 +33,14 @@ Descriptive facts surfaced for the dashboard (no scoring rules attached):
     charmcraft_plugins    — distinct plugins under parts.*.plugin (uv, python,
                             charm, poetry, ...) — modern-stack signal
     bases                 — base/bases entries (e.g. ubuntu@22.04)
-    min_juju_version      — Juju version asserted in `assumes:` (or None)
+    min_juju_version      — lowest Juju version `assumes:` asserts as a
+                            floor (`juju >= 3.4`, or a bare `juju 3.4`), or
+                            None when it asserts no floor
+    max_juju_version      — the ceiling the same block asserts (`juju < 4.0.0`),
+                            or None. Its own field rather than a range string:
+                            a charm can assert either bound, both, or neither,
+                            and the common `postgresql-k8s` shape is a ceiling
+                            with no floor
     ops_requirement       — the `ops` dependency as the charm asks for it
                             (">=2.15", "==2.4.1", "" for an unpinned `ops`),
                             or None when nothing declares one. Empty string
@@ -117,8 +124,12 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 _SECRETY = re.compile(r"(password|token|secret|api[-_]?key)$", re.IGNORECASE)
-# Matches "juju >= 3.4", "juju>=3.4", "juju 3.4", etc. Captures the version.
-_JUJU_VERSION = re.compile(r"juju\s*[>=]*\s*(\d+(?:\.\d+)*)", re.IGNORECASE)
+# Matches "juju >= 3.4", "juju>=3.4", "juju < 4.0.0", "juju 3.4", etc.
+# Captures the comparison operator (empty for a bare version) and the version.
+# The operator has to be captured rather than skipped: `assumes: juju < 4.0.0`
+# is a ceiling, and reading it as a floor would report the charm as asserting
+# the opposite of what it says.
+_JUJU_VERSION = re.compile(r"juju\s*(>=|<=|==|>|<)?\s*(\d+(?:\.\d+)*)", re.IGNORECASE)
 # `pebble.Layer(...)` or `pebble.LayerDict(...)` construction in src/ —
 # strong signal that the charm drives a workload via pebble.
 _PEBBLE_LAYER_CALL = re.compile(r"\bpebble\.Layer(Dict)?\s*\(")
@@ -202,6 +213,7 @@ class CharmMeta:
     charmcraft_plugins: tuple[str, ...] = ()
     bases: tuple[str, ...] = ()
     min_juju_version: str | None = None
+    max_juju_version: str | None = None
     ops_requirement: str | None = None
     ops_requirement_source: str | None = None
     ops_min_version: str | None = None
@@ -249,6 +261,7 @@ class CharmMeta:
             "charmcraft_plugins": list(self.charmcraft_plugins),
             "bases": list(self.bases),
             "min_juju_version": self.min_juju_version,
+            "max_juju_version": self.max_juju_version,
             "ops_requirement": self.ops_requirement,
             "ops_requirement_source": self.ops_requirement_source,
             "ops_min_version": self.ops_min_version,
@@ -292,6 +305,7 @@ class CharmMeta:
             charmcraft_plugins=tuple(raw.get("charmcraft_plugins") or []),
             bases=tuple(raw.get("bases") or []),
             min_juju_version=raw.get("min_juju_version"),
+            max_juju_version=raw.get("max_juju_version"),
             ops_requirement=raw.get("ops_requirement"),
             ops_requirement_source=raw.get("ops_requirement_source"),
             ops_min_version=raw.get("ops_min_version"),
@@ -401,33 +415,60 @@ def _extract_bases(data: dict) -> list[str]:
     return out
 
 
-def _extract_min_juju_version(data: dict) -> str | None:
-    """Strip a Juju version assertion out of charmcraft.yaml `assumes:`.
+def _juju_version_key(v: str) -> tuple[int, ...]:
+    """Sort key for a dotted Juju version, tolerant of anything unparsable."""
+    try:
+        return tuple(int(p) for p in v.split("."))
+    except ValueError:
+        return (0,)
 
-    Returns the earliest version mentioned, or None if no `juju ...`
-    expression is found. Doesn't try to combine clauses across nested
-    any-of / all-of blocks — just scans the flattened textual content.
+
+def _extract_juju_versions(data: dict) -> tuple[str | None, str | None]:
+    """Strip the Juju version assertions out of charmcraft.yaml `assumes:`.
+
+    Returns ``(minimum, maximum)``: the lowest version asserted as a
+    floor and the highest asserted as a ceiling, either of which may be
+    None. A bare ``juju 3.4`` reads as a floor, as charmcraft treats it; ``==``
+    asserts both. Only the version is kept, not the operator, so an
+    inclusive ``<= 4.0.0`` is indistinguishable from ``< 4.0.0`` — a
+    distinction worth one bugfix release of Juju and not a field.
+
+    Where several bounds of a kind are mentioned the pair widens to the
+    hull of them: the lowest floor (which is what the old single-value
+    minimum already returned) and the highest ceiling. That is the reading
+    the common split assertion wants —
+
+        any-of: [all-of: [juju >= 2.9.49, juju < 3],
+                 all-of: [juju >= 3.4.3, juju < 4]]
+
+    is postgresql-k8s saying "2.9 or 3.4, not 3.0-3.3", and the tightest
+    ceiling in it (``< 3``) would report a charm that plainly runs on
+    Juju 3.6 as barred from it. The hull over-reports the gap in the
+    middle instead, which no consumer asks about.
+
+    Clauses aren't combined across the nested any-of / all-of blocks —
+    this just scans the flattened textual content — so the hull is the
+    honest limit of what it can say.
     """
     assumes = data.get("assumes")
     if not assumes:
-        return None
+        return None, None
     # Flatten to a string and regex-extract. Works for the common shapes:
     #   assumes: ["juju >= 3.4"]
     #   assumes: [juju >= 3.4, k8s-api]
-    #   assumes: [{all-of: ["juju >= 3.4"]}]
+    #   assumes: [{all-of: ["juju >= 3.4", "juju < 4.0.0"]}]
     text = yaml.safe_dump(assumes)
-    matches = _JUJU_VERSION.findall(text)
-    if not matches:
-        return None
-
-    # Pick the lowest version mentioned (the asserted minimum).
-    def _key(v: str) -> tuple[int, ...]:
-        try:
-            return tuple(int(p) for p in v.split("."))
-        except ValueError:
-            return (0,)
-
-    return min(matches, key=_key)
+    lower: list[str] = []
+    upper: list[str] = []
+    for op, version in _JUJU_VERSION.findall(text):
+        if op in ("", ">=", ">", "=="):
+            lower.append(version)
+        if op in ("<=", "<", "=="):
+            upper.append(version)
+    return (
+        min(lower, key=_juju_version_key) if lower else None,
+        max(upper, key=_juju_version_key) if upper else None,
+    )
 
 
 def _has_pebble_layer_evidence(charm_root: Path) -> bool:
@@ -784,6 +825,7 @@ def read(charm_root: Path) -> CharmMeta:
     plugins: list[str] = []
     bases: list[str] = []
     min_juju: str | None = None
+    max_juju: str | None = None
     charm_user: str | None = None
 
     for meta_path in _find_metadata_files(charm_root):
@@ -817,8 +859,8 @@ def read(charm_root: Path) -> CharmMeta:
         for b in _extract_bases(data):
             if b not in bases:
                 bases.append(b)
-        if min_juju is None:
-            min_juju = _extract_min_juju_version(data)
+        if min_juju is None and max_juju is None:
+            min_juju, max_juju = _extract_juju_versions(data)
         if charm_user is None:
             # charmcraft validates this against a literal enum, so anything
             # else in the file is a typo; record it as written rather than
@@ -958,6 +1000,7 @@ def read(charm_root: Path) -> CharmMeta:
         charmcraft_plugins=tuple(plugins),
         bases=tuple(bases),
         min_juju_version=min_juju,
+        max_juju_version=max_juju,
         ops_requirement=ops_requirement,
         ops_requirement_source=ops_source,
         ops_min_version=ops_min,
