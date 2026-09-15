@@ -21,6 +21,7 @@ from . import _ast as _ast_kinds
 from ._config import (
     _detect_pytest_config_key,
     _detect_relation_count,
+    _detect_repo_file,
     _detect_requirement,
     _detect_requires_interface,
     _detect_yaml_key,
@@ -137,9 +138,12 @@ def _from_nodes(walker: Callable[[SourceFile, dict], Iterator[ast.stmt | ast.exp
 
 
 # Run once per charm, reading the charm root directly: these are the kinds
-# that can see files `_select_files` never returns.
+# that can see files `_select_files` never returns. `repo-file` reads the
+# repo root instead, which is the only scope a monorepo sub-charm's CI
+# configuration is visible from.
 _CHARM_KINDS: dict[str, Callable[[CharmSource, dict], list[Evidence]]] = {
     "pytest-config-key": _detect_pytest_config_key,
+    "repo-file": _detect_repo_file,
     "requirement": _detect_requirement,
     "requires-interface": _detect_requires_interface,
     "relation-count": _detect_relation_count,

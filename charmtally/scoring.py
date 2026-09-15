@@ -196,6 +196,19 @@ def score_absent(
             )
         return Score(SCORE_NOT_APPLICABLE, "no integration tests present")
 
+    if feature_name == "testing.concierge":
+        # Only a charm with integration tests has an environment to provision,
+        # and the signal is read from the repo's CI rather than the charm's
+        # own tree — so a charm with no `tests/integration/` is not being
+        # told to adopt anything.
+        if meta.has_integration_tests:
+            return Score(
+                SCORE_WORTH_CONSIDERING,
+                "charm has tests/integration/ but its CI provisions Juju by hand — concierge "
+                "declares the environment instead, and is what the charm-tech workflows assume",
+            )
+        return Score(SCORE_NOT_APPLICABLE, "no integration tests to provision an environment for")
+
     if feature_name == "ops.typed-config.params":
         # A breakdown row rather than a recommendation: a charm that types
         # neither half is `ops.typed-config`'s finding, and a charm with no

@@ -152,7 +152,23 @@ Per Python file, backing the architecture and component-graph axes:
 
 File-independent, reading the charm root directly (these are the only ones
 that can see non-Python files — `_select_files` returns `*.py` only):
-`yaml-key` · `pytest-config-key` · `requires-interface` · `relation-count`.
+`yaml-key` · `pytest-config-key` · `requires-interface` · `relation-count` ·
+`requirement`.
+
+File-independent, reading the *repo* root: `repo-file`. It is the only
+detector that looks above the charm root, and the only one whose sweep
+descends into dotted directories, because the questions it answers — how is
+this charm built, tested and released — are answered in `.github/`, which a
+monorepo sub-charm does not own. The repo root is found by walking up for
+`.git` (`CharmSource.repo_root`), the same search `scan.head_sha` does, so
+the evidence and the SHA it is linked against agree; a charm root outside a
+checkout is its own repo root rather than escaping into whatever is above
+it. Its evidence paths stay charm-root-relative and keep their `..`
+segments, so `dashboard._repo_path` normalises the join with `subpath`
+rather than concatenating it. One workflow covering five sub-charms reads as
+present for all five: that is the honest per-charm answer, but it counts
+repos once per charm, so anything wanting a count of *decisions* groups by
+`repo_url`.
 
 A charm is matched against every feature and pattern, so `scan_charm`
 builds one `CharmSource` and passes it to every `detect_feature` call;

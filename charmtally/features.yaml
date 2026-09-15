@@ -528,6 +528,81 @@ features:
     verified: []
     negative: []
 
+  - name: testing.concierge
+    library: concierge
+    summary: The repo's CI provisions its test environment with Concierge.
+    scope: any
+    detect:
+      - kind: repo-file
+        files: [".github/workflows/*.yaml", ".github/workflows/*.yml"]
+        pattern: '\bconcierge\s+(prepare|restore|status)\b'
+      - kind: repo-file
+        files: [".github/workflows/*.yaml", ".github/workflows/*.yml"]
+        pattern: 'snap\s+install[^\n]*\bconcierge\b|CONCIERGE_[A-Z0-9_]+'
+      - kind: repo-file
+        files: ["concierge.yaml", "concierge.yml", "concierge-*.yaml", "concierge-*.yml"]
+    notes: |
+      The first `repo-file` detectors in the catalogue, and the reason the
+      kind exists: `_select_files` returns `*.py` only, and every other
+      file-independent detector globs from the *charm* root, so a monorepo
+      sub-charm can never see `.github/` — which is where the answer to this
+      question lives, for every charm in the repo.
+
+      Three detectors because the shape varies and none of them dominates.
+      A sample of 156 `canonical/*` workflow hits (2026-09-15) shows the
+      command form is the common one — `sudo concierge prepare --trace`,
+      usually a step or two after `sudo snap install concierge --classic` —
+      so the command and the install are matched separately: a workflow that
+      installs the snap and drives it from a script still counts.
+      `CONCIERGE_*` catches the env-var configuration form
+      (`CONCIERGE_JUJU_CHANNEL`, mongodb-k8s-operator). There is no
+      `canonical/setup-concierge` action to match: the request named one, but
+      it has no repository and a code search for it returns a single hit
+      across GitHub, that one a transcript rather than a workflow.
+
+      The third detector is the committed config — repo root only. Concierge
+      reads `concierge.yaml` from the working directory, so a root file is
+      what a CI step invoking it bare picks up; a deeper one
+      (`charm/concierge.yaml`) belongs to whatever runs in that directory and
+      would be attributed to every sibling sub-charm if it were globbed for,
+      which is a worse error than missing it.
+
+      Known false negative, sized 2026-09-15 against the 460 corpus repos
+      that are on GitHub at all (the other 111 are Launchpad or opendev and
+      have no Actions): a charm whose CI delegates to a reusable workflow in
+      *another* repo shows nothing in its own `.github/`. 61 repos / 85
+      charms match directly; another 46 repos / 53 charms call a workflow
+      that provisions with Concierge. So this feature reads about 62% of the
+      charms it should, and the number it reports is low by a third rather
+      than by a rounding error.
+
+      The gap is concentrated rather than spread: seven workflow files
+      account for all 53 charms, six of them in `canonical/observability`
+      (`_charm-quality-checks.yaml`, `_charm-release.yaml`,
+      `charm-pull-request.yaml`, `charm-release.yaml`,
+      `rock-pull-request.yaml`, `rock-release-dev.yaml`) and the seventh
+      `canonical/workflows-team`'s `terraform.yaml`, which is how the four
+      temporal charms get there. It is one team's estate, which is also why
+      closing it would move a single library's adoption rather than the
+      ecosystem's. The two largest reusable-workflow libraries,
+      `canonical/data-platform-workflows` (46 files) and
+      `canonical/operator-workflows` (22), do not use Concierge at all, so
+      the gap does not grow with them.
+
+      Closing it means fetching a workflow out of a repo the scan has not
+      cloned, and following `uses:` transitively — two of the seven are only
+      reached at a second hop. Tracked as charmtally#121. 65 of the 460 repos have no `.github/` at all,
+      and 24 of the rest call a workflow that could not be read (private, or
+      renamed), which is the residual the sizing cannot account for.
+
+      Attribution: a monorepo's one workflow reads as present for every
+      sub-charm it covers, so this counts repos once per charm rather than
+      once. That is the honest per-charm answer — all five sub-charms really
+      are tested under Concierge — but it is not a count of *decisions*;
+      anything wanting that should group by `repo_url`.
+    verified: []
+    negative: []
+
   - name: charmlibs.namespace
     library: charmlibs
     summary: Charm imports a library from the `charmlibs` namespace package.
