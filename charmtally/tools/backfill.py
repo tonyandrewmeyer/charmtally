@@ -234,12 +234,21 @@ def _git_out(args: list[str], cwd: Path | None = None, timeout: int = 300) -> st
     return None if out is None else out.strip()
 
 
-def ensure_full_clone(repo_url: str, dest: Path, *, branch: str | None = None) -> Path | None:
+def ensure_full_clone(
+    repo_url: str, dest: Path, *, branch: str | None = None, blobless: bool = False
+) -> Path | None:
     """Clone `repo_url` into `dest` with full history, or refresh what's there.
 
     A clone left behind by the weekly `scan` is shallow; `--unshallow` it
     rather than refusing, so pointing this at an existing workdir degrades to
     "slow first run" instead of "every checkout fails".
+
+    `blobless` adds `--filter=blob:none`: every commit is still there, but
+    file contents are fetched only when something asks for them. For a caller
+    that reads commit metadata and never checks a tree out — `--commit-dates`
+    — that is the whole corpus in a few hundred MiB instead of several GiB.
+    It degrades rather than breaks a later replay in the same workdir: the
+    checkout still works, it just fetches the blobs it needs first.
 
     Returns None if the repo could not be made available at all.
     """
@@ -253,6 +262,8 @@ def ensure_full_clone(repo_url: str, dest: Path, *, branch: str | None = None) -
         return dest if (dest / ".git").exists() else None
     dest.parent.mkdir(parents=True, exist_ok=True)
     cmd = ["clone", "--quiet", "--no-single-branch"]
+    if blobless:
+        cmd.append("--filter=blob:none")
     if branch:
         cmd += ["--branch", branch]
     cmd += [repo_url, str(dest)]
@@ -800,6 +811,252 @@ def run_rocks(args: argparse.Namespace, dates: list[dt.date]) -> int:
     return 0
 
 
+# ── commit dates ────────────────────────────────────────────────────────────
+
+
+def repo_slug(repo_url: str) -> str:
+    """Return the clone directory name for `repo_url`, matching `CharmRef.slug`.
+
+    The commit-date mode reads its repo list off the snapshots rather than
+    the corpus CSV — the snapshots are what it is filling in, and the CSV has
+    drifted since the oldest of them — so it has to derive the slug the same
+    way `CharmRef` does instead of being handed one.
+    """
+    return repo_url.rstrip("/").rsplit("/", 1)[-1].removesuffix(".git")
+
+
+def snapshot_shas(snap: dict) -> dict[str, set[str]]:
+    """Map repo_url → the commits this snapshot recorded readings at.
+
+    A monorepo contributes one SHA for all its sub-charms: `repo_sha` is the
+    repo's HEAD at scan time, which is exactly what `last_commit` dates.
+    """
+    out: dict[str, set[str]] = {}
+    for slug, charm in snap.items():
+        if slug.startswith("__"):
+            continue
+        meta = charm.get("features", {}).get("__meta__")
+        sha = meta.get("repo_sha") if isinstance(meta, dict) else None
+        repo_url = charm.get("repo_url")
+        if sha and repo_url:
+            out.setdefault(repo_url, set()).add(sha)
+    return out
+
+
+def commit_dates(dest: Path, shas: Iterable[str]) -> dict[str, str]:
+    """Map each SHA to its ISO-8601 committer date, skipping ones git can't find.
+
+    One `git show` for the whole repo rather than one per SHA: a repo carries
+    up to 37 of them, one per snapshot, and the per-SHA form spends more time
+    starting git than reading objects. A single missing object fails the
+    whole batch, though — a force-push or a rewritten branch drops commits
+    the snapshots still name — so a failed batch retries one at a time to
+    salvage the rest.
+    """
+    wanted = sorted(shas)
+    if not wanted:
+        return {}
+    batch = _git_out(["show", "-s", "--format=%H %cI", *wanted], dest)
+    if batch is None:
+        found: dict[str, str] = {}
+        for sha in wanted:
+            one = _git_out(["show", "-s", "--format=%H %cI", sha], dest)
+            if one:
+                found.update(_parse_commit_dates(one))
+        return found
+    return _parse_commit_dates(batch)
+
+
+def _parse_commit_dates(out: str) -> dict[str, str]:
+    """Parse `%H %cI` lines into {sha: date}."""
+    found: dict[str, str] = {}
+    for line in out.splitlines():
+        sha, _, stamp = line.strip().partition(" ")
+        if sha and stamp:
+            found[sha] = stamp
+    return found
+
+
+def resolve_commit_dates(wanted: dict[str, set[str]], clones: Path) -> dict[tuple[str, str], str]:
+    """Resolve every (repo_url, sha) pair to a committer date.
+
+    Missing pairs are simply absent from the result; the caller writes those
+    as an explicit null, because "we looked and could not tell" has to be
+    distinguishable from a charm this pass never considered.
+    """
+    resolved: dict[tuple[str, str], str] = {}
+    for repo_url, shas in sorted(wanted.items()):
+        dest = clones / repo_slug(repo_url)
+        if not (dest / ".git").exists():
+            continue
+        for sha, stamp in commit_dates(dest, shas).items():
+            resolved[repo_url, sha] = stamp
+    return resolved
+
+
+def has_commit_dates(path: Path) -> bool:
+    """Whether this snapshot already carries `last_commit` on any charm."""
+    try:
+        snap = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return False
+    return any(
+        "last_commit" in (charm.get("features", {}).get("__meta__") or {})
+        for slug, charm in snap.items()
+        if not slug.startswith("__")
+    )
+
+
+def _set_last_commit(meta: dict, stamp: str | None) -> None:
+    """Set `last_commit` in the position a fresh scan would write it.
+
+    `CharmMeta.to_dict` emits it immediately after `repo_sha`, so inserting it
+    there rather than appending keeps a backfilled `__meta__` byte-identical
+    in shape to a scanned one. It also halves the diff against the committed
+    snapshots: appending would move the trailing comma on whatever key
+    happens to be last, rewriting a line per charm for no reason.
+    """
+    rebuilt = {}
+    for key, value in meta.items():
+        if key == "last_commit":
+            continue  # re-inserted below, in case of a re-run
+        rebuilt[key] = value
+        if key == "repo_sha":
+            rebuilt["last_commit"] = stamp
+    if "last_commit" not in rebuilt:
+        rebuilt["last_commit"] = stamp
+    meta.clear()
+    meta.update(rebuilt)
+
+
+def merge_commit_dates(path: Path, resolved: dict[tuple[str, str], str]) -> tuple[int, int]:
+    """Write `last_commit` into every charm of an existing snapshot.
+
+    A merge like `merge_rocks_block`, and for the same reason: the readings
+    in these files are right, and one `__meta__` key is all this mode has an
+    opinion about. Every charm gets the key even when the date could not be
+    resolved — `adoption.has_commit_dates` reads key presence to decide
+    whether the snapshot can be filtered at all, so a partial write must
+    still say "this pass looked here".
+
+    Returns `(dated, undatable)`.
+    """
+    snap: dict = json.loads(path.read_text())
+    dated = undatable = 0
+    for slug, charm in snap.items():
+        if slug.startswith("__"):
+            continue
+        meta = charm.get("features", {}).get("__meta__")
+        if not isinstance(meta, dict):
+            continue
+        sha = meta.get("repo_sha")
+        stamp = resolved.get((charm.get("repo_url"), sha)) if sha else None
+        _set_last_commit(meta, stamp)
+        if stamp:
+            dated += 1
+        else:
+            undatable += 1
+    provenance = snap.get("__backfill__")
+    if isinstance(provenance, dict):
+        provenance["commit_dates"] = (
+            f"backfilled from repo_sha ({dated} dated, {undatable} undatable)"
+        )
+    path.write_text(json.dumps(snap, indent=2) + "\n")
+    return dated, undatable
+
+
+def run_commit_dates(args: argparse.Namespace, dates: list[dt.date]) -> int:
+    """`--commit-dates` mode: date the readings already in the snapshots.
+
+    `adoption.active_charms` drops charms dormant for two years, but the
+    committed history pre-dates the `last_commit` field, so every one of
+    those points would ride a wider denominator than the scans that follow
+    and show a step change that is not adoption. Every snapshot already
+    records the `repo_sha` each reading came from, and a SHA dates itself —
+    so this resolves them instead of re-scanning, which is one clone pass
+    over the corpus rather than 37 replays of it.
+
+    Only dates that already have a snapshot are considered, like `--rocks`:
+    there is nothing to date in a file that does not exist.
+    """
+    planned: list[tuple[dt.date, Path]] = []
+    for date in dates:
+        path = args.snapshots_dir / f"scored-{date.isoformat()}.json"
+        if not path.is_file():
+            continue
+        if not args.force and has_commit_dates(path):
+            continue
+        planned.append((date, path))
+    if not planned:
+        print("nothing to do", file=sys.stderr)
+        return 0
+
+    wanted: dict[str, set[str]] = {}
+    for _, path in planned:
+        for repo_url, shas in snapshot_shas(json.loads(path.read_text())).items():
+            wanted.setdefault(repo_url, set()).update(shas)
+    repo_urls = sorted(wanted)
+    pairs = sum(len(v) for v in wanted.values())
+    print(
+        f"plan: {len(planned)} snapshots ({planned[0][0]} → {planned[-1][0]}), "
+        f"{pairs} commits across {len(repo_urls)} repos",
+        file=sys.stderr,
+    )
+    if args.dry_run:
+        for date, _ in planned:
+            print(f"  {date}", file=sys.stderr)
+        return 0
+
+    clones = args.workdir / "charms"
+    if not args.skip_prepare:
+        print(f"… cloning {len(repo_urls)} repos with full history", file=sys.stderr)
+        failures = prepare_url_clones(repo_urls, clones, jobs=args.jobs)
+        print(f"prepare done ({failures} failed)", file=sys.stderr)
+
+    print(f"… resolving {pairs} commits", file=sys.stderr)
+    resolved = resolve_commit_dates(wanted, clones)
+    print(f"resolved {len(resolved)}/{pairs}", file=sys.stderr)
+
+    for _date, path in planned:
+        dated, undatable = merge_commit_dates(path, resolved)
+        print(f"wrote last_commit into {path} ({dated} dated, {undatable} undatable)")
+    return 0
+
+
+def prepare_url_clones(repo_urls: list[str], clones: Path, *, jobs: int = DEFAULT_JOBS) -> int:
+    """Full-clone (or refresh) every repo named by URL. Returns the failure count.
+
+    `prepare_clones`' sibling for a caller holding URLs rather than
+    `CharmRef`s. It writes into the same `charms/` tree under the same slug,
+    so a workdir the charm replay has already built is reused rather than
+    cloned twice — a detached HEAD left behind by a replay is no obstacle to
+    reading a commit date out of the object store.
+
+    Blobless, because the caller reads `%cI` and nothing else. Cloning the
+    trees as well is the difference between a few hundred MiB and several
+    GiB across ~580 repos, and the big ones (postgresql, opensearch) are
+    slow enough to time out when a dozen run at once.
+    """
+    clones.mkdir(parents=True, exist_ok=True)
+    total = len(repo_urls)
+    done = 0
+
+    def one(repo_url: str) -> bool:
+        dest = clones / repo_slug(repo_url)
+        return ensure_full_clone(repo_url, dest, blobless=True) is not None
+
+    failures = 0
+    with ThreadPoolExecutor(max_workers=max(1, jobs)) as pool:
+        for repo_url, ok in zip(repo_urls, pool.map(one, repo_urls), strict=True):
+            done += 1
+            if not ok:
+                failures += 1
+                print(f"  [{done}/{total}] {repo_url}: clone failed", file=sys.stderr)
+            elif done % 25 == 0:
+                print(f"  [{done}/{total}] cloned", file=sys.stderr)
+    return failures
+
+
 # ── CLI ─────────────────────────────────────────────────────────────────────
 
 
@@ -877,6 +1134,14 @@ def build_parser() -> argparse.ArgumentParser:
         "snapshot are touched.",
     )
     p.add_argument(
+        "--commit-dates",
+        action="store_true",
+        help="Backfill `__meta__.last_commit` into existing snapshots by "
+        "resolving the `repo_sha` each reading already records to its "
+        "committer date. One clone pass, no re-scan. Only dates that already "
+        "have a snapshot are touched.",
+    )
+    p.add_argument(
         "--rocks-csv",
         type=Path,
         default=DEFAULT_ROCKS_CSV,
@@ -932,6 +1197,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"end not given; considering every date up to {end}", file=sys.stderr)
 
     dates = weekly_dates(args.start, end, args.weekday)
+    if args.commit_dates:
+        # Merges into snapshots that already exist, so it plans its own range
+        # for the same reason --rocks does.
+        args.workdir.mkdir(parents=True, exist_ok=True)
+        return run_commit_dates(args, dates)
     if args.rocks:
         # The rocks half merges into snapshots that already exist, so it plans
         # its own range rather than sharing the "skip dates already written"

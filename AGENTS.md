@@ -78,13 +78,21 @@ rocks.csv ─────────────────► scan-rocks ─�
   snapshots `trend` reads. Distinct from `trend.py`, which covers the whole
   catalogue and answers "what changed". A metric returns `None` for a
   snapshot whose inputs weren't scanned yet, so a newly added metric shows a
-  short series rather than a fake run of zeros. The default denominator is
-  `eligible_charms` — the corpus minus reactive and legacy-classic charms —
-  but it is a default, not a law: it excludes charms that could never adopt
-  an *ops-era API*, so a metric about tooling that works whatever the charm
-  is built on (jubilant) or about a population that isn't charms at all
-  (rootless, which spans rocks + k8s charms) sets its own denominator and
-  names it in `Metric.denominator_note`, which the card renders.
+  short series rather than a fake run of zeros. Every denominator sits on
+  `active_charms` — charms whose repo saw a commit in the two years before
+  *that snapshot's* date, read off `__meta__.last_commit` — because a charm
+  nobody has touched since before an API existed measures abandonment, not
+  adoption. Dormancy is dated per snapshot so a point reports the corpus as
+  it stood then, and a snapshot with no `last_commit` keeps every charm and
+  is flagged `partial`: the committed history pre-dates the field, so its
+  points ride a wider denominator than today's and must say so. The default
+  denominator narrows once more to `eligible_charms` — active minus reactive
+  and legacy-classic — but that is a default, not a law: it excludes charms
+  that could never adopt an *ops-era API*, so a metric about tooling that
+  works whatever the charm is built on (jubilant) or about a population that
+  isn't charms at all (rootless, which spans rocks + k8s charms) sets its own
+  denominator and names it in `Metric.denominator_note`, which the card
+  renders. Activity is not one of the cuts a metric opts out of.
 - `charmtally/snapshot.py` — thins a scored file into the dated snapshot the
   trend and adoption pages read. The snapshots are the entire history and
   cannot be regenerated, so what goes in stays in git forever; `evidence` and
@@ -305,6 +313,15 @@ Not part of the pipeline; each is run with `uv run python -m charmtally.tools.X`
   written as `readable: false`, which means "we looked and failed". Fixed
   membership applies here too, and `git show` does not follow renames, so a
   rockcraft.yaml that has moved reads as absent before the move.
+  `--commit-dates` is the cheap third mode: it fills `__meta__.last_commit`
+  into snapshots that pre-date the field by resolving the `repo_sha` each
+  reading already records to its committer date, so `adoption.active_charms`
+  can filter the whole history instead of flagging most of it `partial`. It
+  **merges** like `--rocks`, and it does **not** re-scan — a SHA dates
+  itself, so this is one clone pass over the corpus rather than 37 replays
+  of it. Every charm gets the key even when the SHA is gone (a force-push
+  drops commits the snapshots still name); the value is then null, because
+  `adoption` reads key *presence* to tell "we looked" from "we never did".
 - `rockfind.py` — builds a rocks corpus CSV from GitHub code search
   (`filename:rockcraft.yaml`). The REST search endpoint speaks the *legacy*
   query language: `path:` matches a directory there, so only `filename:`

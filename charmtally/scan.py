@@ -48,7 +48,11 @@ def scan_charm(
     in the per-charm ``__meta__`` block as ``architecture: [name, ...]``.
     The scoring layer uses these as inputs to per-feature gap rules.
     """
-    meta = dataclasses.replace(metadata.read(charm_root), repo_sha=head_sha(charm_root))
+    meta = dataclasses.replace(
+        metadata.read(charm_root),
+        repo_sha=head_sha(charm_root),
+        last_commit=head_commit_date(charm_root),
+    )
     # One read-and-parse pass over the charm's Python files, shared by every
     # feature and pattern below.
     source = CharmSource(charm_root)
@@ -182,16 +186,16 @@ def _git(args: list[str], cwd: Path | None = None, timeout: int = 120) -> bool:
     return True
 
 
-def head_sha(charm_root: Path) -> str | None:
-    """Return the commit SHA of the checkout containing `charm_root`.
+def _git_line(args: list[str], charm_root: Path) -> str | None:
+    """Run a read-only git command in `charm_root`, returning its single line.
 
-    Returns None when `charm_root` isn't inside a git checkout (a plain
-    directory passed to `charmtally local`, say). Git searches upwards, so
-    this resolves correctly for a monorepo sub-charm directory too.
+    Returns None when the command fails for any reason — most often because
+    `charm_root` isn't inside a git checkout (a plain directory passed to
+    `charmtally local`, say).
     """
     try:
         proc = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
+            ["git", *args],
             cwd=str(charm_root),
             check=True,
             capture_output=True,
@@ -201,6 +205,34 @@ def head_sha(charm_root: Path) -> str | None:
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):
         return None
     return proc.stdout.strip() or None
+
+
+def head_sha(charm_root: Path) -> str | None:
+    """Return the commit SHA of the checkout containing `charm_root`.
+
+    Returns None when `charm_root` isn't inside a git checkout. Git searches
+    upwards, so this resolves correctly for a monorepo sub-charm directory
+    too.
+    """
+    return _git_line(["rev-parse", "HEAD"], charm_root)
+
+
+def head_commit_date(charm_root: Path) -> str | None:
+    """Return the committer date of HEAD, as an ISO-8601 string.
+
+    This dates the *repository*, not the charm directory: on a monorepo every
+    sub-charm gets the same answer. That is deliberate twice over. It is the
+    signal we actually want — "is anyone still working in here" is a fact
+    about the repo, and a sub-charm in a live monorepo is not dormant just
+    because its own directory has been quiet. It is also the only one the
+    weekly scan can answer: its clones are `--depth 1`, so a path-scoped
+    `git log` would see one commit and report nothing for every charm that
+    commit didn't touch.
+
+    Committer date rather than author date, matching `backfill.cutoff`, so a
+    replayed reading and a scanned one order the same way.
+    """
+    return _git_line(["log", "-1", "--format=%cI", "HEAD"], charm_root)
 
 
 def refresh_clone(dest: Path, ref: CharmRef) -> bool:

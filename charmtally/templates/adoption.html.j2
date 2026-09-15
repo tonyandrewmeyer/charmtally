@@ -145,12 +145,19 @@
 {% endfor %}
 
 <p class="meta">
-  Unless a card says otherwise, the denominator is <em>eligible</em> charms:
-  the scanned corpus minus reactive and legacy-classic charms, which pre-date
-  ops and could never adopt these APIs. Metrics about tooling that works
-  whatever the charm is built on — Jubilant, say — measure against the whole
-  corpus instead, and name that on the card. The corpus itself grows between
-  scans, so read a series as a share, not as a count.
+  Every denominator on this page counts only <em>actively-maintained</em>
+  charms: those whose repository has seen a commit in the two years before
+  that snapshot&rsquo;s date. A charm nobody has touched since before these
+  APIs existed is not one anyone is going to migrate, so counting it would
+  measure abandonment rather than adoption.
+</p>
+<p class="meta">
+  Unless a card says otherwise, the denominator narrows further to
+  <em>eligible</em> charms: active charms minus reactive and legacy-classic
+  ones, which pre-date ops and could never adopt these APIs. Metrics about
+  tooling that works whatever the charm is built on — Jubilant, say — measure
+  against every active charm instead, and name that on the card. The corpus
+  itself grows between scans, so read a series as a share, not as a count.
 </p>
 
 <script type="application/json" id="adoption-metrics-data">{{ chart_data|tojson }}</script>
