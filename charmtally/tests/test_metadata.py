@@ -163,7 +163,46 @@ def test_min_juju_version_from_assumes_list(tmp_path: Path) -> None:
     (tmp_path / "charmcraft.yaml").write_text(
         "type: charm\nname: c\nassumes: ['juju >= 3.4', 'k8s-api']\n"
     )
-    assert read(tmp_path).min_juju_version == "3.4"
+    meta = read(tmp_path)
+    assert meta.min_juju_version == "3.4"
+    assert meta.max_juju_version is None
+
+
+def test_max_juju_version_from_upper_bound_only(tmp_path: Path) -> None:
+    """The postgresql-k8s shape: a ceiling and no floor at all."""
+    (tmp_path / "charmcraft.yaml").write_text("type: charm\nname: c\nassumes: ['juju < 4.0.0']\n")
+    meta = read(tmp_path)
+    assert meta.min_juju_version is None
+    assert meta.max_juju_version == "4.0.0"
+
+
+def test_juju_version_range(tmp_path: Path) -> None:
+    (tmp_path / "charmcraft.yaml").write_text(
+        "type: charm\nname: c\nassumes:\n  - all-of: ['juju >= 3.4', 'juju < 4.0.0']\n"
+    )
+    meta = read(tmp_path)
+    assert meta.min_juju_version == "3.4"
+    assert meta.max_juju_version == "4.0.0"
+
+
+def test_juju_versions_are_the_hull_of_a_split_assertion(tmp_path: Path) -> None:
+    """postgresql-k8s's shape: two disjoint ranges, read as the range they span."""
+    (tmp_path / "charmcraft.yaml").write_text(
+        "type: charm\nname: c\nassumes:\n"
+        "  - any-of:\n"
+        "      - all-of: ['juju >= 2.9.49', 'juju < 3']\n"
+        "      - all-of: ['juju >= 3.4.3', 'juju < 4']\n"
+    )
+    meta = read(tmp_path)
+    assert meta.min_juju_version == "2.9.49"
+    assert meta.max_juju_version == "4"
+
+
+def test_juju_version_bare_reads_as_a_floor(tmp_path: Path) -> None:
+    (tmp_path / "charmcraft.yaml").write_text("type: charm\nname: c\nassumes: ['juju 3.4']\n")
+    meta = read(tmp_path)
+    assert meta.min_juju_version == "3.4"
+    assert meta.max_juju_version is None
 
 
 def test_min_juju_version_from_assumes_nested(tmp_path: Path) -> None:
@@ -176,7 +215,9 @@ def test_min_juju_version_from_assumes_nested(tmp_path: Path) -> None:
 
 def test_min_juju_version_absent(tmp_path: Path) -> None:
     _ops_charm(tmp_path)
-    assert read(tmp_path).min_juju_version is None
+    meta = read(tmp_path)
+    assert meta.min_juju_version is None
+    assert meta.max_juju_version is None
 
 
 def test_library_count(tmp_path: Path) -> None:
@@ -436,6 +477,7 @@ def test_charm_meta_dict_round_trip() -> None:
         charmcraft_plugins=("uv",),
         bases=("ubuntu@24.04",),
         min_juju_version="3.6",
+        max_juju_version="4.0.0",
         library_count=2,
         library_names=("foo", "bar"),
         src_modules=("manager", "workload"),

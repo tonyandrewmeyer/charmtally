@@ -136,6 +136,19 @@ def _primary_arch(meta: dict) -> str:
     return "delta"
 
 
+def _juju_assertion(meta: dict) -> str | None:
+    """Render a charm's `assumes:` Juju bounds as one specifier.
+
+    ">=3.4", "<4.0.0", ">=3.4,<4.0.0", or None when the charm asserts
+    neither bound. One cell rather than two because the floor and the
+    ceiling answer the same question, and the ceiling is the half that
+    decides whether the charm can be deployed on Juju 4 at all.
+    """
+    lo = meta.get("min_juju_version")
+    hi = meta.get("max_juju_version")
+    return ",".join(b for b in (f">={lo}" if lo else "", f"<{hi}" if hi else "") if b) or None
+
+
 def render(results: dict, features: list, ref: str = "main", *, pairs: list | None = None) -> str:
     """Render the survey results as a standalone HTML dashboard."""
     charms = [v for k, v in results.items() if not k.startswith("__")]
@@ -282,13 +295,14 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
         plugins = list(m.get("charmcraft_plugins") or [])
         bases = list(m.get("bases") or [])
         tooling = list(m.get("tooling") or [])
+        juju_assertion = _juju_assertion(m)
         # Free-text blob behind the search box's `stack:` field.
         stack_text = " ".join([
             "k8s" if m.get("has_containers") else "machine",
             *plugins,
             *bases,
             *tooling,
-            f"juju {m['min_juju_version']}" if m.get("min_juju_version") else "",
+            f"juju {juju_assertion}" if juju_assertion else "",
             # `ops` with no specifier is a finding, so it gets a searchable
             # word rather than falling through the falsy branch as unknown.
             f"ops {m['ops_requirement'] or 'unpinned'}"
@@ -319,7 +333,7 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
             "library_count": m.get("library_count", 0),
             "plugins": plugins,
             "bases": bases,
-            "min_juju": m.get("min_juju_version"),
+            "juju_assertion": juju_assertion,
             "ops_requirement": m.get("ops_requirement"),
             "tooling": tooling,
             "stack_text": stack_text,
