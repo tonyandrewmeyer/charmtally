@@ -2591,3 +2591,80 @@ def test_context_identity_catalogue_feature_fires_on_either_keyword(tmp_path: Pa
 
     (tmp_path / "tests" / "unit" / "test_charm.py").write_text("ctx = Context(MyCharm)\n")
     assert detect_feature(tmp_path, feature) == []
+
+
+# ── ops.tracing.manual ───────────────────────────────────────────────────────
+
+
+def test_manual_tracing_fires_on_an_opentelemetry_import(tmp_path: Path) -> None:
+    _write_charm(tmp_path, "from opentelemetry import trace\n")
+    ev = detect_feature(tmp_path, _catalogue_feature("ops.tracing.manual"))
+    assert [e.detector_kind for e in ev] == ["import"]
+
+
+def test_manual_tracing_fires_on_a_span_context_manager(tmp_path: Path) -> None:
+    _write_charm(
+        tmp_path,
+        """
+def _reconcile(self):
+    with self.tracer.start_as_current_span("workload-restart"):
+        self._restart()
+""",
+    )
+    ev = detect_feature(tmp_path, _catalogue_feature("ops.tracing.manual"))
+    assert [e.detector_kind for e in ev] == ["call"]
+
+
+def test_manual_tracing_fires_on_the_span_decorator(tmp_path: Path) -> None:
+    """The decorator form is a call too, so the one suffix covers both."""
+    _write_charm(
+        tmp_path,
+        """
+@tracer.start_as_current_span("backup")
+def _on_backup(self, event):
+    pass
+""",
+    )
+    assert detect_feature(tmp_path, _catalogue_feature("ops.tracing.manual"))
+
+
+def test_manual_tracing_fires_on_set_destination(tmp_path: Path) -> None:
+    _write_charm(
+        tmp_path,
+        """
+def __init__(self, framework):
+    ops.tracing.set_destination(url=self.config["tracing-url"], ca=None)
+""",
+    )
+    assert detect_feature(tmp_path, _catalogue_feature("ops.tracing.manual"))
+
+
+def test_manual_tracing_absent_for_an_uninstrumented_charm(tmp_path: Path) -> None:
+    """The dependency alone is `ops.tracing`; nothing here reads as manual."""
+    _write_charm(
+        tmp_path,
+        """
+import ops
+
+
+class Charm(ops.CharmBase):
+    def __init__(self, framework):
+        super().__init__(framework)
+        framework.observe(self.on.start, self._on_start)
+""",
+    )
+    (tmp_path / "requirements.txt").write_text("ops[tracing] ~= 2.21\n")
+    assert detect_feature(tmp_path, _catalogue_feature("ops.tracing.manual")) == []
+
+
+def test_manual_tracing_ignores_a_same_named_charm_helper(tmp_path: Path) -> None:
+    """`set_destination` is only matched through a `tracing.` attribute chain."""
+    _write_charm(
+        tmp_path,
+        """
+def _on_config_changed(self, event):
+    self.set_destination("/srv/backups")
+    self._backup.set_destination("/srv/backups")
+""",
+    )
+    assert detect_feature(tmp_path, _catalogue_feature("ops.tracing.manual")) == []

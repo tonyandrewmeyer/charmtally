@@ -219,6 +219,18 @@ def score_absent(
             )
         return Score(SCORE_NOT_APPLICABLE, "charm does not use the typed config/params API")
 
+    if feature_name == "ops.tracing.manual":
+        # A charm without `ops[tracing]` cannot emit a span at all, so its
+        # absence here is `ops.tracing`'s finding rather than a second one.
+        if _is_present(features, "ops.tracing"):
+            return Score(
+                SCORE_WORTH_CONSIDERING,
+                "tracing is enabled but nothing in src/ is instrumented — ops traces the hook "
+                "and its own Juju calls, so workload calls and long-running loops are the spans "
+                "still missing from the trace",
+            )
+        return Score(SCORE_NOT_APPLICABLE, "charm does not depend on ops[tracing]")
+
     if feature_name == "ops.stored-state":
         # Special case: presence is a flag for *migration away from*. Absence
         # is the desired state.

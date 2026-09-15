@@ -965,6 +965,51 @@ features:
     verified: []
     negative: []
 
+  - name: ops.tracing.manual
+    library: ops
+    summary: Charm instruments its own code rather than only what ops traces for it.
+    scope: src
+    expected_rare: true
+    detect:
+      - kind: import
+        module: opentelemetry
+      - kind: call
+        attr: start_as_current_span
+      - kind: call
+        attr: tracing.set_destination
+    added-in: ops 2.21
+    notes: |
+      The other half of `ops.tracing`: that one says the charm has turned
+      tracing on, this one says someone went further than the dependency.
+      `ops[tracing]` already emits a span per hook and per Juju call, so the
+      charm-level picture costs nothing; a span around a workload call or a
+      long-running loop has to be written by hand, and that is what this row
+      counts.
+
+      Only meaningful against charms that have tracing enabled at all —
+      `ops.tracing` is the denominator, and a charm without the dependency
+      scores `not-applicable` here rather than as a gap.
+
+      Three signals, `src` only:
+
+      * an `opentelemetry` import anywhere in `src`, which is how a charm
+        gets a tracer in the first place;
+      * a `start_as_current_span` call, the usual span-per-block idiom,
+        matched as a call suffix so the decorator and context-manager forms
+        both count;
+      * `ops.tracing.set_destination`, which is a charm choosing where its
+        traces go instead of leaving that to the `tracing` relation.
+
+      Two blind spots. `from ops.tracing import set_destination` followed by
+      a bare `set_destination(...)` is invisible, because a one-segment
+      suffix here would also match any charm helper of that name — the
+      dotted form is the safer half of the trade. And instrumentation that
+      lives in a vendored library rather than in `src` reads as absent,
+      which is the same treatment every other `src`-scoped feature gives
+      library-mediated code.
+    verified: [wazuh-server-operator]
+    negative: [grafana-k8s-operator, loki-k8s-operator, opentelemetry-collector-k8s-operator]
+
   # ── database integrations (metadata: requires:) ────────────────────────────
   #
   # Descriptive facts derived from the charm's `requires:` block in
