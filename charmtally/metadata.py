@@ -57,6 +57,12 @@ Descriptive facts surfaced for the dashboard (no scoring rules attached):
                             never reads as consuming one
     library_names         — the same set, by name (used by pair detection
                             to spot k8s/machine pairs sharing a charmlib)
+    src_modules           — module and package names directly under `src/`,
+                            minus the `charm.py` entry point. Used by pair
+                            detection to tell a same-repo k8s/machine pair
+                            that shares a source module from one that is a
+                            copy-paste; it is names only, so two modules that
+                            merely agree on a name read as shared
     charmlibs_count       — distinct `charmlibs` namespace packages used
     charmlibs_names       — the same set, by name (`pathops`, `apt`,
                             `interfaces.tls`, ...). The PyPI charmlibs, not
@@ -155,6 +161,7 @@ class CharmMeta:
     charm_user: str | None = None
     library_count: int = 0
     library_names: tuple[str, ...] = ()
+    src_modules: tuple[str, ...] = ()
     charmlibs_count: int = 0
     charmlibs_names: tuple[str, ...] = ()
     provides_own_library: bool = False
@@ -199,6 +206,7 @@ class CharmMeta:
             "charm_user": self.charm_user,
             "library_count": self.library_count,
             "library_names": list(self.library_names),
+            "src_modules": list(self.src_modules),
             "charmlibs_count": self.charmlibs_count,
             "charmlibs_names": list(self.charmlibs_names),
             "provides_own_library": self.provides_own_library,
@@ -239,6 +247,7 @@ class CharmMeta:
             charm_user=raw.get("charm_user"),
             library_count=int(raw.get("library_count", 0)),
             library_names=tuple(raw.get("library_names") or []),
+            src_modules=tuple(raw.get("src_modules") or []),
             charmlibs_count=int(raw.get("charmlibs_count", 0)),
             charmlibs_names=tuple(raw.get("charmlibs_names") or []),
             provides_own_library=bool(raw.get("provides_own_library")),
@@ -440,6 +449,33 @@ def _charmlibs_names(charm_root: Path) -> list[str]:
     for path in dependency_files(charm_root):
         names.update(_charmlibs_requirements(path))
 
+    return sorted(names)
+
+
+def _src_modules(charm_root: Path) -> list[str]:
+    """Return the module and package names directly under `src/`.
+
+    `charm.py` is excluded: every ops charm has one, so it would match
+    every pair and say nothing. Packages count only when they carry an
+    `__init__.py`, which keeps `__pycache__` and stray data directories
+    out.
+
+    Names only — the contents are not read, so two same-repo charms whose
+    `src/` trees agree on a module name read as sharing it whether the
+    module is one file reached twice or two copies of it. That is the
+    definition pair detection was specified against; a content-level
+    check is a separate metric.
+    """
+    src = charm_root / "src"
+    if not src.is_dir():
+        return []
+    names: set[str] = set()
+    for entry in src.iterdir():
+        if entry.is_dir():
+            if (entry / "__init__.py").is_file():
+                names.add(entry.name)
+        elif entry.suffix == ".py" and entry.stem != "charm":
+            names.add(entry.stem)
     return sorted(names)
 
 
@@ -840,6 +876,7 @@ def read(charm_root: Path) -> CharmMeta:
         charm_user=charm_user,
         library_count=library_count,
         library_names=tuple(library_names),
+        src_modules=tuple(_src_modules(charm_root)),
         charmlibs_count=len(charmlibs_names),
         charmlibs_names=tuple(charmlibs_names),
         provides_own_library=provides_own_library,

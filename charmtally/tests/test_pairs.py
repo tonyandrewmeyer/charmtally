@@ -6,7 +6,12 @@ from ..pairs import Pair, find_pairs
 
 
 def _record(
-    name: str, *, has_containers: bool, repo_url: str = "", libs: list[str] | None = None
+    name: str,
+    *,
+    has_containers: bool,
+    repo_url: str = "",
+    libs: list[str] | None = None,
+    src_modules: list[str] | None = None,
 ) -> dict:
     return {
         "name": name,
@@ -15,6 +20,7 @@ def _record(
             "__meta__": {
                 "has_containers": has_containers,
                 "library_names": libs or [],
+                "src_modules": src_modules or [],
             }
         },
     }
@@ -103,7 +109,7 @@ def test_ambiguous_prefix_does_not_falsely_pair() -> None:
     assert pairs == []
 
 
-def test_shares_charmlib_when_machine_charm_vendors_k8s_lib() -> None:
+def test_mechanism_charmlib_when_machine_charm_vendors_k8s_lib() -> None:
     corpus = _corpus(
         (
             "machine",
@@ -113,10 +119,10 @@ def test_shares_charmlib_when_machine_charm_vendors_k8s_lib() -> None:
     )
     pairs = find_pairs(corpus)
     assert len(pairs) == 1
-    assert pairs[0].shares_charmlib is True
+    assert pairs[0].sharing_mechanism == "charmlib"
 
 
-def test_shares_charmlib_when_k8s_charm_vendors_machine_lib() -> None:
+def test_mechanism_charmlib_when_k8s_charm_vendors_machine_lib() -> None:
     corpus = _corpus(
         ("machine", _record("foo", has_containers=False)),
         (
@@ -126,16 +132,82 @@ def test_shares_charmlib_when_k8s_charm_vendors_machine_lib() -> None:
     )
     pairs = find_pairs(corpus)
     assert len(pairs) == 1
-    assert pairs[0].shares_charmlib is True
+    assert pairs[0].sharing_mechanism == "charmlib"
 
 
-def test_shares_charmlib_false_when_no_overlap() -> None:
+def test_mechanism_copy_paste_when_no_overlap() -> None:
     corpus = _corpus(
         ("machine", _record("foo", has_containers=False, libs=["unrelated"])),
         ("k8s", _record("foo-k8s", has_containers=True, libs=["another"])),
     )
     pairs = find_pairs(corpus)
-    assert pairs[0].shares_charmlib is False
+    assert pairs[0].sharing_mechanism == "copy-paste"
+
+
+def test_mechanism_shared_src_when_same_repo_shares_a_module() -> None:
+    same = "https://github.com/x/foo-operators"
+    corpus = _corpus(
+        (
+            "machine",
+            _record(
+                "foo", has_containers=False, repo_url=same, src_modules=["manager", "constants"]
+            ),
+        ),
+        (
+            "k8s",
+            _record(
+                "foo-k8s", has_containers=True, repo_url=same, src_modules=["manager", "workload"]
+            ),
+        ),
+    )
+    pairs = find_pairs(corpus)
+    assert len(pairs) == 1
+    assert pairs[0].same_repo is True
+    assert pairs[0].sharing_mechanism == "shared-src"
+
+
+def test_mechanism_not_shared_src_across_separate_repos() -> None:
+    """A module name in common means nothing when the two are unrelated repos."""
+    corpus = _corpus(
+        ("machine", _record("foo", has_containers=False, src_modules=["utils"])),
+        ("k8s", _record("foo-k8s", has_containers=True, src_modules=["utils"])),
+    )
+    pairs = find_pairs(corpus)
+    assert pairs[0].same_repo is False
+    assert pairs[0].sharing_mechanism == "copy-paste"
+
+
+def test_mechanism_copy_paste_when_same_repo_shares_no_module() -> None:
+    same = "https://github.com/x/foo-operators"
+    corpus = _corpus(
+        ("machine", _record("foo", has_containers=False, repo_url=same, src_modules=["machine"])),
+        (
+            "k8s",
+            _record("foo-k8s", has_containers=True, repo_url=same, src_modules=["kubernetes"]),
+        ),
+    )
+    pairs = find_pairs(corpus)
+    assert pairs[0].sharing_mechanism == "copy-paste"
+
+
+def test_mechanism_charmlib_wins_over_shared_src() -> None:
+    """Both signals fire; the named mechanism is the one reported."""
+    same = "https://github.com/x/foo-operators"
+    corpus = _corpus(
+        (
+            "machine",
+            _record(
+                "foo",
+                has_containers=False,
+                repo_url=same,
+                libs=["foo_k8s"],
+                src_modules=["manager"],
+            ),
+        ),
+        ("k8s", _record("foo-k8s", has_containers=True, repo_url=same, src_modules=["manager"])),
+    )
+    pairs = find_pairs(corpus)
+    assert pairs[0].sharing_mechanism == "charmlib"
 
 
 def test_pairs_skip_double_underscore_meta_rows() -> None:
@@ -171,7 +243,7 @@ def test_pair_record_is_a_frozen_dataclass() -> None:
         machine_repo_url="",
         confidence="high",
         same_repo=False,
-        shares_charmlib=False,
+        sharing_mechanism="copy-paste",
     )
     # frozen dataclass instances are hashable
     assert hash(p) == hash(p)

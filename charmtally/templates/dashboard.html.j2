@@ -504,10 +504,13 @@
   {{ pairs|length }} pair{{ "" if pairs|length == 1 else "s" }} identified by
   name normalisation. <em>High</em> = identical root after stripping
   <code>-k8s</code> / <code>-operator</code>; <em>medium</em> = within
-  edit-distance 2. <code>shared lib</code> means either side vendors a
-  <code>lib/charms/&lt;n&gt;/</code> whose name normalises to the other's root.
-  Sub-metrics <em>shared-src</em> / <em>copy-paste</em> / <em>% unique code</em>
-  are v2.
+  edit-distance 2. <em>Code sharing</em> is how the two members share code:
+  <code>charmlib</code> when either side vendors a
+  <code>lib/charms/&lt;n&gt;/</code> whose name normalises to the other's root,
+  <code>shared-src</code> when same-repo members name a <code>src/</code>
+  module in common, and <code>copy-paste</code> for the residual — not a
+  positive finding, just neither of the other two. <em>% unique code</em>
+  needs the clones and is still to come.
 </p>
 <table id="pairs-table">
   <thead>
@@ -538,8 +541,9 @@
         {% else %}<span class="chip" title="Different repos">separate</span>{% endif %}
       </td>
       <td>
-        {% if p.shares_charmlib %}<span class="chip chip-flag" title="Either side vendors a charmlib whose name normalises to the other's root">shared lib</span>
-        {% else %}<span class="chip" title="No shared charmlib detected (shared-src / copy-paste is v2)">—</span>{% endif %}
+        {% if p.sharing_mechanism == "charmlib" %}<span class="chip chip-flag" title="Either side vendors a charmlib whose name normalises to the other's root">charmlib</span>
+        {% elif p.sharing_mechanism == "shared-src" %}<span class="chip chip-flag" title="Same repo, and both members name a src/ module in common (charm.py excluded)">shared-src</span>
+        {% else %}<span class="chip" title="Neither a shared charmlib nor a common src/ module name — no sharing mechanism detected">copy-paste</span>{% endif %}
       </td>
     </tr>
   {% endfor %}
