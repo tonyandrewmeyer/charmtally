@@ -6,6 +6,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+from .. import workflows
 from ..catalogue import Detector, Feature, Pattern, default_path
 from ..catalogue import load as catalogue_load
 from ..detectors import detect_feature
@@ -2769,3 +2770,74 @@ def test_repo_file_without_a_pattern_needs_a_glob(tmp_path: Path) -> None:
     """An empty `files` list matches nothing rather than sweeping the repo."""
     charm_root = _write_repo(tmp_path, {"concierge.yaml": "x: 1\n"})
     assert detect_feature(charm_root, _feature("repo-file")) == []
+
+
+# ── repo-file: following `uses:` into another repo ───────────────────────────
+
+
+_DELEGATING_WORKFLOW = """\
+name: ci
+on: [pull_request]
+jobs:
+  quality:
+    uses: canonical/observability/.github/workflows/charm-pull-request.yaml@main
+"""
+
+_REUSABLE_RAW = (
+    "https://raw.githubusercontent.com/canonical/observability/main"
+    "/.github/workflows/charm-pull-request.yaml"
+)
+
+
+def test_repo_file_follows_uses_into_another_repo(tmp_path: Path) -> None:
+    """A charm whose CI delegates has nothing in its own `.github/` to match."""
+    charm_root = _write_repo(tmp_path, {".github/workflows/ci.yaml": _DELEGATING_WORKFLOW})
+    feature = _catalogue_feature("testing.concierge")
+    assert detect_feature(charm_root, feature) == []
+
+    workflows.configure(
+        tmp_path / "cache", lambda url: _CONCIERGE_WORKFLOW if url == _REUSABLE_RAW else None
+    )
+    try:
+        ev = detect_feature(charm_root, feature)
+    finally:
+        workflows.configure(None)
+    assert [(e.file, e.line) for e in ev] == [
+        (".github/workflows/ci.yaml", 5),
+        (".github/workflows/ci.yaml", 5),
+    ]
+    # Attributed to the local `uses:` line, with the hop named in the snippet.
+    assert ev[0].snippet == (
+        "concierge prepare — via "
+        "canonical/observability/.github/workflows/charm-pull-request.yaml@main"
+    )
+
+
+def test_repo_file_does_not_follow_uses_when_the_repo_already_answers(tmp_path: Path) -> None:
+    """A local match settles it, so the fetch is not worth making."""
+    fetched: list[str] = []
+    charm_root = _write_repo(
+        tmp_path,
+        {
+            ".github/workflows/ci.yaml": _CONCIERGE_WORKFLOW,
+            ".github/workflows/release.yaml": _DELEGATING_WORKFLOW,
+        },
+    )
+    workflows.configure(tmp_path / "cache", lambda url: fetched.append(url) or None)
+    try:
+        ev = detect_feature(charm_root, _catalogue_feature("testing.concierge"))
+    finally:
+        workflows.configure(None)
+    assert [e.file for e in ev] == [".github/workflows/ci.yaml"] * 2
+    assert fetched == []
+
+
+def test_repo_file_absent_when_the_called_workflow_does_not_provision(tmp_path: Path) -> None:
+    charm_root = _write_repo(tmp_path, {".github/workflows/ci.yaml": _DELEGATING_WORKFLOW})
+    workflows.configure(
+        tmp_path / "cache", lambda _url: "jobs:\n  t:\n    steps:\n      - run: tox\n"
+    )
+    try:
+        assert detect_feature(charm_root, _catalogue_feature("testing.concierge")) == []
+    finally:
+        workflows.configure(None)

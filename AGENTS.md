@@ -170,6 +170,32 @@ present for all five: that is the honest per-charm answer, but it counts
 repos once per charm, so anything wanting a count of *decisions* groups by
 `repo_url`.
 
+`repo-file` is also the only detector that can reach the *network*, via
+`follow_uses: true` and `charmtally/workflows.py`: a charm whose CI delegates
+to a reusable workflow in another repo has nothing in its own `.github/` to
+match, which is a third of `testing.concierge`'s real population. That module
+fetches the called workflow from `raw.githubusercontent.com` — the same shape
+`rocks.py` uses, and for the same reason: one file answers the question and
+the `uses:` value already spells out its path — and follows `uses:`
+transitively, since some workflows only provision at the second hop.
+
+Two switches, and both are needed. `features.yaml` says which detectors *want*
+resolution; `workflows.configure()` says whether this run can do it, and
+nothing is fetched until a caller installs a cache. So the test suite,
+`charmtally local` and `scan --no-follow-uses` behave exactly as they did
+before, and no detector reaches the network by accident. `cmd_scan` uses
+`workflows.session()` rather than `configure()` so a command cannot leave the
+resolver installed for whatever runs next in the process.
+
+The cache under `<workdir>/workflow-cache` is a *within-run* cache — its job is
+to stop the scan's worker processes each fetching the same seven files — and
+entries expire after six hours so no two weekly runs read the same bytes: a
+workflow that stops provisioning with Concierge has to be able to say so.
+Misses are never written to disk, and a fetch is retried once, because an
+unreadable workflow makes every charm delegating to it read as *not doing* the
+thing, which the output cannot distinguish from having looked and found
+nothing.
+
 A charm is matched against every feature and pattern, so `scan_charm`
 builds one `CharmSource` and passes it to every `detect_feature` call;
 each file is read and parsed once per charm, not once per feature. New

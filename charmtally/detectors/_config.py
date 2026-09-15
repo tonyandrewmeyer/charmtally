@@ -17,6 +17,7 @@ import configparser
 import re
 from typing import TYPE_CHECKING
 
+from .. import workflows as _workflows
 from .._toml import tomllib
 from ._files import Evidence
 
@@ -167,6 +168,13 @@ def _detect_repo_file(source: CharmSource, config: dict) -> list[Evidence]:
     `uses:` value, a `run:` line or an `env:` entry, and the three have no
     structure in common worth matching against. One hit per file — the
     question is whether the repo does the thing, not how often.
+
+    `follow_uses: true` extends the search through the reusable workflows the
+    swept files call, transitively — see `charmtally.workflows`. Only files
+    that matched no pattern locally are followed: a repo that already answers
+    the question answers it, and there is no reason to spend a fetch proving
+    it twice. Requires both the flag here and a run that has installed a
+    workflow cache, so an offline run silently reads only what is on disk.
     """
     globs = list(config.get("files") or [])
     if not globs:
@@ -175,6 +183,7 @@ def _detect_repo_file(source: CharmSource, config: dict) -> list[Evidence]:
     pattern: re.Pattern[str] | None = re.compile(str(raw), flags=re.MULTILINE) if raw else None
 
     results: list[Evidence] = []
+    unmatched: list[tuple[str, str]] = []
     for path in source.repo_files(globs):
         rel = source.rel_to_charm(path)
         if pattern is None:
@@ -183,10 +192,38 @@ def _detect_repo_file(source: CharmSource, config: dict) -> list[Evidence]:
         text = source.repo_text(path)
         match = pattern.search(text)
         if match is None:
+            unmatched.append((rel, text))
             continue
         line = text.count("\n", 0, match.start()) + 1
         results.append(Evidence(rel, line, "repo-file", match.group(0).strip()[:120]))
+    if not results and pattern is not None and config.get("follow_uses") and _workflows.enabled():
+        results.extend(_follow_uses(unmatched, pattern))
     return results
+
+
+def _follow_uses(unmatched: list[tuple[str, str]], pattern: re.Pattern[str]) -> list[Evidence]:
+    """Match `pattern` against the reusable workflows `unmatched` files call.
+
+    Evidence is attributed to the local `uses:` line rather than to the remote
+    file, because the evidence path is charm-root-relative by contract and the
+    dashboard re-bases it onto this charm's repo — a remote path would resolve
+    to a file that repo does not have. The snippet carries the hops and the
+    remote match, so the reading stays traceable to where it was actually made.
+
+    One hit per calling file, matching the local rule above: the question is
+    whether this repo's CI does the thing, and it does not become more true
+    for being reached down two branches of the call graph.
+    """
+    out: list[Evidence] = []
+    for rel, text in unmatched:
+        for hit in _workflows.resolve(text):
+            match = pattern.search(hit.text)
+            if match is None:
+                continue
+            snippet = f"{match.group(0).strip()} — via {hit.ref.slug}"
+            out.append(Evidence(rel, hit.origin.line, "repo-file", snippet[:120]))
+            break
+    return out
 
 
 def _detect_requires_interface(source: CharmSource, config: dict) -> list[Evidence]:
