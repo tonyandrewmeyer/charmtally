@@ -111,6 +111,14 @@ Descriptive facts surfaced for the dashboard (no scoring rules attached):
 
 `CharmMeta.to_dict` / `CharmMeta.from_dict` are the round-trip pair used to
 write and re-read the per-charm ``__meta__`` block in results.json.
+
+Two keys in that block are *not* CharmMeta fields, because nothing in the
+charm root answers them: ``architecture`` (stamped by `scan.scan_charm` from
+the pattern matches) and ``charmhub_listing`` (stamped by `cli.cmd_scan` from
+the store — see `charmtally.charmhub`). Both are written straight into the
+dict. `to_dict` emits every field it knows about unconditionally, so a key
+routed through it could never be *absent*, and absence is what tells a reader
+that a run did not look.
 """
 
 from __future__ import annotations

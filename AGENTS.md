@@ -73,6 +73,21 @@ rocks.csv ─────────────────► scan-rocks ─�
   one existing exception: `backfill.py --rocks` clones, because raw serves
   HEAD and nothing else. It reuses `facts_from_rockcraft`, so a replayed
   reading cannot drift from a scanned one.
+- `charmtally/charmhub.py` — asks the store, once per declared charm name,
+  whether it lists that charm publicly (`result.unlisted` on
+  `api.charmhub.io/v2/charms/info/<name>`). Run as one pass in the parent
+  after the scan, not from a worker, so there is nobody to share a fetch with
+  and no disk cache: a cached listing would be wrong at the weekly cadence,
+  since a charm that was listed last week and is not now is the event the
+  metric exists to show. **Opt-in** (`scan --charmhub`, which `scan.yaml`
+  passes) rather than opt-out like `--no-follow-uses`, because it fires once
+  per charm in *every* scan instead of only for charms whose CI delegates
+  somewhere — default-on would have put 760 requests into the test suite. The
+  verdict is stamped straight into `__meta__` alongside `architecture`, not
+  routed through `CharmMeta`: everything `to_dict` emits is emitted always,
+  and a key that is always present cannot say whether this run looked. `None`
+  means the store did not answer, key-absent means nobody asked, and
+  `adoption` needs both.
 - `charmtally/adoption.py` — the charm-tech adoption scorecard: a
   deliberately tiny set (3–6) of headline metrics over the same dated
   snapshots `trend` reads. Distinct from `trend.py`, which covers the whole

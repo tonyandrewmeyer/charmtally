@@ -84,6 +84,7 @@ jobs:
           uv run charmtally scan \
             --workdir /tmp/charm-workdir \
             --overrides corpus-overrides.yaml \
+            --charmhub \
             --out results.json
 
       - name: Score
