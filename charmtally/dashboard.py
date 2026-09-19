@@ -29,6 +29,7 @@ from typing import TYPE_CHECKING, Any
 import jinja2
 
 from . import adoption as _adoption
+from . import ceilings as _ceilings
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -208,6 +209,24 @@ def _juju_assertion(meta: dict) -> str | None:
     return ",".join(b for b in (f">={lo}" if lo else "", f"<{hi}" if hi else "") if b) or None
 
 
+def _ceiling_state(ceiling: _ceilings.Ceiling | None) -> str:
+    """Bucket a derived ceiling into the filter-bar axis value (#73).
+
+    Three states, because the question has three answers: the corpus showed
+    a ceiling, the corpus showed there is none, or the corpus could not
+    tell. Only `inherited` gets a chip in the row — it is the one that is
+    news, and `unknown` is the majority state (most charms require at least
+    one interface nobody in the corpus provides), so a chip for it would
+    label two thirds of the table with a non-finding. The axis keeps all
+    three visible and countable.
+    """
+    if ceiling is None:
+        return "unknown"
+    if ceiling.version:
+        return "inherited"
+    return "unknown" if ceiling.unresolved else "none"
+
+
 def render(results: dict, features: list, ref: str = "main", *, pairs: list | None = None) -> str:
     """Render the survey results as a standalone HTML dashboard."""
     charms = [v for k, v in results.items() if not k.startswith("__")]
@@ -349,6 +368,9 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
     # and k8s/reactive/lib-provider/terraform flags — surfaced as chips +
     # a compact stack cell in the rendered HTML.
     charm_rows: list[dict[str, Any]] = []
+    # The Juju ceiling a charm inherits from its relation partners (#73) is a
+    # join across the corpus, so it is derived once here rather than per row.
+    derived_ceilings = _ceilings.derive({c["name"]: c for c in charms})
     for c in charms:
         present = clear_gap = clear_gap_ai = worth = 0
         gaps = []
@@ -395,6 +417,8 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
         bases = list(m.get("bases") or [])
         tooling = list(m.get("tooling") or [])
         juju_assertion = _juju_assertion(m)
+        ceiling = derived_ceilings.get(c["name"])
+        ceiling_state = _ceiling_state(ceiling)
         # Free-text blob behind the search box's `stack:` field.
         stack_text = " ".join([
             "k8s" if m.get("has_containers") else "machine",
@@ -402,6 +426,13 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
             *bases,
             *tooling,
             f"juju {juju_assertion}" if juju_assertion else "",
+            # Searchable as `stack:juju-ceiling` / `stack:mysql_client`, so
+            # "which charms does this one interface cap?" is one query.
+            f"juju-ceiling <{ceiling.version} {' '.join(ceiling.via)}"
+            if ceiling and ceiling.version
+            else "juju-ceiling unknown"
+            if ceiling_state == "unknown"
+            else "",
             # `ops` with no specifier is a finding, so it gets a searchable
             # word rather than falling through the falsy branch as unknown.
             f"ops {m['ops_requirement'] or 'unpinned'}"
@@ -433,6 +464,9 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
             "plugins": plugins,
             "bases": bases,
             "juju_assertion": juju_assertion,
+            "juju_ceiling": ceiling.version if ceiling else None,
+            "juju_ceiling_via": list(ceiling.via) if ceiling else [],
+            "juju_ceiling_state": ceiling_state,
             "ops_requirement": m.get("ops_requirement"),
             "tooling": tooling,
             "stack_text": stack_text,
@@ -495,6 +529,7 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
     tooling_dist: dict[str, int] = {}
     plugin_dist: dict[str, int] = {}
     base_dist: dict[str, int] = {}
+    ceiling_dist: dict[str, int] = {}
     k8s_count = 0
     reactive_count = 0
     legacy_classic_count = 0
@@ -509,6 +544,8 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
             plugin_dist[p] = plugin_dist.get(p, 0) + 1
         for b in r["bases"]:
             base_dist[b] = base_dist.get(b, 0) + 1
+        state = r["juju_ceiling_state"]
+        ceiling_dist[state] = ceiling_dist.get(state, 0) + 1
         if r["k8s"]:
             k8s_count += 1
         if r["is_reactive"]:
@@ -531,6 +568,7 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
         "tooling": sorted(tooling_dist.items(), key=lambda kv: -kv[1]),
         "plugins": sorted(plugin_dist.items(), key=lambda kv: -kv[1]),
         "bases": sorted(base_dist.items(), key=lambda kv: -kv[1])[:6],
+        "juju_ceiling": ceiling_dist.get("inherited", 0),
     }
 
     # Facet values for the filter bars. Derived here rather than with
@@ -544,6 +582,11 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
         # populated — the filter bar should stay stable week to week, and a
         # bucket with 0 charms is itself worth being able to check for.
         "architectures": [(a, arch_dist.get(a, 0)) for a in _ARCH_PRIORITY],
+        # Fixed three, for the same reason as the architectures above: the
+        # bar should not change shape the week no charm inherits a ceiling.
+        "ceilings": [
+            (state, ceiling_dist.get(state, 0)) for state in ("inherited", "none", "unknown")
+        ],
     }
 
     # Evidence log (all clear-gap findings, flattened).

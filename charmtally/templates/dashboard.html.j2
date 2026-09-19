@@ -56,6 +56,10 @@
     white-space: nowrap;
   }
   .stack .sep { color: #aaa; margin: 0 4px; }
+  /* An inherited ceiling is a derived claim about the charm's partners,
+     not something read out of its own files — coloured so it does not
+     read as another fact from the charm's own metadata. */
+  .stack .ceiling { color: #a33; }
 
   /* Top-of-page summary widget */
   .summary {
@@ -349,6 +353,10 @@
     <button data-value="clean">no clear-gap</button>
   </div>
   <span class="label">Flags:</span>
+  <div class="group" data-single="ceiling" title="The Juju ceiling a charm inherits from its relation partners, not the one it asserts itself">
+    <button class="active" data-value="">any ceiling</button>
+    {% for state, n in facets.ceilings %}<button data-value="{{ state }}" title="{{ n }} charm{{ '' if n == 1 else 's' }}">{{ state }}</button>{% endfor %}
+  </div>
   <div class="group" data-multi="flags" data-match="all">
     <button data-value="lib-provider">lib provider</button>
     <button data-value="subordinate">subordinate</button>
@@ -402,6 +410,7 @@
       data-shape="{{ 'k8s' if c.k8s else 'machine' }}"
       data-status="{{ 'has-gaps' if c.clear_gap else 'clean' }}"
       data-flags="{{ c.flags|join(' ') }}"
+      data-ceiling="{{ c.juju_ceiling_state }}"
       data-team="{{ c.team or '(no team)' }}"
       data-tooling="{{ c.tooling|join(' ') }}"
       data-features="{{ c.present_features|join(' ') }}"
@@ -426,6 +435,7 @@
         {% if c.plugins %}<span class="sep">·</span>{{ c.plugins|join(",") }}{% endif %}
         {% if c.bases %}<span class="sep">·</span>{{ c.bases|join(",") }}{% endif %}
         {% if c.juju_assertion %}<span class="sep" title="The Juju versions the charm asserts in `assumes:`">·</span>juju&nbsp;{{ c.juju_assertion }}{% endif %}
+        {% if c.juju_ceiling %}<span class="sep">·</span><span class="ceiling" title="Every charm in the corpus that provides {{ c.juju_ceiling_via|join(', ') }} caps Juju below {{ c.juju_ceiling }}, so this charm cannot be deployed against any of them above that — whatever its own `assumes:` says. Whether the relation is optional is not knowable from the metadata.">inherits&nbsp;juju&nbsp;&lt;{{ c.juju_ceiling }}&nbsp;via&nbsp;{{ c.juju_ceiling_via|join(",") }}</span>{% endif %}
         {% if c.ops_requirement is not none %}<span class="sep" title="The `ops` version the charm asks for">·</span>ops&nbsp;{{ c.ops_requirement if c.ops_requirement else "*" }}{% endif %}
         {% if c.library_count %}<span class="sep">·</span>{{ c.library_count }}&nbsp;lib{{ "" if c.library_count == 1 else "s" }}{% endif %}
         {% if c.tooling %}<span class="sep">·</span>{{ c.tooling|join("+") }}{% endif %}

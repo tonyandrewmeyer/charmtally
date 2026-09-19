@@ -479,3 +479,37 @@ def test_ops_cohorts_exclude_charms_whose_scores_are_not_applicable() -> None:
     ]
     html = render({c["name"]: c for c in charms}, feats)
     assert "1 / 1 charms in the ops 2 cohort have this feature" in html
+
+
+def _related(name: str, *, provides=(), requires=(), ceiling: str | None = None) -> dict:
+    relations = [{"name": i, "role": "provides", "interface": i} for i in provides]
+    relations += [{"name": i, "role": "requires", "interface": i} for i in requires]
+    return _charm(
+        name,
+        present_features=set(),
+        all_features=["thing"],
+        meta={"relations": relations, "max_juju_version": ceiling},
+    )
+
+
+def test_inherited_juju_ceiling_is_shown_and_attributed() -> None:
+    """The point of #73: the cell names the partner that imposes the cap, not
+    just the cap, because the charm's own `assumes:` does not mention it."""
+    feats = [_feature("thing")]
+    corpus = [
+        _related("db", provides=["sql"], ceiling="4"),
+        _related("app", requires=["sql"]),
+    ]
+    html = render({c["name"]: c for c in corpus}, feats)
+    assert "inherits&nbsp;juju&nbsp;&lt;4&nbsp;via&nbsp;sql" in html
+    assert 'data-ceiling="inherited"' in html
+
+
+def test_unresolvable_partner_reads_as_unknown_not_clear() -> None:
+    feats = [_feature("thing")]
+    corpus = [_related("app", requires=["ingress"]), _related("db", provides=["sql"])]
+    html = render({c["name"]: c for c in corpus}, feats)
+    assert 'data-ceiling="unknown"' in html
+    assert 'data-ceiling="none"' in html
+    # Only the inherited state earns a chip; unknown is the majority state.
+    assert "inherits&nbsp;juju" not in html

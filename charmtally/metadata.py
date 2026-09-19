@@ -426,7 +426,7 @@ def _extract_bases(data: dict) -> list[str]:
     return out
 
 
-def _juju_version_key(v: str) -> tuple[int, ...]:
+def juju_version_key(v: str) -> tuple[int, ...]:
     """Sort key for a dotted Juju version, tolerant of anything unparsable."""
     try:
         return tuple(int(p) for p in v.split("."))
@@ -477,8 +477,8 @@ def _extract_juju_versions(data: dict) -> tuple[str | None, str | None]:
         if op in ("<=", "<", "=="):
             upper.append(version)
     return (
-        min(lower, key=_juju_version_key) if lower else None,
-        max(upper, key=_juju_version_key) if upper else None,
+        min(lower, key=juju_version_key) if lower else None,
+        max(upper, key=juju_version_key) if upper else None,
     )
 
 

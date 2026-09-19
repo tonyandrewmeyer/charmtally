@@ -93,6 +93,19 @@ rocks.csv ─────────────────► scan-rocks ─�
   isn't charms at all (rootless, which spans rocks + k8s charms) sets its own
   denominator and names it in `Metric.denominator_note`, which the card
   renders. Activity is not one of the cuts a metric opts out of.
+- `charmtally/ceilings.py` — the Juju ceiling a charm *inherits* from its
+  relation partners, as distinct from the one it asserts itself. A corpus
+  join, not a per-charm reading, so it runs at render time over the
+  `__meta__` blocks rather than being written into them by the scan: nothing
+  derived goes into a snapshot that is recomputable from the bytes beside it.
+  An interface hands its ceiling on only when **every** in-corpus provider
+  declares one — a single-capped-provider rule caps a third of the corpus
+  because `postgresql-k8s` also happens to be a scrape target — and
+  `any-charm` is excluded from the provider side, being a test fixture that
+  provides 263 interfaces and is nobody's deployment choice. An endpoint
+  nothing in the corpus provides reads as `unknown`, never as "no ceiling".
+  Optional-vs-mandatory is not knowable from the metadata, so the claim is
+  about the interface rather than the deployment.
 - `charmtally/snapshot.py` — thins a scored file into the dated snapshot the
   trend and adoption pages read. The snapshots are the entire history and
   cannot be regenerated, so what goes in stays in git forever; `evidence` and
