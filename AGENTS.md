@@ -286,17 +286,31 @@ negative test in `tests/test_detectors.py`.
 Not part of the pipeline; each is run with `uv run python -m charmtally.tools.X`.
 
 - `audit.py` — calibration sampling over `scored.json`.
-- `calibration_check.py` — asserts the architecture detectors still agree with
+- `calibration_check.py` — asserts the detectors still agree with
   `calibration-ledger.yaml`, so a detector change that silently re-breaks a
   charm an earlier round fixed fails CI. Run by `make calibration` and the
-  `calibration` job in `ci.yaml`. Covers the `reconcile` and `delta` buckets
-  only; the rest of the ledger's buckets are 44 rows and down, thin enough that
-  a failure would be as likely to mean the extraction missed a row. Reads the
-  committed `results.json` rather than re-scanning — 236 of the 240 in-scope
-  rows resolve to a charm in it — so it costs seconds, not ~344 clones.
-  Membership comes off the raw `__meta__.architecture` list, **not**
-  `dashboard._primary_arch`: that one picks a single label per charm by
-  priority, so folding `paas_charm` into `component-graph` moved charms out of
+  `calibration` job in `ci.yaml`. Covers `reconcile`, `delta` and
+  `clear-gap:ops.collect-status`; the rest of the ledger's buckets are 14 rows
+  and down, thin enough that a failure would be as likely to mean the
+  extraction missed a row. A bucket joins the check only once its rows have
+  been read back against the prose — collect-status's 44 rows and the 8
+  superseded events in their `history` lists were, and all 52 resolve to a
+  CALIBRATION.md line naming the slug with the verdict the prose gives. Reads
+  the committed `results.json` rather than re-scanning — 265 of the 284
+  in-scope rows resolve to a charm in it — so it costs seconds, not ~344
+  clones. A `clear-gap:<feature>` row's membership is the **feature's own
+  `present` flag, not its `score`**: the score folds in the architecture axis,
+  `is_reactive`, `is_legacy_classic` and the relation list, so comparing
+  against it asks "did any of those move" rather than the single-detector
+  question the round put. Read against the score, 5 round-15 TPs read as
+  regressions purely because `reconcile` charms now short-circuit to
+  `not-applicable`. Twelve collect-status rows carry a slug the scan never
+  emits — rounds 1-4's informal display names, round 15's abbreviated monorepo
+  paths — and are skipped rather than normalised, because the ledger is a
+  transcription; resolving them wants an alias field, not an edit to `slug`.
+  Architecture-bucket membership comes off the raw `__meta__.architecture`
+  list, **not** `dashboard._primary_arch`: that one picks a single label per
+  charm by priority, so folding `paas_charm` into `component-graph` moved charms out of
   the *displayed* `reconcile` bucket while the `reconcile` detector went on
   matching them. Comparing against the displayed label reports three such
   charms as regressions with no detector change. `delta` has no detector — it

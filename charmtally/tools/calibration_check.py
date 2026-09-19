@@ -1,4 +1,4 @@
-"""Assert the architecture detectors still agree with the calibration ledger.
+"""Assert the detectors still agree with the calibration ledger.
 
 Usage:
     uv run python -m charmtally.tools.calibration_check
@@ -12,27 +12,47 @@ adjudicator saw. Without it, a detector change that silently re-breaks a charm
 an earlier round fixed ships, and is only noticed the next time somebody reads
 the prose.
 
-Scope: the two architecture buckets, `reconcile` and `delta`. That is where the
-ledger has enough rows (149 and 92) for a failure to mean something. The next
-bucket down is 44 rows and the rest are in the teens or single digits, thin
-enough that a failure would be as likely to mean the extraction missed a row as
-that a detector changed — see LEDGER-EXTRACTION.md, "What was deliberately not
-done".
+Scope: the two architecture buckets, `reconcile` and `delta`, plus
+`clear-gap:ops.collect-status`. That is where the ledger has enough rows (149,
+91 and 44) for a failure to mean something. Everything after those runs from 14
+rows down to one, thin enough that a failure would be as likely to mean the
+extraction missed a row as that a detector changed — see LEDGER-EXTRACTION.md,
+"What was deliberately not done".
+
+The collect-status bucket was held back for the same reason until its rows had
+been read against the prose the way the two architecture buckets were. That
+pass is done: all 44 rows and the 8 superseded events in their `history` lists
+resolve to a CALIBRATION.md line naming the slug, every verdict matches the
+prose, and the five rounds that sampled the bucket (#1, #2, #3, #4, #15)
+account for all 52 events with nothing left over.
 
 What it runs against
 --------------------
 The committed `results.json`, not a fresh scan. Re-cloning ~344 charm repos per
 CI run is not viable, and it turns out not to be needed: `results.json` carries
-`features.__meta__.architecture` per charm, which *is* the detectors' raw
-output for these two buckets, and 236 of the ledger's 241 (slug, bucket) rows
-in scope resolve to a charm in it. The five that do not are corpus departures,
-reported as skips rather than failures.
+`features.__meta__.architecture` and a `present` flag per feature for every
+charm, which *is* the detectors' raw output for all three buckets. 265 of the
+ledger's 284 (slug, bucket) rows in scope resolve to a charm in it, and the 19
+that do not are reported as skips rather than failures.
+
+Twelve of those nineteen are collect-status rows, and they are not corpus
+departures: they are slugs CALIBRATION.md wrote in a form the scan does not
+emit. Six are rounds 1-4's informal display names (`Alertmanager`, `Microk8s`,
+`admission-webhook`, ...), each of which round 15 re-read under its real slug,
+so the verdict is checked by the other row. Four are round 15's abbreviated
+monorepo paths (`istio-operators/istio-gateway` for
+`istio-operators/charms/istio-gateway`; `content-cache-operator/c-c`, which #40
+itself glosses as `content-cache-operator/content-cache`). One repo was renamed
+(`kafka-broker-rack-awareness` -> `-operator`) and one charm really has left the
+corpus (`mysql-k8s-operator`). The ledger is a transcription, so the slugs stay
+as the prose wrote them and the bucket checks 24 of its 44 rows; resolving the
+rest wants an alias field, not an edit to the transcribed `slug`.
 
 Bucket membership
 -----------------
-Membership is read off the raw `architecture` list, NOT off `dashboard`'s
-`_primary_arch`. The two disagree, and the raw list is the one the ledger
-adjudicated: `_primary_arch` picks a single label per charm by priority, so
+An architecture bucket's membership is read off the raw `architecture` list,
+NOT off `dashboard`'s `_primary_arch`. The two disagree, and the raw list is
+the one the ledger adjudicated: `_primary_arch` picks a single label per charm by priority, so
 folding `paas_charm` into `component-graph` (CALIBRATION #42) moved charms like
 `github-profiles-automator` out of the displayed `reconcile` bucket while the
 `reconcile` detector went on matching them exactly as before. Comparing against
@@ -43,6 +63,20 @@ architecture pattern matched" — so membership there is an empty list.
 That reading also reproduces LEDGER-EXTRACTION.md's live-bucket figure: it
 leaves exactly 13 `reconcile` rows recorded FP and still matching, and the
 document's census is 120 TP / 133, i.e. 13 surviving false positives.
+
+A `clear-gap:<feature>` bucket's membership is the *detector*: the charm is in
+it while the feature reads absent. Deliberately not the `score`, although the
+bucket is named after one. A clear-gap score is a function of several signals —
+the architecture axis, `is_reactive`, `is_legacy_classic`, `status-set-directly`
+and the relation list — so a score-based comparison answers "did any of those
+move", which is the ambiguity that kept this bucket out of the check in the
+first place. Read against the score, 8 of the 24 checkable rows diverge and 5 of
+those 8 are one post-hoc scoring rule (`reconcile` charms short-circuit to
+`not-applicable`), none of them a statement about collect-status. Read against
+the detector, the bucket is the single-signal question the round actually put:
+is the charm missing a collect-status handler? A TP says it was and a fix would
+be welcome; an FP says the detector was wrong and the charm should read present
+once the gap is closed.
 """
 
 from __future__ import annotations
@@ -60,7 +94,12 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
 
 #: The buckets this check covers. See the module docstring for why it stops here.
-BUCKETS = ("reconcile", "delta")
+BUCKETS = ("reconcile", "delta", "clear-gap:ops.collect-status")
+
+#: Marks a bucket whose membership is a feature's absence rather than an
+#: architecture label. The suffix is the feature name, as `features.yaml`
+#: spells it.
+CLEAR_GAP_PREFIX = "clear-gap:"
 
 #: Every architecture pattern `features.yaml` can emit. `delta` is not among
 #: them: it is the residual, so a charm is in the `delta` bucket when this list
@@ -107,6 +146,7 @@ class Outcome:
     verdict_as_written: str | None = None
     in_bucket: bool | None = None
     architecture: list[str] | None = None
+    score: str | None = None
     repo_sha: str | None = None
     note: str | None = None
     accepted_by: dict[str, Any] | None = None
@@ -167,6 +207,13 @@ def ledger_rows(ledger: dict, buckets: Iterable[str] = BUCKETS) -> Iterator[dict
 # ---------------------------------------------------------------------------
 
 
+def clear_gap_feature(bucket: str) -> str | None:
+    """Return the feature a `clear-gap:<feature>` bucket is about, or None."""
+    if bucket.startswith(CLEAR_GAP_PREFIX):
+        return bucket[len(CLEAR_GAP_PREFIX) :]
+    return None
+
+
 def in_bucket(bucket: str, meta: dict) -> bool:
     """Whether the detectors currently place this charm in `bucket`.
 
@@ -178,6 +225,20 @@ def in_bucket(bucket: str, meta: dict) -> bool:
     if bucket == "delta":
         return not archs
     return bucket in archs
+
+
+def in_clear_gap(feature: str, features: dict) -> bool | None:
+    """Whether `feature` is still an unfilled gap for this charm.
+
+    The feature's own detector, not its `score` — see the module docstring.
+    None when the scan carries no record of the feature at all, which means it
+    was never looked for (`scan --feature`, a catalogue rename) rather than
+    looked for and not found, and is reported as a skip.
+    """
+    record = features.get(feature)
+    if record is None:
+        return None
+    return not record.get("present")
 
 
 def evaluate_row(record: dict, results: dict) -> Outcome:
@@ -236,13 +297,28 @@ def evaluate_row(record: dict, results: dict) -> Outcome:
         note = f"not in the scan output ({skipped})" if skipped else "not in the scan output"
         return Outcome(kind=SKIPPED_ABSENT, note=note, **common)
 
-    meta = charm.get("features", {}).get("__meta__") or {}
-    present = in_bucket(bucket, meta)
-    detail = {
-        "in_bucket": present,
+    features = charm.get("features") or {}
+    meta = features.get("__meta__") or {}
+    detail: dict[str, Any] = {
         "architecture": list(meta.get("architecture") or []),
         "repo_sha": meta.get("repo_sha"),
     }
+
+    feature = clear_gap_feature(bucket)
+    if feature is None:
+        present = in_bucket(bucket, meta)
+    else:
+        gap = in_clear_gap(feature, features)
+        if gap is None:
+            return Outcome(
+                kind=SKIPPED_ABSENT,
+                note=f"{feature} not in the scan output for this charm",
+                **common,
+                **detail,
+            )
+        present = gap
+        detail["score"] = (features[feature] or {}).get("score")
+    detail["in_bucket"] = present
 
     if present == (verdict == "TP"):
         return Outcome(kind=AGREE, **common, **detail)
@@ -329,9 +405,16 @@ def _fmt_round(outcome: Outcome) -> str:
 
 
 def _fmt_now(outcome: Outcome) -> str:
+    verb = "still in" if outcome.in_bucket else "not in"
+    feature = clear_gap_feature(outcome.bucket)
+    if feature is not None:
+        # The score is not what membership was read off, but it is what the
+        # dashboard shows, so print it to save a second lookup.
+        if outcome.in_bucket:
+            return f"{verb} `{outcome.bucket}` — {feature} absent, scored {outcome.score}"
+        return f"{verb} `{outcome.bucket}` — {feature} present"
     archs = outcome.architecture or []
     shown = ", ".join(archs) if archs else "no pattern matched"
-    verb = "still in" if outcome.in_bucket else "not in"
     return f"{verb} `{outcome.bucket}` — architecture: [{shown}]"
 
 
