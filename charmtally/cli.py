@@ -78,6 +78,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, TypeVar
 
 from . import __version__, adoption, catalogue, corpus, dashboard, scan
+from . import charmhub as _charmhub
 from . import llm_score as _llm_score
 from . import metadata as _metadata
 from . import pairs as _pairs
@@ -356,6 +357,9 @@ def cmd_scan(args: argparse.Namespace) -> int:
             _apply_feature_excludes(charm_features, overrides, unit.repo_url, unit.sub_path)
             results[unit.slug] = {**unit.record, "features": charm_features}
 
+    if args.charmhub:
+        _stamp_charmhub_listing(results)
+
     if skipped:
         results["__skipped__"] = skipped
 
@@ -364,6 +368,45 @@ def cmd_scan(args: argparse.Namespace) -> int:
     scanned = sum(1 for k in results if not k.startswith("__"))
     print(f"wrote {args.out} ({scanned} records, {len(skipped)} skipped)", file=sys.stderr)
     return 0
+
+
+def _stamp_charmhub_listing(results: dict[str, object]) -> None:
+    """Record, per charm, whether Charmhub lists it publicly.
+
+    One pass in the parent after the scan, rather than a lookup inside each
+    worker: the store is asked once per distinct declared name, and a monorepo
+    publishing one charm under several roots costs one request, not several.
+
+    Stamped straight into the `__meta__` dict, the way `stale` is, and
+    deliberately not routed through `CharmMeta`. Everything `to_dict` emits is
+    emitted always, and a key that is always present cannot say whether this
+    run looked — which is exactly what `adoption` needs to tell a corpus that
+    is not on Charmhub from a run that never asked. A charm whose lookup
+    failed gets the key with a null value: we looked, the store did not say.
+
+    A charm with no declared name gets no key at all. There is nothing to ask
+    the store about, and guessing from the repo slug would put an answer about
+    some other charm into this one's record.
+    """
+    # The `__meta__` blocks themselves, not their slugs: the verdict is
+    # written back into the same dict the scan produced.
+    targets: list[tuple[dict, str]] = []
+    for slug, record in results.items():
+        if slug.startswith("__") or not isinstance(record, dict):
+            continue
+        meta = record.get("features", {}).get("__meta__")
+        name = meta.get("charm_name") if isinstance(meta, dict) else None
+        if name:
+            targets.append((meta, str(name)))
+
+    names = {name for _, name in targets}
+    print(f"asking Charmhub about {len(names)} charm names…", file=sys.stderr)
+    verdicts = _charmhub.listings(names)
+    for meta, name in targets:
+        meta["charmhub_listing"] = verdicts.get(name)
+    missed = sum(1 for v in verdicts.values() if v is None)
+    if missed:
+        print(f"  {missed} name(s) the store did not answer for", file=sys.stderr)
 
 
 def _clone_all(
@@ -830,6 +873,14 @@ def main(argv: list[str] | None = None) -> int:
         help="Don't fetch the reusable workflows a repo's CI delegates to. "
         "Detectors that ask to follow them read only the checkout, which "
         "under-reports CI features for charms whose workflows live elsewhere.",
+    )
+    p_scan.add_argument(
+        "--charmhub",
+        action="store_true",
+        help="Ask Charmhub whether each charm is publicly listed, and record "
+        "it as `__meta__.charmhub_listing`. Off unless asked for: it is one "
+        "request per charm against someone else's service, and every other "
+        "input to a scan comes off disk. The weekly workflow passes it.",
     )
     p_scan.set_defaults(func=cmd_scan)
 

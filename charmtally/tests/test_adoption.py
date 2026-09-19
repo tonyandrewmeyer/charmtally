@@ -430,6 +430,89 @@ def test_charmlibs_share_needs_the_count_in_meta() -> None:
     assert adoption.compute_charmlibs_share(snap) is None
 
 
+# --- charmhub listing -------------------------------------------------------
+
+
+def _listed_charm(verdict: str | None, **meta: object) -> dict:
+    return _charm(
+        features={"ops.collect-status": True}, meta={"charmhub_listing": verdict, **meta}
+    )
+
+
+def test_charmhub_listed_splits_unlisted_from_absent() -> None:
+    """The two are different problems: a tick-box, and a release process."""
+    snap = _snapshot({
+        "on-store": _listed_charm(adoption.charmhub.LISTED),
+        "hidden": _listed_charm(adoption.charmhub.UNLISTED),
+        "nowhere": _listed_charm(adoption.charmhub.ABSENT),
+        "also-listed": _listed_charm(adoption.charmhub.LISTED),
+    })
+
+    point = adoption.compute_charmhub_listed(snap)
+
+    assert point is not None
+    assert point["value"] == 50.0
+    assert point["counts"] == {"listed": 2, "unlisted on Charmhub": 1, "not on Charmhub": 1}
+
+
+def test_a_charm_the_store_did_not_answer_for_leaves_the_denominator() -> None:
+    """Otherwise an outage would report as charms falling off Charmhub."""
+    snap = _snapshot({
+        "on-store": _listed_charm(adoption.charmhub.LISTED),
+        "no-answer": _listed_charm(None),
+    })
+
+    point = adoption.compute_charmhub_listed(snap)
+
+    assert point is not None
+    assert point["denominator"] == 1
+    assert point["value"] == 100.0
+
+
+def test_charmhub_listed_counts_reactive_charms_too() -> None:
+    """Publishing is independent of what the charm is built on."""
+    snap = _snapshot({
+        "modern": _listed_charm(adoption.charmhub.LISTED),
+        "reactive": _listed_charm(adoption.charmhub.ABSENT, is_reactive=True),
+    })
+
+    point = adoption.compute_charmhub_listed(snap)
+
+    assert point is not None
+    assert point["denominator"] == 2
+
+
+def test_charmhub_listed_still_drops_dormant_charms() -> None:
+    snap = _snapshot(
+        {
+            "fresh": _listed_charm(adoption.charmhub.LISTED),
+            "dormant": _listed_charm(
+                adoption.charmhub.ABSENT, last_commit="2023-01-05T09:00:00+00:00"
+            ),
+        },
+        date="2026-06-11",
+    )
+
+    point = adoption.compute_charmhub_listed(snap)
+
+    assert point is not None
+    assert point["denominator"] == 1
+
+
+def test_charmhub_listed_needs_the_key_in_meta() -> None:
+    """A scan that never asked yields no point, not a corpus that is 0% listed."""
+    snap = _snapshot({"a": _charm(features={"ops.collect-status": True})})
+
+    assert adoption.compute_charmhub_listed(snap) is None
+
+
+def test_a_scan_that_asked_and_got_nothing_is_not_a_point() -> None:
+    """`--no-charmhub` leaves no key; an outage leaves keys with no verdicts."""
+    snap = _snapshot({"a": _listed_charm(None), "b": _listed_charm(None)})
+
+    assert adoption.compute_charmhub_listed(snap) is None
+
+
 # --- series -----------------------------------------------------------------
 
 

@@ -12,13 +12,13 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
-from .. import scan
+import pytest
+
+from .. import charmhub, scan
 from ..cli import main
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    import pytest
 
 _CHARM = """\
 import ops
@@ -70,7 +70,7 @@ def _fake_clones(
     monkeypatch.setattr(scan, "ensure_clone", fake)
 
 
-def _run(tmp_path: Path, names: list[str], jobs: int) -> dict:
+def _run(tmp_path: Path, names: list[str], jobs: int, *, extra: list[str] | None = None) -> dict:
     out = tmp_path / f"results-{jobs}.json"
     assert (
         main([
@@ -83,6 +83,7 @@ def _run(tmp_path: Path, names: list[str], jobs: int) -> dict:
             str(jobs),
             "--out",
             str(out),
+            *(extra or []),
         ])
         == 0
     )
@@ -154,3 +155,56 @@ class TestJobs:
 
         assert list(parallel) == list(serial) == names
         assert parallel == serial
+
+
+class TestCharmhubListing:
+    """`--charmhub` is the only thing in a scan that talks to the store."""
+
+    def test_the_store_is_not_asked_unless_the_flag_says_so(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Absence of the key, not a null: nobody looked."""
+        _fake_clones(monkeypatch, {"alpha": _make_charm(tmp_path / "repos", "alpha")})
+        monkeypatch.setattr(charmhub, "listings", lambda *a, **k: pytest.fail("asked the store"))
+
+        results = _run(tmp_path, ["alpha"], jobs=1)
+
+        assert "charmhub_listing" not in results["alpha"]["features"]["__meta__"]
+
+    def test_the_verdict_lands_in_meta(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _fake_clones(
+            monkeypatch,
+            {n: _make_charm(tmp_path / "repos", n) for n in ("alpha", "beta")},
+        )
+        monkeypatch.setattr(
+            charmhub,
+            "listings",
+            lambda names, **k: {"alpha": charmhub.LISTED, "beta": None},
+        )
+
+        results = _run(tmp_path, ["alpha", "beta"], jobs=1, extra=["--charmhub"])
+
+        assert results["alpha"]["features"]["__meta__"]["charmhub_listing"] == charmhub.LISTED
+        # We asked and the store didn't say — the key is there, the value is not.
+        assert results["beta"]["features"]["__meta__"]["charmhub_listing"] is None
+
+    def test_the_store_is_asked_about_declared_names(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Not the corpus slug: the store knows a charm by what it calls itself."""
+        charm = _make_charm(tmp_path / "repos", "alpha")
+        (charm / "charmcraft.yaml").write_text("type: charm\nname: alpha-k8s\n")
+        _fake_clones(monkeypatch, {"alpha": charm})
+        asked: list[set[str]] = []
+
+        monkeypatch.setattr(
+            charmhub,
+            "listings",
+            lambda names, **k: asked.append(set(names)) or dict.fromkeys(names, charmhub.LISTED),
+        )
+
+        _run(tmp_path, ["alpha"], jobs=1, extra=["--charmhub"])
+
+        assert asked == [{"alpha-k8s"}]

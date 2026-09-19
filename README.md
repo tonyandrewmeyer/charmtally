@@ -122,6 +122,11 @@ blank for those dates rather than reading a missing scan as "everything runs as
 root". A charm that has since left the corpus is missing from every backfilled
 date too: a fixed list cures curation lag, not survivorship.
 
+The Charmhub listing metric cannot be backfilled at all, for a stronger reason:
+the store answers for today and keeps no history anyone can query, so
+`scan --charmhub` is the only way a reading is ever taken and the series starts
+at the first run that took one.
+
 ## Building a rock corpus
 
 There is no curated list of repos that build rocks the way canonical/hyrum

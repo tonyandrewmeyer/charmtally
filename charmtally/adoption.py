@@ -50,7 +50,7 @@ from dataclasses import dataclass, field
 from datetime import date, timedelta
 from typing import TYPE_CHECKING
 
-from . import charmlib_pairs, rocks
+from . import charmhub, charmlib_pairs, rocks
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -65,6 +65,7 @@ TYPED_RELATION = "typed-relation"
 INTEGRATION_TESTING = "integration-testing"
 CHARMLIBS_SHARE = "charmlibs-share"
 ROOTLESS = "rootless"
+CHARMHUB_LISTED = "charmhub-listed"
 
 
 @dataclass(frozen=True)
@@ -587,6 +588,74 @@ def compute_rootless(snapshot: Snapshot) -> dict | None:
     )
 
 
+# ── metric: publicly listed on Charmhub ─────────────────────────────────────
+
+_LISTED = "listed"
+_UNLISTED = "unlisted on Charmhub"
+_ABSENT = "not on Charmhub"
+
+
+def _has_charmhub_data(snapshot: Snapshot) -> bool:
+    """Whether this snapshot's `__meta__` carries `charmhub_listing` at all.
+
+    Key presence, not value, for the same reason as `_has_charmlibs_data`:
+    `scan --no-charmhub` and a lookup the store never answered both leave a
+    null behind, and only the absence of the key says nobody asked.
+    """
+    return any("charmhub_listing" in _meta(charm) for charm in snapshot.charms.values())
+
+
+def compute_charmhub_listed(snapshot: Snapshot) -> dict | None:
+    """Share of active charms Charmhub lists publicly.
+
+    Measured against **all active charms**, not `eligible_charms`: publishing
+    to Charmhub has nothing to do with which framework a charm is built on,
+    and a reactive charm is as listable as an ops one. Dormancy still applies
+    — a charm nobody has touched in two years is not one anyone is about to
+    publish, and counting it would report abandonment as a listing gap.
+
+    Three buckets, because the ways of not being listed are not the same
+    problem. `unlisted` is a charm that *is* on the store and has been hidden
+    from search: somebody published it and chose, or forgot to change, that.
+    `absent` is a charm with no Charmhub entry at all. The first is a
+    tick-box, the second is a release process.
+
+    A charm whose lookup the store did not answer is dropped from the
+    denominator rather than counted as absent, the same way an unreadable
+    rock is dropped from the rootless metric: a network failure is not a
+    finding about the charm, and folding it in would report an outage as
+    charms falling off the store.
+    """
+    if not _has_charmhub_data(snapshot):
+        return None
+    counts = {_LISTED: 0, _UNLISTED: 0, _ABSENT: 0}
+    for charm in active_charms(snapshot).values():
+        meta = _meta(charm)
+        if "charmhub_listing" not in meta:
+            continue
+        verdict = meta["charmhub_listing"]
+        if verdict == charmhub.LISTED:
+            counts[_LISTED] += 1
+        elif verdict == charmhub.UNLISTED:
+            counts[_UNLISTED] += 1
+        elif verdict == charmhub.ABSENT:
+            counts[_ABSENT] += 1
+        # None: we asked and the store didn't say. Not a bucket.
+
+    total = sum(counts.values())
+    if not total:
+        return None
+    return _point(
+        snapshot,
+        value=_percent(counts[_LISTED], total),
+        numerator=counts[_LISTED],
+        denominator=total,
+        breakdown={k: _percent(v, total) for k, v in counts.items()},
+        counts=counts,
+        partial=_partial(snapshot),
+    )
+
+
 # ── the scorecard ───────────────────────────────────────────────────────────
 
 METRICS: tuple[Metric, ...] = (
@@ -714,6 +783,45 @@ METRICS: tuple[Metric, ...] = (
             "via sudo.",
             "Archived repos and forks are dropped from the rocks half, as are "
             "rocks whose rockcraft.yaml could not be read at scan time.",
+        ),
+    ),
+    Metric(
+        key=CHARMHUB_LISTED,
+        title="Findable on Charmhub",
+        question="Can somebody who doesn't already know about a charm find it?",
+        unit="percent",
+        compute=compute_charmhub_listed,
+        breakdown_keys=(_LISTED, _UNLISTED, _ABSENT),
+        # The store is asked at scan time and cannot be asked about the past,
+        # so unlike every other metric here this one has no history to
+        # backfill: the series starts at the first weekly run that carries
+        # `charmhub_listing` and grows a point a week from there.
+        pending=(
+            "the store cannot be asked what it listed last January, so this "
+            "series starts at the first scan that asked"
+        ),
+        detail=(
+            "Percent of actively-maintained charms that Charmhub lists "
+            "publicly, read from <code>result.unlisted</code> on "
+            "<code>api.charmhub.io</code> at scan time. Split against charms "
+            "that are on the store but hidden from search, and charms with no "
+            "store entry at all."
+        ),
+        denominator_note=(
+            "every actively-maintained charm, not just eligible charms — "
+            "publishing to Charmhub is independent of what the charm is "
+            "built on"
+        ),
+        caveats=(
+            "Matched on the name the charm declares, so a charm published "
+            "under a different name than its <code>charmcraft.yaml</code> "
+            "says reads as absent.",
+            "A charm the store did not answer for is dropped from the "
+            "denominator rather than counted as absent — an outage is not a "
+            "finding about a charm.",
+            "The corpus is hyrum's list of charm <em>repositories</em>, so a "
+            "charm that was never meant for Charmhub (a test fixture, an "
+            "internal-only charm) counts against this number.",
         ),
     ),
 )
