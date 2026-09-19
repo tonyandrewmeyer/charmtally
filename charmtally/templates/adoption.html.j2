@@ -40,6 +40,12 @@
   .pending-note {
     border-left: 3px solid #ddd; padding-left: .8em; color: #666; max-width: 70ch;
   }
+  .counts { display: flex; flex-wrap: wrap; gap: 1.6em; margin: .8em 0 1em 0; }
+  .counts h3 { font-size: 13px; font-weight: 600; margin: 0 0 .3em 0; color: #444; }
+  .counts table { font-size: 13px; }
+  .counts td { padding: .1em .8em .1em 0; }
+  .counts .asof { flex-basis: 100%; color: #888; font-size: 12px; margin: 0; }
+
   details.fallback { margin: .6em 0 1em 0; }
   details.fallback summary { color: #666; font-size: 12px; cursor: pointer; }
   details.fallback table { margin-top: .6em; }
@@ -126,6 +132,25 @@
     </tbody>
   </table>
   </details>
+
+  {% if card.metric.count_tables and card.latest %}
+  <div class="counts">
+    {% for heading, rows in card.metric.count_tables %}
+    <div>
+      <h3>{{ heading }}</h3>
+      <table>
+        {% for key, label in rows %}
+        <tr>
+          <td class="num">{{ card.latest.counts.get(key, "—") }}</td>
+          <td>{{ label|safe }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+    {% endfor %}
+    <p class="asof">As of {{ card.latest.date }}. Earlier dates are in the JSON.</p>
+  </div>
+  {% endif %}
 
   {% if card.latest and card.latest.partial %}
   <p class="partial">Latest point is partial: {{ card.latest.partial }}.</p>

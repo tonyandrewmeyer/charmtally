@@ -1,0 +1,146 @@
+# Charmlibs ↔ Charmhub library equivalences.
+#
+# A charm can reach the same functionality two ways: by depending on a
+# `charmlibs-*` package from PyPI, or by vendoring a Charmhub library into
+# `lib/charms/<publisher>/vN/<module>.py`. The scan records both — as
+# `__meta__.charmlibs_names` and `__meta__.library_names` — but nothing in
+# either list says that `interfaces.tls_certificates` and
+# `tls_certificates_interface` are the same library. That claim cannot be
+# derived; it has to be asserted, and this file is where it is asserted.
+#
+# It is source data, hand-curated, like `rocks.csv` and
+# `calibration-ledger.yaml` — not build output. Every row names the module
+# the equivalence was checked against, so a reader can re-check it.
+#
+# Only *pairs* are listed. Everything else falls out: a Charmhub library
+# named in no row is Charmhub-only, and a charmlibs package named in no row
+# is charmlibs-only. That keeps the file to the claims that actually need
+# making, and means a new charmlib needs a row here only once a Charmhub
+# predecessor for it exists.
+#
+# ---------------------------------------------------------------------------
+# Schema
+# ---------------------------------------------------------------------------
+#
+#   id          Stable identifier for the library, independent of which side
+#               it is being counted on. Used as a key in the emitted JSON, so
+#               add rather than rename.
+#   charmlibs   Every name `__meta__.charmlibs_names` can carry for this
+#               library. Usually two: `metadata._normalise_charmlib` collapses
+#               a dotted path to its first segment (or first two, under
+#               `interfaces`), and a PyPI dist name and an import path do not
+#               always collapse the same way — `charmlibs-interfaces-tls-
+#               certificates` (a dependency line) truncates to
+#               `interfaces.tls`, while `charmlibs.interfaces.tls_certificates`
+#               (an import) gives `interfaces.tls_certificates`. Both spellings
+#               mean one library, and listing both here is what stops the
+#               census counting it twice.
+#   charmhub    The `lib/charms/<publisher>/` directory names that hold the
+#               equivalent. A list, because one library can be published by
+#               more than one charm.
+#   module      The module(s) inside those directories the equivalence was
+#               checked against. Recorded for the reader: `library_names`
+#               carries the directory only, so nothing downstream can filter
+#               on it yet.
+#   note        Why this row says what it says, where that isn't obvious.
+
+version: 1
+
+pairs:
+  # Five charmlibs packages, one Charmhub directory. They are one row rather
+  # than five because `library_names` records the directory and not the
+  # module: a charm vendoring `operator_libs_linux` cannot be told from the
+  # snapshots to be an `apt` user rather than a `snap` user. Five rows would
+  # therefore count the same 74 charms five times over on the Charmhub side.
+  # `library_versions` (added 2026-09-15, in no snapshot yet) is per module
+  # and would let this split later.
+  - id: operator-libs-linux
+    charmlibs: [apt, snap, systemd, sysctl, passwd]
+    charmhub: [operator_libs_linux]
+    module: [apt.py, snap.py, systemd.py, sysctl.py, passwd.py]
+    note: >-
+      The directory also publishes dnf.py, grub.py and
+      juju_systemd_notices.py, which have no charmlibs counterpart; a charm
+      vendoring only those still reads as being on the Charmhub side.
+
+  - id: rollingops
+    charmlibs: [rollingops]
+    charmhub: [rolling_ops]
+    module: [rollingops.py]
+
+  - id: tls-certificates
+    charmlibs: [interfaces.tls, interfaces.tls_certificates]
+    charmhub: [tls_certificates_interface]
+    module: [tls_certificates.py]
+
+  - id: certificate-transfer
+    charmlibs: [interfaces.certificate, interfaces.certificate_transfer]
+    charmhub: [certificate_transfer_interface]
+    module: [certificate_transfer.py]
+
+  - id: service-mesh
+    charmlibs: [interfaces.service, interfaces.service_mesh]
+    charmhub: [istio_beacon_k8s]
+    module: [service_mesh.py]
+
+  - id: oauth
+    charmlibs: [interfaces.oauth]
+    charmhub: [hydra]
+    module: [oauth.py]
+
+  - id: openfga
+    charmlibs: [interfaces.openfga]
+    charmhub: [openfga_k8s]
+    module: [openfga.py]
+
+  - id: ldap
+    charmlibs: [interfaces.ldap]
+    charmhub: [glauth_k8s]
+    module: [ldap.py]
+
+  # Two charmlibs packages, one directory again: oathkeeper publishes both
+  # auth_proxy.py and forward_auth.py, and `library_names` cannot say which
+  # of them a charm vendoring `oathkeeper` is after. oauth2_proxy_k8s
+  # publishes forward_auth.py as well, which is why the Charmhub side is two
+  # directories.
+  - id: oathkeeper-auth
+    charmlibs: [interfaces.auth_proxy, interfaces.forward_auth]
+    charmhub: [oathkeeper, oauth2_proxy_k8s]
+    module: [auth_proxy.py, forward_auth.py]
+
+  - id: istio-ingress-route
+    charmlibs: [interfaces.istio_ingress_route]
+    charmhub: [istio_ingress_k8s]
+    module: [istio_ingress_route.py]
+
+  - id: istio-metadata
+    charmlibs: [interfaces.istio_metadata]
+    charmhub: [istio_k8s]
+    module: [istio_metadata.py]
+
+# ---------------------------------------------------------------------------
+# Deliberately unpaired
+# ---------------------------------------------------------------------------
+#
+# Recorded so the next reader doesn't re-do the search that found nothing.
+#
+#   pathops, pydeps, seceng, nginx_k8s     no Charmhub predecessor found.
+#   interfaces.otlp                        a new interface for sharing OTLP
+#                                          endpoints, not a repackaging of
+#                                          tempo's tracing.py. Pairing the two
+#                                          would be a design claim, not an
+#                                          observation.
+#   interfaces.sloth                       sloth-k8s-operator publishes no
+#                                          library.
+#   interfaces.k8s_backup_target           velero-operator publishes
+#                                          velero_backup_config.py, a
+#                                          different interface.
+#   interfaces.gateway_metadata,           charmlibs-native; the istio charms
+#   interfaces.istio_request_auth          have tests for them but publish no
+#                                          Charmhub library.
+#
+# `interfaces.istio` and `interfaces.k8s` can appear in `charmlibs_names` and
+# are pairable to nothing: they are what the dist-name truncation above leaves
+# of `charmlibs-interfaces-istio-{metadata,request-auth,ingress-route}` and
+# `charmlibs-interfaces-k8s-backup-target`, so one spelling covers three
+# different packages. They are left out of every row rather than guessed at.

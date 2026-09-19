@@ -347,6 +347,80 @@ def test_charms_with_no_libraries_are_tracked_not_averaged() -> None:
     assert point["breakdown"]["no-libraries"] == 50.0
 
 
+def _census_charm(*, charmlibs: list[str], charmhub: list[str]) -> dict:
+    return _charm(
+        features={"ops.collect-status": True},
+        meta={
+            "charmlibs_count": len(charmlibs),
+            "charmlibs_names": charmlibs,
+            "library_count": len(charmhub),
+            "library_names": charmhub,
+        },
+    )
+
+
+def test_census_counts_libraries_by_where_they_are_available() -> None:
+    snap = _snapshot({
+        # `pathops` is on no Charmhub; `loki_k8s` is on no charmlibs;
+        # tls-certificates is on both, whichever side this charm took.
+        "a": _census_charm(charmlibs=["pathops"], charmhub=["loki_k8s"]),
+        "b": _census_charm(charmlibs=["interfaces.tls_certificates"], charmhub=[]),
+    })
+
+    point = adoption.compute_charmlibs_share(snap)
+
+    assert point is not None
+    assert point["counts"]["libraries-charmlibs-only"] == 1  # pathops
+    assert point["counts"]["libraries-charmhub-only"] == 1  # loki_k8s
+    assert point["counts"]["libraries-on-both"] == 1  # tls-certificates
+
+
+def test_census_counts_a_paired_library_once_under_either_spelling() -> None:
+    """The dist-name and import spellings of one charmlib are not two libraries."""
+    snap = _snapshot({
+        "a": _census_charm(charmlibs=["interfaces.tls"], charmhub=[]),
+        "b": _census_charm(charmlibs=["interfaces.tls_certificates"], charmhub=[]),
+    })
+
+    point = adoption.compute_charmlibs_share(snap)
+
+    assert point is not None
+    assert point["counts"]["libraries-on-both"] == 1
+    assert point["counts"]["paired-uses-charmlibs"] == 2  # both charms, one library
+
+
+def test_paired_uses_split_by_the_side_each_charm_took() -> None:
+    snap = _snapshot({
+        "moved": _census_charm(charmlibs=["interfaces.tls"], charmhub=[]),
+        "stayed": _census_charm(charmlibs=[], charmhub=["tls_certificates_interface"]),
+        "midway": _census_charm(
+            charmlibs=["interfaces.tls"], charmhub=["tls_certificates_interface"]
+        ),
+        # Unpaired on both sides: contributes to neither bucket.
+        "elsewhere": _census_charm(charmlibs=["pathops"], charmhub=["loki_k8s"]),
+    })
+
+    point = adoption.compute_charmlibs_share(snap)
+
+    assert point is not None
+    assert point["counts"]["paired-uses-charmlibs"] == 1
+    assert point["counts"]["paired-uses-charmhub"] == 1
+    assert point["counts"]["paired-uses-both"] == 1
+    assert point["breakdown"]["paired-uses-charmlibs"] == 33.3
+
+
+def test_paired_uses_are_counted_per_library_not_per_charm() -> None:
+    """One charm consuming two paired libraries contributes two uses."""
+    snap = _snapshot({
+        "a": _census_charm(charmlibs=["interfaces.tls", "rollingops"], charmhub=["loki_k8s"]),
+    })
+
+    point = adoption.compute_charmlibs_share(snap)
+
+    assert point is not None
+    assert point["counts"]["paired-uses-charmlibs"] == 2
+
+
 def test_charmlibs_share_needs_the_count_in_meta() -> None:
     """A scan predating charmlibs counting yields no point, not a 0% one."""
     snap = _snapshot({

@@ -50,7 +50,7 @@ from dataclasses import dataclass, field
 from datetime import date, timedelta
 from typing import TYPE_CHECKING
 
-from . import rocks
+from . import charmlib_pairs, rocks
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -94,6 +94,15 @@ class Metric:
     # reader comparing two cards will otherwise assume a shared denominator.
     denominator_note: str = ""
     caveats: tuple[str, ...] = field(default_factory=tuple)
+    # Extra tables drawn under the chart from the latest point's `counts`,
+    # as (heading, ((count key, row label), ...)). A count that answers a
+    # different question from the headline — a census of libraries, say,
+    # where the headline is a mean over charms — has nowhere to go in a
+    # stacked chart whose bands must total 100, and reaches only
+    # `--emit-json` if it is left in `counts` alone. Declared per metric
+    # rather than rendered for every key in `counts`, so a bookkeeping
+    # count does not become page furniture by accident.
+    count_tables: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = ()
 
 
 # ── shared helpers ──────────────────────────────────────────────────────────
@@ -350,6 +359,70 @@ def _has_charmlibs_data(snapshot: Snapshot) -> bool:
     return any("charmlibs_count" in _meta(charm) for charm in snapshot.charms.values())
 
 
+#: Census buckets, keyed as the emitted JSON keys they become.
+_LIBS_CHARMLIBS_ONLY = "libraries-charmlibs-only"
+_LIBS_CHARMHUB_ONLY = "libraries-charmhub-only"
+_LIBS_BOTH = "libraries-on-both"
+#: Per-(library, charm) buckets, over the libraries that exist on both sides.
+_PAIRED_CHARMLIBS = "paired-uses-charmlibs"
+_PAIRED_CHARMHUB = "paired-uses-charmhub"
+_PAIRED_BOTH = "paired-uses-both"
+
+
+def _census(charms: dict[str, dict], table: charmlib_pairs.PairTable) -> dict[str, int]:
+    """Count libraries by where they are available, and paired uses by side.
+
+    Two questions, both asked of the same walk. The first is about
+    *libraries*: of the ones this corpus actually uses, how many exist only
+    as a charmlib, only as a vendored Charmhub library, or both. The second
+    is about *uses*: over just the libraries that exist on both sides, how
+    many (library, charm) pairs are on each. A charm on both sides of one
+    library — mid-migration, or importing one module from each — is its own
+    bucket rather than being assigned to whichever side reads better.
+
+    Availability comes from the pairing table, not from the corpus: a library
+    counts as existing on both sides whether or not anyone has moved yet, so
+    `libraries-on-both` is the size of the opportunity and
+    `paired-uses-charmlibs` is how much of it has been taken.
+
+    Uses are counted per library, so a charm consuming four paired libraries
+    contributes four — unlike the headline share above it, which is a mean
+    over charms. The two answer different questions and neither is the other
+    rounded off.
+    """
+    on_charmlibs: dict[str, set[str]] = {}
+    on_charmhub: dict[str, set[str]] = {}
+    for slug, charm in charms.items():
+        meta = _meta(charm)
+        for name in meta.get("charmlibs_names") or ():
+            on_charmlibs.setdefault(table.identity(charmlib=name), set()).add(slug)
+        for name in meta.get("library_names") or ():
+            on_charmhub.setdefault(table.identity(charmhub=name), set()).add(slug)
+
+    paired = {pair.id for pair in table.pairs}
+    counts = {
+        _LIBS_CHARMLIBS_ONLY: 0,
+        _LIBS_CHARMHUB_ONLY: 0,
+        _LIBS_BOTH: 0,
+        _PAIRED_CHARMLIBS: 0,
+        _PAIRED_CHARMHUB: 0,
+        _PAIRED_BOTH: 0,
+    }
+    for identity in on_charmlibs.keys() | on_charmhub.keys():
+        if identity in paired:
+            counts[_LIBS_BOTH] += 1
+            users = on_charmlibs.get(identity, set())
+            vendors = on_charmhub.get(identity, set())
+            counts[_PAIRED_BOTH] += len(users & vendors)
+            counts[_PAIRED_CHARMLIBS] += len(users - vendors)
+            counts[_PAIRED_CHARMHUB] += len(vendors - users)
+        elif identity in on_charmlibs:
+            counts[_LIBS_CHARMLIBS_ONLY] += 1
+        else:
+            counts[_LIBS_CHARMHUB_ONLY] += 1
+    return counts
+
+
 def compute_charmlibs_share(snapshot: Snapshot) -> dict | None:
     """Mean per-charm share of libraries that come from `charmlibs`.
 
@@ -366,6 +439,13 @@ def compute_charmlibs_share(snapshot: Snapshot) -> dict | None:
     Charms using no libraries at all have no ratio to contribute and are
     excluded from the mean; their share of the corpus is reported separately
     as the `no-libraries` breakdown rather than being quietly dropped.
+
+    The point also carries a census of the libraries themselves — see
+    `_census` — which the headline mean cannot show. A share that moves
+    because charms adopted `pathops`, which was never on Charmhub, is a
+    different event from one that moves because charms left
+    `tls_certificates_interface` for `charmlibs.interfaces.tls_certificates`,
+    and only the second is a migration.
     """
     if not _has_charmlibs_data(snapshot):
         return None
@@ -391,6 +471,8 @@ def compute_charmlibs_share(snapshot: Snapshot) -> dict | None:
     if not ratios:
         return None
     mean_share = 100 * sum(ratios) / len(ratios)
+    census = _census(charms, charmlib_pairs.default_table())
+    paired_uses = census[_PAIRED_CHARMLIBS] + census[_PAIRED_CHARMHUB] + census[_PAIRED_BOTH]
     return _point(
         snapshot,
         value=mean_share,
@@ -400,11 +482,18 @@ def compute_charmlibs_share(snapshot: Snapshot) -> dict | None:
             "charmlibs": mean_share,
             "charmhub-libs": 100 - mean_share,
             _NO_LIBS: _percent(no_libs, len(charms)),
+            # Shares of the paired uses, so the three total 100. Kept out of
+            # `breakdown_keys` for the same reason `no-libraries` is: they
+            # ride a different denominator from the two the chart stacks.
+            _PAIRED_CHARMLIBS: _percent(census[_PAIRED_CHARMLIBS], paired_uses),
+            _PAIRED_CHARMHUB: _percent(census[_PAIRED_CHARMHUB], paired_uses),
+            _PAIRED_BOTH: _percent(census[_PAIRED_BOTH], paired_uses),
         },
         counts={
             "charms-with-libraries": len(ratios),
             "charms-using-any-charmlib": with_any_charmlib,
             _NO_LIBS: no_libs,
+            **census,
         },
         partial=_partial(snapshot),
     )
@@ -557,9 +646,40 @@ METRICS: tuple[Metric, ...] = (
             "Charmhub libs)</code>. Charms using no libraries at all are "
             "excluded from the mean and tracked separately."
         ),
+        count_tables=(
+            (
+                "Libraries in use, by where they are available",
+                (
+                    (_LIBS_BOTH, "on charmlibs and Charmhub"),
+                    (_LIBS_CHARMHUB_ONLY, "Charmhub only"),
+                    (_LIBS_CHARMLIBS_ONLY, "charmlibs only"),
+                ),
+            ),
+            (
+                "Uses of a library available on both sides, by the side taken",
+                (
+                    (_PAIRED_CHARMLIBS, "charmlibs"),
+                    (_PAIRED_CHARMHUB, "vendored from Charmhub"),
+                    (_PAIRED_BOTH, "both"),
+                ),
+            ),
+        ),
         caveats=(
             "Unweighted mean of per-charm ratios: every charm counts once, "
             "regardless of how many libraries it pulls in.",
+            "The two tables count different things: the first counts "
+            "<em>libraries</em>, the second counts <em>(library, charm) "
+            "uses</em>, so a charm consuming four paired libraries "
+            "contributes four rows to the second.",
+            "Which charmlib replaces which Charmhub library is asserted by a "
+            "curated table (<code>charmlib-pairs.yaml</code>), not derived: "
+            "the two registries name the same library differently. A library "
+            "missing a row reads as available on one side only.",
+            "<code>library_names</code> records the "
+            "<code>lib/charms/&lt;publisher&gt;/</code> directory, not the "
+            "module, so libraries sharing a directory — the five "
+            "<code>operator_libs_linux</code> modules, oathkeeper&rsquo;s two "
+            "— are counted as one.",
         ),
     ),
     Metric(
