@@ -7,19 +7,23 @@ import json
 import pytest
 import yaml
 
-from ..catalogue import default_path, load_patterns
+from ..catalogue import default_path, load, load_patterns
 from ..tools.calibration_check import (
     ACCEPTED,
     AGREE,
     ARCH_PATTERNS,
+    BUCKETS,
+    CLEAR_GAP_PREFIX,
     REGRESSION,
     SKIPPED_ABSENT,
     SKIPPED_INHERITED,
     SKIPPED_VERDICT,
     UNFIXED_FP,
+    clear_gap_feature,
     evaluate,
     evaluate_row,
     in_bucket,
+    in_clear_gap,
     main,
     render,
     to_json,
@@ -44,6 +48,12 @@ def _results(*charms: tuple[str, list[str]], skipped: dict | None = None) -> dic
     if skipped is not None:
         out["__skipped__"] = skipped
     return out
+
+
+def _with_feature(results: dict, slug: str, feature: str, **record) -> dict:
+    """Add one feature record to a charm built by `_results`."""
+    results[slug]["features"][feature] = dict(record)
+    return results
 
 
 def _record(slug: str, bucket: str, verdict: str, **extra) -> dict:
@@ -108,6 +118,37 @@ def test_in_bucket_delta_ignores_reactive_and_legacy_classic():
     assert in_bucket("delta", meta)
 
 
+def test_clear_gap_membership_is_the_detector_not_the_score():
+    # The whole reason the bucket is readable: `present` is one detector, while
+    # `score` folds in the architecture axis, is_reactive, is_legacy_classic,
+    # status-set-directly and the relation list. A charm scored not-applicable
+    # because it reconciles is still missing a collect-status handler.
+    features = {"ops.collect-status": {"present": False, "score": "not-applicable"}}
+    assert in_clear_gap("ops.collect-status", features)
+    features = {"ops.collect-status": {"present": True}}
+    assert not in_clear_gap("ops.collect-status", features)
+
+
+def test_clear_gap_membership_is_none_when_the_feature_was_never_looked_for():
+    # `scan --feature` or a catalogue rename, not "looked and found nothing".
+    assert in_clear_gap("ops.collect-status", {}) is None
+
+
+def test_clear_gap_feature_names_the_feature_or_nothing():
+    assert clear_gap_feature("clear-gap:ops.collect-status") == "ops.collect-status"
+    assert clear_gap_feature("reconcile") is None
+    assert clear_gap_feature("delta") is None
+
+
+def test_clear_gap_buckets_name_a_real_feature():
+    # Same guard as ARCH_PATTERNS: a bucket naming a feature `features.yaml`
+    # has since renamed would skip every one of its rows rather than fail.
+    catalogue = {f.name for f in load(default_path())}
+    named = [b.removeprefix(CLEAR_GAP_PREFIX) for b in BUCKETS if b.startswith(CLEAR_GAP_PREFIX)]
+    assert named
+    assert set(named) <= catalogue
+
+
 def test_arch_patterns_match_the_catalogue():
     # `delta` is the residual, so a new pattern landing in features.yaml
     # without being listed here would silently shrink it and clear delta rows
@@ -137,6 +178,47 @@ def test_arch_patterns_match_the_catalogue():
 def test_evaluate_row_classifies_each_combination(bucket, verdict, archs, expected):
     results = _results(("a-charm", archs))
     assert evaluate_row(_record("a-charm", bucket, verdict), results).kind == expected
+
+
+@pytest.mark.parametrize(
+    ("verdict", "present", "expected"),
+    [
+        ("TP", False, AGREE),  # the gap the round read is still open
+        ("TP", True, REGRESSION),  # gap closed — an upstream adoption, or a detector change
+        ("FP", True, AGREE),  # the miscall was fixed and the feature now reads present
+        ("FP", False, UNFIXED_FP),  # the detector still cannot see it
+    ],
+)
+def test_evaluate_row_classifies_a_clear_gap_row(verdict, present, expected):
+    bucket = "clear-gap:ops.collect-status"
+    results = _with_feature(
+        _results(("a-charm", [])), "a-charm", "ops.collect-status", present=present
+    )
+    assert evaluate_row(_record("a-charm", bucket, verdict), results).kind == expected
+
+
+def test_a_clear_gap_row_ignores_the_architecture_label():
+    # A `reconcile` charm scores not-applicable for collect-status, but the
+    # ledger row is about the handler, not the score. Reading membership off
+    # the score instead turns five round-15 TPs into regressions that say
+    # nothing about collect-status.
+    results = _with_feature(
+        _results(("a-charm", ["reconcile"])),
+        "a-charm",
+        "ops.collect-status",
+        present=False,
+        score="not-applicable",
+    )
+    record = _record("a-charm", "clear-gap:ops.collect-status", "TP")
+    assert evaluate_row(record, results).kind == AGREE
+
+
+def test_a_feature_missing_from_the_scan_is_skipped_not_failed():
+    results = _results(("a-charm", []))
+    record = _record("a-charm", "clear-gap:ops.collect-status", "TP")
+    outcome = evaluate_row(record, results)
+    assert outcome.kind == SKIPPED_ABSENT
+    assert "ops.collect-status not in the scan output" in outcome.note
 
 
 @pytest.mark.parametrize("verdict", ["NA", "other", "unadjudicated"])
@@ -195,7 +277,7 @@ def test_the_current_verdict_is_checked_not_the_superseded_history():
     assert evaluate_row(record, results).kind == AGREE
 
 
-def test_rows_outside_the_two_buckets_are_not_evaluated():
+def test_rows_outside_the_checked_buckets_are_not_evaluated():
     ledger = _ledger(
         _record("a-charm", "clear-gap:ops.secrets", "TP"),
         _record("b-charm", "reconcile", "TP"),
@@ -318,6 +400,35 @@ def test_a_failure_carries_enough_to_triage_it():
     assert "not in `reconcile` — architecture: [part-reconcile]" in text
     assert "repo_sha abc123" in text
     assert "FAIL" in text
+
+
+def test_a_clear_gap_failure_names_the_feature_not_the_architecture():
+    ledger = _ledger(_record("a-charm", "clear-gap:ops.collect-status", "TP"))
+    results = _with_feature(
+        _results(("a-charm", ["reconcile"])), "a-charm", "ops.collect-status", present=True
+    )
+    text = render(evaluate(results, ledger))
+    assert "REGRESSION  a-charm  [clear-gap:ops.collect-status]" in text
+    assert "not in `clear-gap:ops.collect-status` — ops.collect-status present" in text
+    # The architecture list belongs to the other two buckets; printing it here
+    # would invite reading the divergence as an architecture move.
+    assert "architecture:" not in text
+
+
+def test_a_clear_gap_row_still_in_the_bucket_reports_its_score():
+    ledger = _ledger(_record("a-charm", "clear-gap:ops.collect-status", "FP"))
+    results = _with_feature(
+        _results(("a-charm", [])),
+        "a-charm",
+        "ops.collect-status",
+        present=False,
+        score="clear-gap",
+    )
+    text = render(evaluate(results, ledger))
+    assert (
+        "still in `clear-gap:ops.collect-status` — ops.collect-status absent, scored clear-gap"
+        in text
+    )
 
 
 def test_the_failure_output_explains_how_to_accept_a_change():

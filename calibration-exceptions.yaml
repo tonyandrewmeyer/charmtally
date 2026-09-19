@@ -236,3 +236,51 @@ exceptions:
       sibling to the sub-charm root and so invisible to _SRC_DIRS. A fresh read
       of an already-documented gap.
     source: "CALIBRATION.md:7756 (#47)"
+
+  # -------------------------------------------------------------------------
+  # Group 3: the charm closed the gap.
+  #
+  # A `clear-gap:<feature>` TP says the round read the charm and found the
+  # feature genuinely missing. The charm adopting it afterwards is the outcome
+  # the label exists to produce, so these three are the check working as
+  # intended rather than a detector moving — but they still diverge from a
+  # verdict that was right when it was written, and the ledger records what the
+  # round said, not what the charm did next.
+  #
+  # Unlike groups 1 and 2 these are expected to keep arriving: every entry here
+  # is one more charm that took the advice. If the list grows past a handful,
+  # that is an argument for recording adoption in the ledger row rather than
+  # for lengthening this file.
+  # -------------------------------------------------------------------------
+  - slug: "exim-operator"
+    bucket: "clear-gap:ops.collect-status"
+    ledger_verdict: "TP"
+    accepted: "2026-09-19"
+    reason: >-
+      Adopted collect-status upstream after #15. The current scan matches
+      `observe(self.on.collect_unit_status` at src/charm.py:79, so the feature
+      reads present and the charm has left the clear-gap list. The round-15
+      verdict — direct `.unit.status =` assignment, no handler — was right when
+      it was written; the gap is simply closed.
+    source: "CALIBRATION.md:536 (#15); results.json ops.collect-status evidence at repo_sha 448b09f5"
+
+  - slug: "ranger-k8s-operator"
+    bucket: "clear-gap:ops.collect-status"
+    ledger_verdict: "TP"
+    accepted: "2026-09-19"
+    reason: >-
+      Adopted collect-status upstream after #15 —
+      `observe(self.on.collect_unit_status` at src/charm.py:123. Same shape as
+      exim-operator: verdict correct at the time, gap since closed.
+    source: "CALIBRATION.md:539 (#15); results.json ops.collect-status evidence at repo_sha 9669798a"
+
+  - slug: "superset-k8s-operator"
+    bucket: "clear-gap:ops.collect-status"
+    ledger_verdict: "TP"
+    accepted: "2026-09-19"
+    reason: >-
+      Adopted collect-status upstream after #15 —
+      `observe(self.on.collect_unit_status` at src/charm.py:128. Note this is
+      the same charm as the `reconcile` row #47 re-confirmed; the two buckets
+      are independent questions and only the collect-status one has moved.
+    source: "CALIBRATION.md:540 (#15); results.json ops.collect-status evidence at repo_sha d6d292b1"
