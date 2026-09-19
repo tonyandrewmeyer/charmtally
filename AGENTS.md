@@ -397,6 +397,20 @@ output so you can tell them apart:
 - the charm changed upstream, or a later round moved it between buckets — add
   an entry to `calibration-exceptions.yaml` with a reason and a citation.
 
+`scanned_sha` separates the first of those from the third. Where a round cited
+a permalink — 206 of the ledger's 363 verdict events, essentially everything
+from #21 on — the SHA it read is on the row, and the check compares it against
+the `repo_sha` the committed scan read, so it can say "this charm moved" rather
+than leaving that to whoever reads the output. Most cannot be blamed upstream:
+111 of the 160 comparable in-scope rows are at a different commit today, so a
+charm having moved narrows the search rather than settling it. A row carrying
+no SHA is checked exactly as before — the field qualifies a divergence, it
+never causes or excuses one. New rows should carry one; it comes off the
+evidence permalink (GitHub, opendev and Launchpad all appear). The
+collect-status bucket contributes none of the 160: all 52 of its events come
+from rounds 1-4 and 15, which predate the habit of citing one, so those 44 rows
+are checked for their verdict but never for movement.
+
 Exceptions name the verdict they were written against, so correcting a ledger
 row invalidates its exception rather than carrying it over, and the check
 reports entries that no longer accept anything so the list shrinks as the gaps

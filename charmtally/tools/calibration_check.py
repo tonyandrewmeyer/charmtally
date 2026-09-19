@@ -77,6 +77,22 @@ the detector, the bucket is the single-signal question the round actually put:
 is the charm missing a collect-status handler? A TP says it was and a fix would
 be welcome; an FP says the detector was wrong and the charm should read present
 once the gap is closed.
+
+Which commit the round read
+---------------------------
+A divergence has three explanations — the detector regressed, the ledger row
+is stale, or the charm changed upstream — and the third is the one the check
+can rule in by itself. Where a round cited an evidence permalink the ledger
+row carries its `scanned_sha`, and that is compared against the `repo_sha` the
+committed scan read. A charm at a different commit is not proof of anything,
+since most of the corpus has moved since it was adjudicated, but it says which
+of the three to look at first, which is exactly what the output could not say
+before.
+
+Rows without one are checked as they always were: the SHA qualifies a
+divergence, it never causes or excuses one. It also decides nothing about the
+exit code — an upstream change is accepted through
+`calibration-exceptions.yaml` by a human, not by this comparison.
 """
 
 from __future__ import annotations
@@ -148,6 +164,8 @@ class Outcome:
     architecture: list[str] | None = None
     score: str | None = None
     repo_sha: str | None = None
+    scanned_sha: str | None = None
+    moved: bool | None = None
     note: str | None = None
     accepted_by: dict[str, Any] | None = None
 
@@ -214,6 +232,19 @@ def clear_gap_feature(bucket: str) -> str | None:
     return None
 
 
+def same_commit(a: str | None, b: str | None) -> bool | None:
+    """Whether two SHAs name the same commit, or None if that can't be told.
+
+    Compared on the shorter one's length: the ledger's SHAs come out of
+    evidence permalinks, and a round that pasted an abbreviated one is still
+    saying which commit it read.
+    """
+    if not a or not b:
+        return None
+    n = min(len(a), len(b))
+    return a[:n].lower() == b[:n].lower()
+
+
 def in_bucket(bucket: str, meta: dict) -> bool:
     """Whether the detectors currently place this charm in `bucket`.
 
@@ -253,6 +284,7 @@ def evaluate_row(record: dict, results: dict) -> Outcome:
         "date": record.get("date"),
         "reason": record.get("reason"),
         "source_line": record.get("source_line"),
+        "scanned_sha": record.get("scanned_sha"),
         "verdict_as_written": record.get("verdict_as_written"),
     }
 
@@ -299,9 +331,15 @@ def evaluate_row(record: dict, results: dict) -> Outcome:
 
     features = charm.get("features") or {}
     meta = features.get("__meta__") or {}
+    repo_sha = meta.get("repo_sha")
+    agrees = same_commit(record.get("scanned_sha"), repo_sha)
     detail: dict[str, Any] = {
         "architecture": list(meta.get("architecture") or []),
-        "repo_sha": meta.get("repo_sha"),
+        "repo_sha": repo_sha,
+        # None where the row carries no SHA, or the scan recorded none: the
+        # check cannot then say whether the charm moved, which is different
+        # from knowing it did not.
+        "moved": None if agrees is None else not agrees,
     }
 
     feature = clear_gap_feature(bucket)
@@ -385,7 +423,10 @@ To accept one of these, pick whichever of the three it actually is:
                                      invalid rather than carrying over.
   * the charm changed upstream,
     or a later round moved it
-    between buckets               -> add an entry to calibration-exceptions.yaml
+    between buckets               -> a charm-moved note above is the tell for
+                                     the first of these, on the rows whose
+                                     round recorded the SHA it read. Add an
+                                     entry to calibration-exceptions.yaml
                                      with `slug`, `bucket`, `ledger_verdict`,
                                      `accepted` (a date), `reason` and a
                                      `source` citation.
@@ -418,6 +459,24 @@ def _fmt_now(outcome: Outcome) -> str:
     return f"{verb} `{outcome.bucket}` — architecture: [{shown}]"
 
 
+def _fmt_sha(outcome: Outcome) -> str:
+    """One line on which commit was read, then and now.
+
+    The three cases are distinct and a reader needs to tell them apart: the
+    charm moved (look upstream first), it did not (look at the detector), or
+    the round left no SHA so neither can be said.
+    """
+    if outcome.moved is None:
+        why = "ledger row records no SHA" if not outcome.scanned_sha else "scan records no SHA"
+        return f"scanned at repo_sha {outcome.repo_sha} — cannot compare, {why}"
+    if outcome.moved:
+        return (
+            f"scanned at repo_sha {outcome.repo_sha}, but the round read "
+            f"{outcome.scanned_sha} — THE CHARM MOVED"
+        )
+    return f"scanned at repo_sha {outcome.repo_sha} — the same commit the round read"
+
+
 def render_outcome(outcome: Outcome) -> str:
     """Render one divergence in enough detail to triage it without the prose."""
     written = outcome.verdict_as_written
@@ -427,7 +486,7 @@ def render_outcome(outcome: Outcome) -> str:
         f"    ledger: {outcome.verdict}{as_written} — {_fmt_round(outcome)}",
         f"            {outcome.reason}",
         f"    now:    {_fmt_now(outcome)}",
-        f"            scanned at repo_sha {outcome.repo_sha}",
+        f"            {_fmt_sha(outcome)}",
     ]
     if outcome.accepted_by:
         entry = outcome.accepted_by
@@ -454,6 +513,17 @@ def render(report: Report, *, strict: bool = False) -> str:
         out.append(f"  {key.rjust(width)}: {value}")
     out.append(f"  {'total rows'.rjust(width)}: {len(report.outcomes)}")
     out.append("")
+
+    # How much of the checked set can answer "has this charm moved?" at all.
+    # Said up front because it bounds what the per-row notes below can claim.
+    compared = [o for o in report.outcomes if o.moved is not None]
+    if compared:
+        moved = sum(1 for o in compared if o.moved)
+        out += [
+            f"Read at the round's own commit: {len(compared) - moved} of {len(compared)} rows "
+            f"carrying a scanned_sha; {moved} charms have moved since.",
+            "",
+        ]
 
     # Skips are listed, not just counted: a row silently dropping out of the
     # checked set is the failure mode this whole file exists to prevent.
@@ -507,6 +577,12 @@ def render(report: Report, *, strict: bool = False) -> str:
     failures = report.failures()
     if failures:
         out.append(f"FAILURES ({len(failures)}):")
+        moved = [o for o in failures if o.moved]
+        if moved:
+            out.append(
+                f"  {len(moved)} of these are at a commit the round did not read, so look "
+                "upstream before the detector."
+            )
         out.append("")
         out += [render_outcome(o) + "\n" for o in failures]
         out.append(_ACCEPT_HELP)
