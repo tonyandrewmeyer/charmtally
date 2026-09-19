@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 import pytest
 import yaml
@@ -14,6 +15,7 @@ from ..tools.calibration_check import (
     ARCH_PATTERNS,
     BUCKETS,
     CLEAR_GAP_PREFIX,
+    DEFAULT_LEDGER,
     REGRESSION,
     SKIPPED_ABSENT,
     SKIPPED_INHERITED,
@@ -26,6 +28,7 @@ from ..tools.calibration_check import (
     in_clear_gap,
     main,
     render,
+    same_commit,
     to_json,
 )
 
@@ -34,14 +37,16 @@ from ..tools.calibration_check import (
 # ---------------------------------------------------------------------------
 
 
-def _results(*charms: tuple[str, list[str]], skipped: dict | None = None) -> dict:
+def _results(
+    *charms: tuple[str, list[str]], skipped: dict | None = None, sha: str = "abc123"
+) -> dict:
     """Build a minimal results.json from (slug, architecture) pairs."""
     out: dict = {
         slug: {
             "name": slug,
             "team": "",
             "repo_url": f"https://github.com/canonical/{slug}",
-            "features": {"__meta__": {"architecture": list(archs), "repo_sha": "abc123"}},
+            "features": {"__meta__": {"architecture": list(archs), "repo_sha": sha}},
         }
         for slug, archs in charms
     }
@@ -526,3 +531,111 @@ def test_main_reports_a_missing_input_file(tmp_path, capsys):
         main(["--ledger", str(tmp_path / "nope.yaml"), "--results", str(tmp_path / "r.json")]) == 2
     )
     assert "no such file" in capsys.readouterr().err
+
+
+# ---------------------------------------------------------------------------
+# scanned_sha — was the charm read at the commit the round read?
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("a", "b", "expected"),
+    [
+        ("abc123def456", "abc123def456", True),
+        # A round that pasted an abbreviated SHA still said which commit it
+        # read, so the comparison is on the shorter one's length.
+        ("abc123d", "abc123def456", True),
+        ("abc123def456", "abc123d", True),
+        ("ABC123D", "abc123def456", True),
+        ("abc123def456", "fed654cba321", False),
+        ("abc123d", "fed654c", False),
+        # Either side missing means the question cannot be answered, which is
+        # not the same as answering "no".
+        (None, "abc123d", None),
+        ("abc123d", None, None),
+        ("", "abc123d", None),
+    ],
+)
+def test_same_commit(a, b, expected):
+    assert same_commit(a, b) is expected
+
+
+def test_a_row_with_no_scanned_sha_is_checked_exactly_as_before():
+    # Most of the pre-#21 material cites no permalink. Those rows must still
+    # be evaluated; the SHA qualifies a divergence, it never causes one.
+    ledger = _ledger(_record("a-charm", "reconcile", "TP"))
+    outcome = evaluate(_results(("a-charm", ["reconcile"])), ledger).outcomes[0]
+    assert outcome.kind == AGREE
+    assert outcome.scanned_sha is None
+    assert outcome.moved is None
+
+
+def test_a_moved_charm_is_named_as_such():
+    ledger = _ledger(_record("a-charm", "reconcile", "TP", scanned_sha="f00dcafe1234"))
+    report = evaluate(_results(("a-charm", []), sha="beefbeef5678"), ledger)
+    outcome = report.outcomes[0]
+    assert outcome.kind == REGRESSION
+    assert outcome.moved is True
+    text = render(report)
+    assert "THE CHARM MOVED" in text
+    assert "the round read f00dcafe1234" in text
+    # And the reader is pointed upstream before the detector.
+    assert "look upstream before the detector" in text
+
+
+def test_an_unmoved_charm_says_so():
+    # The more damning case: the tree is byte-for-byte what the round read, so
+    # nothing upstream can explain the divergence.
+    ledger = _ledger(_record("a-charm", "reconcile", "TP", scanned_sha="abc123"))
+    report = evaluate(_results(("a-charm", []), sha="abc123"), ledger)
+    assert report.outcomes[0].moved is False
+    text = render(report)
+    assert "the same commit the round read" in text
+    assert "THE CHARM MOVED" not in text
+    assert "look upstream before the detector" not in text
+
+
+def test_an_uncomparable_row_says_why():
+    ledger = _ledger(_record("a-charm", "reconcile", "TP"))
+    text = render(evaluate(_results(("a-charm", [])), ledger))
+    assert "cannot compare, ledger row records no SHA" in text
+
+
+def test_the_summary_reports_how_much_of_the_set_could_be_compared():
+    ledger = _ledger(
+        _record("moved", "reconcile", "TP", scanned_sha="aaaa1111"),
+        _record("still", "reconcile", "TP", scanned_sha="bbbb2222"),
+        _record("unknown", "reconcile", "TP"),
+    )
+    results = _results(("still", ["reconcile"]), ("unknown", ["reconcile"]), sha="bbbb2222")
+    results.update(_results(("moved", ["reconcile"]), sha="cccc3333"))
+    text = render(evaluate(results, ledger))
+    assert "1 of 2 rows carrying a scanned_sha; 1 charms have moved since" in text
+
+
+def test_moved_survives_the_json_output():
+    ledger = _ledger(_record("a-charm", "reconcile", "TP", scanned_sha="aaaa1111"))
+    payload = to_json(evaluate(_results(("a-charm", ["reconcile"]), sha="bbbb2222"), ledger))
+    row = payload["outcomes"][0]
+    assert row["scanned_sha"] == "aaaa1111"
+    assert row["moved"] is True
+
+
+def test_the_ledgers_own_scanned_shas_are_well_formed():
+    # A transcription bug here is silent: a malformed SHA never matches, so
+    # every row carrying one would read as "the charm moved" forever.
+    ledger = yaml.safe_load(DEFAULT_LEDGER.read_text(encoding="utf-8"))
+
+    def events(record):
+        yield record
+        yield from record.get("history") or []
+
+    seen = 0
+    for record in ledger["records"]:
+        for event in events(record):
+            sha = event.get("scanned_sha")
+            if sha is None:
+                continue
+            seen += 1
+            assert re.fullmatch(r"[0-9a-f]{7,40}", sha), f"{record['slug']}: {sha!r}"
+    assert seen > 100, "the extraction covers most of the post-#21 rounds"
