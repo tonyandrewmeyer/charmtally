@@ -32,7 +32,7 @@ from typing import TYPE_CHECKING, Protocol
 from ..corpus import load_overrides
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable, Generator
 
 _ENV_CACHE_DIR = "CHARMTALLY_CACHE_DIR"
 _ENV_AUDIT_TS = "AUDIT_TS"
@@ -82,7 +82,7 @@ class CloneCache:
         return self.root / key
 
     @contextmanager
-    def _locked(self, entry_dir: Path) -> Iterator[None]:
+    def _locked(self, entry_dir: Path) -> Generator[None]:
         entry_dir.mkdir(parents=True, exist_ok=True)
         with (entry_dir / ".lock").open("w") as fh:
             fcntl.flock(fh, fcntl.LOCK_EX)
