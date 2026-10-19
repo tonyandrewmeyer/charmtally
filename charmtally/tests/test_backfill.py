@@ -205,6 +205,56 @@ class TestSnapshotShape:
         assert snapshot.charms == {}
 
 
+class TestAdoptionOnly:
+    def test_drops_what_the_pass_did_not_compute(self):
+        snap = {
+            "a": {
+                "features": {
+                    "ops.typed-relation": {"present": True, "score": "x", "rationale": "y"},
+                    "__meta__": {"architecture": [], "charm_user": None},
+                }
+            },
+            "__backfill__": {"outcomes": {}},
+        }
+        backfill.mark_adoption_only(snap, ["ops.typed-relation"])
+        features = snap["a"]["features"]
+        assert features["ops.typed-relation"] == {"present": True}
+        # Absent, not `[]`: patterns were never run, so nothing was matched.
+        assert "architecture" not in features["__meta__"]
+        assert "charm_user" in features["__meta__"]
+        assert snap["__backfill__"]["scope"] == trend.ADOPTION_SCOPE
+        assert snap["__backfill__"]["features_scanned"] == ["ops.typed-relation"]
+
+    def test_force_never_thins_a_full_snapshot(self, tmp_path: Path, capsys):
+        snaps = tmp_path / "snapshots"
+        snaps.mkdir()
+        (snaps / "scored-2026-01-05.json").write_text("{}\n")
+        thin = {"__backfill__": {"scope": trend.ADOPTION_SCOPE}}
+        (snaps / "scored-2026-01-12.json").write_text(json.dumps(thin))
+        csv = tmp_path / "corpus.csv"
+        csv.write_text("Team,Charm Name,Repository\nx,foo,https://github.com/canonical/foo\n")
+        rc = backfill.main([
+            "--start",
+            "2026-01-01",
+            "--end",
+            "2026-01-19",
+            "--workdir",
+            str(tmp_path / "work"),
+            "--snapshots-dir",
+            str(snaps),
+            "--corpus",
+            str(csv),
+            "--adoption-only",
+            "--force",
+            "--dry-run",
+        ])
+        assert rc == 0
+        lines = [line.strip() for line in capsys.readouterr().err.splitlines()]
+        assert "2026-01-05" not in lines
+        assert "2026-01-12" in lines
+        assert "2026-01-19" in lines
+
+
 def _written(tmp_path: Path, snap: dict) -> Path:
     path = tmp_path / "scored-x.json"
     path.write_text(json.dumps(snap, indent=2) + "\n")

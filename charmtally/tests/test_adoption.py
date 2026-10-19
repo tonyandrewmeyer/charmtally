@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
-from .. import adoption, cli, trend
+from .. import adoption, catalogue, cli, trend
 from ..dashboard import render_adoption
 
 if TYPE_CHECKING:
@@ -530,6 +530,40 @@ def test_metric_with_unscanned_inputs_has_an_empty_series() -> None:
     snap = _snapshot({"a": _charm(features={"ops.typed-relation": True})})
 
     assert adoption.compute_series([snap])[adoption.ROOTLESS] == []
+
+
+def test_compute_series_starts_each_metric_at_its_since() -> None:
+    """A snapshot predating the API's release draws no point, not a zero."""
+    metric = adoption.metric_by_key(adoption.TYPED_RELATION)
+    assert metric is not None and metric.since
+    charms = {"a": _charm(features={"ops.typed-relation": False})}
+    before = _snapshot(charms, date="2025-06-30")
+    on = _snapshot(charms, date=metric.since)
+
+    series = adoption.compute_series([before, on])
+
+    assert [p["date"] for p in series[adoption.TYPED_RELATION]] == [metric.since]
+
+
+def test_every_since_has_a_note_and_inputs_are_catalogue_features() -> None:
+    names = {f.name for f in catalogue.load(catalogue.default_path())}
+    for metric in adoption.METRICS:
+        assert bool(metric.since) == bool(metric.since_note), metric.key
+        assert set(metric.inputs) <= names, metric.key
+
+
+def test_replay_inputs_grow_as_metrics_start() -> None:
+    assert adoption.replay_inputs("2024-05-13") == frozenset()
+    assert adoption.replay_inputs("2025-05-05") == {
+        "jubilant.integration-tests",
+        "testing.pytest-operator",
+    }
+    assert adoption.replay_inputs("2025-07-07") == {
+        "jubilant.integration-tests",
+        "testing.pytest-operator",
+        "ops.typed-relation",
+        "ops.typed-config",
+    }
 
 
 def test_compute_series_only_filters_to_one_metric() -> None:
