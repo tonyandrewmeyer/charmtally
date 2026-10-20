@@ -36,6 +36,7 @@
   .detail { color: #444; max-width: 70ch; margin: 0 0 .8em 0; }
   .caveats { color: #85560a; font-size: 12px; max-width: 70ch; }
   .partial { color: #85560a; font-size: 12px; }
+  .since { color: #666; font-size: 12px; max-width: 70ch; margin: -.4em 0 .8em 0; }
   .chart { height: 320px; }
   .pending-note {
     border-left: 3px solid #ddd; padding-left: .8em; color: #666; max-width: 70ch;
@@ -101,6 +102,9 @@
 <section class="metric" id="metric-{{ card.metric.key }}">
   <h2>{{ card.metric.title }}</h2>
   <p class="detail">{{ card.metric.detail|safe }}</p>
+  {% if card.metric.since_note %}
+  <p class="since">Series starts {{ card.metric.since }}: {{ card.metric.since_note|safe }}.</p>
+  {% endif %}
 
   {% if card.series %}
   <div class="chart" id="chart-{{ card.metric.key }}"></div>

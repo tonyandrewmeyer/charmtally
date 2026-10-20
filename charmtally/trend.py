@@ -52,6 +52,17 @@ class Snapshot:
     # the same way the feature catalogue is read from the data itself.
     rocks: dict[str, dict] = field(default_factory=dict)
     rocks_scanned: bool = False
+    # Written by `tools.backfill --adoption-only`, which scans only the few
+    # features the adoption scorecard reads. The feature-drift guard copes
+    # with that per series, but the History page's diff compares its first
+    # snapshot to its last over the features *both* scanned, so one of these
+    # at the head of the range would empty the whole diff. `cmd_trend` drops
+    # them; `cmd_adoption` is what they are for.
+    adoption_only: bool = False
+
+
+#: `__backfill__.scope` on a snapshot that scanned only the adoption inputs.
+ADOPTION_SCOPE = "adoption"
 
 
 def _feature_names_of(charm: dict) -> set[str]:
@@ -66,12 +77,14 @@ def _load_one(path: Path, date: str) -> Snapshot:
         feature_names |= _feature_names_of(charm)
     rocks_block = raw.get(ROCKS_KEY)
     rocks = rocks_block.get("rocks", {}) if isinstance(rocks_block, dict) else {}
+    provenance = raw.get("__backfill__")
     return Snapshot(
         date=date,
         charms=charms,
         feature_names=frozenset(feature_names),
         rocks=rocks if isinstance(rocks, dict) else {},
         rocks_scanned=isinstance(rocks_block, dict),
+        adoption_only=isinstance(provenance, dict) and provenance.get("scope") == ADOPTION_SCOPE,
     )
 
 

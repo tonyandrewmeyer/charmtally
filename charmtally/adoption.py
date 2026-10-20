@@ -104,6 +104,18 @@ class Metric:
     # rather than rendered for every key in `counts`, so a bookkeeping
     # count does not become page furniture by accident.
     count_tables: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = ()
+    # First snapshot date (ISO) this metric reports, and why it starts there.
+    # Snapshots run further back than any one metric means anything — the
+    # series is shared, and the oldest metric sets how far back it goes — so a
+    # metric about an API that did not exist yet would otherwise draw a run of
+    # zeros that measures the release calendar rather than anybody's choices.
+    since: str = ""
+    since_note: str = ""
+    # Catalogue features `compute` reads, so `tools.backfill --adoption-only`
+    # can replay a date scanning only what the metrics live on that date
+    # need. `__meta__` is always written, so a metric reading only that
+    # declares nothing here.
+    inputs: tuple[str, ...] = ()
 
 
 # ── shared helpers ──────────────────────────────────────────────────────────
@@ -666,6 +678,12 @@ METRICS: tuple[Metric, ...] = (
         unit="percent",
         compute=compute_typed_relation,
         breakdown_keys=("typed", "untyped"),
+        since="2025-07-07",
+        since_note=(
+            "the first weekly cutoff after ops 2.23.0 (2025-06-30), which added "
+            "config, action-parameter and relation-data classes"
+        ),
+        inputs=("ops.typed-relation", "ops.typed-config"),
         detail=(
             "Percent of eligible charms calling any of <code>load_config</code>, "
             "<code>load_params</code>, <code>Relation.load</code> or "
@@ -681,6 +699,9 @@ METRICS: tuple[Metric, ...] = (
         unit="percent",
         compute=compute_integration_testing,
         breakdown_keys=(_JUBILANT, _PYTEST_OPERATOR, _OTHER_TESTS, _NO_TESTS),
+        since="2025-05-05",
+        since_note="the first weekly cutoff after jubilant 1.0.0 (2025-04-29)",
+        inputs=("jubilant.integration-tests", "testing.pytest-operator"),
         detail=(
             "Percent of all actively-maintained charms whose integration tests "
             "import <code>jubilant</code>, split against pytest-operator, "
@@ -710,6 +731,11 @@ METRICS: tuple[Metric, ...] = (
         # it drew as nothing. It stays in `breakdown` and `counts` for the
         # fallback table and the JSON.
         breakdown_keys=("charmlibs", "charmhub-libs"),
+        since="2025-04-28",
+        since_note=(
+            "the first weekly cutoff after charmlibs-pathops 1.0.0 "
+            "(2025-04-25), the first stable charmlibs package"
+        ),
         detail=(
             "Mean over charms of <code>charmlibs / (charmlibs + vendored "
             "Charmhub libs)</code>. Charms using no libraries at all are "
@@ -759,6 +785,12 @@ METRICS: tuple[Metric, ...] = (
         compute=compute_rootless,
         scope="charms+rocks",
         breakdown_keys=(_DAEMON, _NON_ROOT, _SUDOER, _OTHER_USER, _AS_ROOT),
+        since="2024-05-13",
+        since_note=(
+            "the first weekly cutoff after Juju 3.5.0 (2024-05-07), the first "
+            "Juju to honour <code>charm-user</code>; rockcraft's "
+            "<code>run-user</code> is older"
+        ),
         detail=(
             "Percent of scanned artefacts that declare a non-root user: rocks "
             "setting <code>run-user</code> in <code>rockcraft.yaml</code> "
@@ -847,9 +879,19 @@ def compute_series(snapshots: list[Snapshot], *, only: str | None = None) -> dic
         if metric.compute is None:
             out[metric.key] = []
             continue
-        points = [metric.compute(s) for s in snapshots]
+        points = [metric.compute(s) for s in snapshots if s.date >= metric.since]
         out[metric.key] = [p for p in points if p is not None]
     return out
+
+
+def replay_inputs(on: str) -> frozenset[str]:
+    """Catalogue features the metrics reporting on date `on` read.
+
+    What `tools.backfill --adoption-only` scans at that date: a metric whose
+    series has not started yet contributes nothing, so a date before every
+    feature-backed metric starts is a metadata-only replay.
+    """
+    return frozenset(name for metric in METRICS if metric.since <= on for name in metric.inputs)
 
 
 def latest_and_delta(series: list[dict]) -> tuple[dict | None, float | None]:

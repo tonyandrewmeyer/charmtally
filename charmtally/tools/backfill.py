@@ -114,6 +114,24 @@ it would read indexing lag as adoption), its `Archived` / `Fork` columns are
 today's and are applied to every date, and `git show` does not follow renames —
 a rockcraft.yaml that has since moved reads as `NO_ROCK_YET` before the move.
 
+Adoption-only
+-------------
+`--adoption-only` replays dates for the scorecard alone, further back than the
+History page needs to go::
+
+    uv run python -m charmtally.tools.backfill --adoption-only \\
+        --start 2024-05-13 --end 2025-12-29 \\
+        --workdir /tmp/charmtally-backfill --overrides corpus-overrides.yaml
+
+Each date scans only `adoption.replay_inputs(date)` — the features of the
+metrics whose `since` has passed — plus the `__meta__` block every scan
+writes, so a date before any feature-backed metric starts costs a checkout
+and a metadata read per repo. Architecture patterns are skipped, and with them
+`__meta__.architecture` and every `score`; `__backfill__.scope` marks the
+snapshot so `trend` leaves it out (its diff compares only the features both
+ends of the range scanned). `--force` redoes a thin replay but never thins a
+full snapshot. Follow with `--rocks` for the rocks half, as for a full replay.
+
 Cost, at ~350 corpus repos: the prepare phase is the long pole (full clones,
 minutes to tens of minutes and a few GiB), and each replayed date then costs
 about what one weekly scan costs, minus the network.
@@ -137,6 +155,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from .. import adoption as _adoption
 from .. import catalogue, corpus, scan
 from .. import rocks as _rocks
 from .. import snapshot as _snapshot
@@ -522,6 +541,31 @@ def snapshot_for_date(
         "tool": "charmtally.tools.backfill",
     }
     return out
+
+
+def mark_adoption_only(snap: dict, scanned: list[str]) -> None:
+    """Make an `--adoption-only` replay say what it did and did not look at.
+
+    Architecture patterns are not run, so `__meta__.architecture` is dropped
+    rather than left as `[]`, which reads as "looked and matched nothing".
+    `score` and `rationale` go too: a score folds in the architecture axis and
+    other features' state, neither of which this pass has, and `present` is
+    all the scorecard reads.
+    """
+    for key, record in snap.items():
+        if key.startswith("__"):
+            continue
+        features = record.get("features", {})
+        meta = features.get("__meta__")
+        if isinstance(meta, dict):
+            meta.pop("architecture", None)
+        for name, rec in features.items():
+            if name != "__meta__" and isinstance(rec, dict):
+                rec.pop("score", None)
+                rec.pop("rationale", None)
+    provenance = snap["__backfill__"]
+    provenance["scope"] = _trend.ADOPTION_SCOPE
+    provenance["features_scanned"] = scanned
 
 
 # ── prepare phase ───────────────────────────────────────────────────────────
@@ -1142,6 +1186,14 @@ def build_parser() -> argparse.ArgumentParser:
         "have a snapshot are touched.",
     )
     p.add_argument(
+        "--adoption-only",
+        action="store_true",
+        help="Scan only what the adoption scorecard reads at each date — the "
+        "features of metrics whose series has started (`Metric.since`) plus "
+        "`__meta__` — and mark the snapshot so the History page skips it. For "
+        "dates further back than the History page needs to go.",
+    )
+    p.add_argument(
         "--rocks-csv",
         type=Path,
         default=DEFAULT_ROCKS_CSV,
@@ -1181,6 +1233,10 @@ def _snapshot_date(path: Path) -> dt.date | None:
         return None
 
 
+def _snapshot_path(snapshots_dir: Path, date: dt.date) -> Path:
+    return snapshots_dir / f"scored-{date.isoformat()}.json"
+
+
 def _existing_snapshot_dates(snapshots_dir: Path) -> list[dt.date]:
     found = (_snapshot_date(p) for p in snapshots_dir.glob("scored-*.json"))
     return sorted(d for d in found if d is not None)
@@ -1210,6 +1266,15 @@ def main(argv: list[str] | None = None) -> int:
         return run_rocks(args, dates)
     if not args.force:
         dates = [d for d in dates if d not in set(existing)]
+    elif args.adoption_only:
+        # --force may redo a thin replay, never thin a full one: that would
+        # take a date off the History page to save a few minutes of scanning.
+        full = {
+            d
+            for d in existing
+            if not _trend._load_one(_snapshot_path(args.snapshots_dir, d), "").adoption_only
+        }
+        dates = [d for d in dates if d not in full]
     if not dates:
         print("nothing to do", file=sys.stderr)
         return 0
@@ -1251,10 +1316,24 @@ def main(argv: list[str] | None = None) -> int:
     args.snapshots_dir.mkdir(parents=True, exist_ok=True)
     for date in dates:
         print(f"… replaying {date}", file=sys.stderr)
-        snap = snapshot_for_date(
-            date, refs, args.workdir, feats, pats, overrides, args.features, source
-        )
-        out = args.snapshots_dir / f"scored-{date.isoformat()}.json"
+        if args.adoption_only:
+            wanted = _adoption.replay_inputs(date.isoformat())
+            snap = snapshot_for_date(
+                date,
+                refs,
+                args.workdir,
+                [f for f in feats if f.name in wanted],
+                [],
+                overrides,
+                args.features,
+                source,
+            )
+            mark_adoption_only(snap, sorted(wanted))
+        else:
+            snap = snapshot_for_date(
+                date, refs, args.workdir, feats, pats, overrides, args.features, source
+            )
+        out = _snapshot_path(args.snapshots_dir, date)
         # Thinned like the weekly snapshot: a replayed date is written once
         # and kept forever, so it should not be the one place fat snapshots
         # keep being created.

@@ -364,6 +364,13 @@ Not part of the pipeline; each is run with `uv run python -m charmtally.tools.X`
   of it. Every charm gets the key even when the SHA is gone (a force-push
   drops commits the snapshots still name); the value is then null, because
   `adoption` reads key *presence* to tell "we looked" from "we never did".
+  `--adoption-only` replays dates for the scorecard alone: each date scans
+  only `adoption.replay_inputs(date)` — the `inputs` of metrics whose
+  `Metric.since` has passed — plus `__meta__`, skipping architecture
+  patterns, and marks the snapshot `__backfill__.scope: adoption`. `trend`
+  drops those, because its diff compares only the features both ends of the
+  range scanned; `compute_series` drops each metric's points before its
+  `since`, which is the release that made the metric mean anything.
 - `rockfind.py` — builds a rocks corpus CSV from GitHub code search
   (`filename:rockcraft.yaml`). The REST search endpoint speaks the *legacy*
   query language: `path:` matches a directory there, so only `filename:`

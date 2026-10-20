@@ -503,6 +503,39 @@ def test_cli_trend_parses_all_flags_and_writes_output(tmp_path: Path) -> None:
     assert payload["diff"]["latest_date"] == "2026-06-22"
 
 
+def test_cli_trend_skips_adoption_only_snapshots(tmp_path: Path) -> None:
+    """A thin replay at the head of the range would empty the diff."""
+    snapshots_dir = tmp_path / "snapshots"
+    snapshots_dir.mkdir()
+    _write_snapshot(snapshots_dir, "2026-06-11", {"a": _charm(present={"f": False})})
+    _write_snapshot(snapshots_dir, "2026-06-22", {"a": _charm(present={"f": True})})
+    thin = snapshots_dir / "scored-2026-06-04.json"
+    thin.write_text(
+        json.dumps({
+            "a": {"features": {"__meta__": {}}},
+            "__backfill__": {"scope": trend.ADOPTION_SCOPE},
+        })
+    )
+    assert trend._load_one(thin, "2026-06-04").adoption_only
+    out = tmp_path / "trend.html"
+
+    rc = cli.main([
+        "trend",
+        "--snapshots-dir",
+        str(snapshots_dir),
+        "--live",
+        str(tmp_path / "does-not-exist.json"),
+        "--out",
+        str(out),
+        "--json",
+    ])
+
+    assert rc == 0
+    payload = json.loads(out.with_suffix(".json").read_text())
+    assert payload["diff"]["base_date"] == "2026-06-11"
+    assert payload["diff"]["flips"]
+
+
 def test_cli_trend_errors_without_snapshots(tmp_path: Path) -> None:
     empty_dir = tmp_path / "snapshots"
     empty_dir.mkdir()

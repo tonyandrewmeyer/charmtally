@@ -674,7 +674,11 @@ def cmd_trend(args: argparse.Namespace) -> int:
     snapshot for today already exists) and writes a standalone History page.
     See trend.py for the corpus-drift / feature-drift / rename guards.
     """
-    snapshots = _trend.load_snapshots(args.snapshots_dir, args.live)
+    # Adoption-only replays carry a handful of features, and the diff below
+    # compares only what its two ends both scanned — see `Snapshot.adoption_only`.
+    snapshots = [
+        s for s in _trend.load_snapshots(args.snapshots_dir, args.live) if not s.adoption_only
+    ]
     if not snapshots:
         print(f"no snapshots found under {args.snapshots_dir}", file=sys.stderr)
         return 1
