@@ -21,6 +21,7 @@ from typing import TypeVar, overload
 
 import yaml
 
+from .. import layout as _layout
 from .. import metadata as _metadata
 
 _Node = TypeVar("_Node", bound=ast.AST)
@@ -93,7 +94,37 @@ def _select_files(charm_root: Path, scope: str) -> list[Path]:
             continue
         if any(d in parts for d in wanted_dirs):
             out.append(p)
+    if scope == "tests":
+        out.extend(_shared_integration_files(charm_root))
     return out
+
+
+def _shared_integration_files(charm_root: Path) -> list[Path]:
+    """Return a monorepo's shared `tests/integration/` tree, when the charm has none of its own.
+
+    The only case in which a per-file scope reaches above the charm root.
+    `layout.integration_tests_dir` already prefers the charm's own suite and
+    stops at the repo root, so this is empty for a single-charm repo and for
+    a sub-charm that carries its own tests — exactly the files the sweep
+    above already returned. Vendored libraries under the shared tree (a
+    fixture charm's `lib/charms/`) are skipped as they are everywhere else.
+    """
+    shared = _layout.integration_tests_dir(charm_root)
+    if shared is None or _is_relative_to(shared, charm_root):
+        return []
+    return [
+        p
+        for p in sorted(shared.rglob("*.py"))
+        if p.is_file() and not _is_vendored_lib(p.relative_to(shared).parts)
+    ]
+
+
+def _is_relative_to(path: Path, base: Path) -> bool:
+    try:
+        path.absolute().relative_to(base.absolute())
+    except ValueError:
+        return False
+    return True
 
 
 # ── AST helpers ─────────────────────────────────────────────────────────────────
@@ -160,7 +191,10 @@ class SourceFile:
 
     def __init__(self, path: Path, charm_root: Path) -> None:
         self.path = path
-        self.rel = str(path.relative_to(charm_root))
+        # `relpath` rather than `relative_to`: a monorepo's shared integration
+        # suite sits above the charm root, and its evidence has to say so
+        # with `..` segments, as `CharmSource.rel_to_charm` does for repo files.
+        self.rel = Path(os.path.relpath(path, charm_root)).as_posix()
         self.text = path.read_text(encoding="utf-8", errors="replace")
         self.tree = _parse_text(self.text, path)
         self._lines: list[str] | None = None
@@ -458,21 +492,10 @@ class CharmSource:
 _YAML_SKIP_DIRS = {".git", ".tox", ".venv", "venv", "node_modules", "build", "dist", "vendor"}
 
 
-def _find_repo_root(charm_root: Path) -> Path:
-    """Walk up from `charm_root` to the directory holding `.git`, else `charm_root`.
-
-    `.git` is matched as an entry rather than a directory: a worktree or a
-    submodule checkout has a `.git` *file* pointing elsewhere, and both are
-    still the top of the tree the evidence paths are relative to.
-
-    Resolved before the walk because `charmtally local .` hands in a relative
-    path, whose `parents` run out at `.` rather than at the filesystem root.
-    """
-    charm_root = charm_root.resolve()
-    for candidate in (charm_root, *charm_root.parents):
-        if (candidate / ".git").exists():
-            return candidate
-    return charm_root
+# The walk lives in `layout` so that `metadata.read` and the detectors agree
+# on which checkout a charm is in; this is the name the rest of this module
+# and its tests have always used.
+_find_repo_root = _layout.find_repo_root
 
 
 def _repo_files(repo_root: Path, globs: list[str]) -> list[Path]:

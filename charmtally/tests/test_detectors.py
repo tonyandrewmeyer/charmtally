@@ -2841,3 +2841,95 @@ def test_repo_file_absent_when_the_called_workflow_does_not_provision(tmp_path: 
         assert detect_feature(charm_root, _catalogue_feature("testing.concierge")) == []
     finally:
         workflows.configure(None)
+
+
+# ── tests scope above the charm root, and zaza-config ───────────────────────
+
+
+_ZAZA_TESTS_YAML = """\
+charm_name: cinder
+gate_bundles:
+  - noble-caracal
+tests:
+  - zaza.openstack.charm_tests.cinder.tests.CinderTests
+"""
+
+
+def test_tests_scope_reads_a_monorepo_shared_integration_suite(tmp_path: Path) -> None:
+    """A sub-charm with no `tests/integration/` of its own is read against the repo's."""
+    charm_root = _write_repo(
+        tmp_path,
+        {"tests/integration/test_charm.py": "import jubilant\n"},
+        charm_dir="coordinator",
+    )
+    ev = detect_feature(charm_root, _catalogue_feature("jubilant.integration-tests"))
+    assert [(e.file, e.snippet) for e in ev] == [
+        ("../tests/integration/test_charm.py", "import jubilant")
+    ]
+
+
+def test_tests_scope_prefers_the_charm_s_own_suite(tmp_path: Path) -> None:
+    """The repo's suite is a fallback, never an addition."""
+    charm_root = _write_repo(
+        tmp_path,
+        {
+            "tests/integration/test_charm.py": "import jubilant\n",
+            "charms/foo/tests/integration/test_foo.py": "import pytest_operator\n",
+        },
+        charm_dir="charms/foo",
+    )
+    assert detect_feature(charm_root, _catalogue_feature("jubilant.integration-tests")) == []
+    ev = detect_feature(charm_root, _catalogue_feature("testing.pytest-operator"))
+    assert [e.file for e in ev] == ["tests/integration/test_foo.py"]
+
+
+def test_tests_scope_does_not_read_a_sibling_sub_charm_s_suite(tmp_path: Path) -> None:
+    charm_root = _write_repo(
+        tmp_path,
+        {"charms/bar/tests/integration/test_bar.py": "import jubilant\n"},
+        charm_dir="charms/foo",
+    )
+    assert detect_feature(charm_root, _catalogue_feature("jubilant.integration-tests")) == []
+
+
+def test_tests_scope_does_not_escape_a_charm_root_outside_a_checkout(tmp_path: Path) -> None:
+    (tmp_path / "tests" / "integration").mkdir(parents=True)
+    (tmp_path / "tests" / "integration" / "test_x.py").write_text("import jubilant\n")
+    (tmp_path / "charm").mkdir()
+    charm_root = _write_charm(tmp_path / "charm", "import ops\n")
+    assert detect_feature(charm_root, _catalogue_feature("jubilant.integration-tests")) == []
+
+
+def test_zaza_config_fires_on_a_charm_s_own_tests_yaml(tmp_path: Path) -> None:
+    charm_root = _write_repo(tmp_path, {"tests/tests.yaml": _ZAZA_TESTS_YAML})
+    ev = detect_feature(charm_root, _catalogue_feature("testing.zaza"))
+    assert [(e.file, e.line, e.detector_kind, e.snippet) for e in ev] == [
+        ("tests/tests.yaml", 2, "zaza-config", "gate_bundles:")
+    ]
+
+
+def test_zaza_config_reaches_a_repo_root_suite_set_above_a_sub_charm(tmp_path: Path) -> None:
+    """sunbeam-charms: one `tests/<suite>/tests.yaml` set for every charm beneath."""
+    charm_root = _write_repo(
+        tmp_path,
+        {
+            "tests/machine/tests.yaml": _ZAZA_TESTS_YAML,
+            "tests/identity/tests.yaml": _ZAZA_TESTS_YAML,
+        },
+        charm_dir="charms/keystone-k8s",
+    )
+    ev = detect_feature(charm_root, _catalogue_feature("testing.zaza"))
+    assert [e.file for e in ev] == [
+        "../../tests/identity/tests.yaml",
+        "../../tests/machine/tests.yaml",
+    ]
+
+
+def test_zaza_config_ignores_a_tests_yaml_that_is_not_zaza_s(tmp_path: Path) -> None:
+    charm_root = _write_repo(tmp_path, {"tests/tests.yaml": "fixtures:\n  - a\n"})
+    assert detect_feature(charm_root, _catalogue_feature("testing.zaza")) == []
+
+
+def test_zaza_config_absent_without_a_tests_yaml(tmp_path: Path) -> None:
+    charm_root = _write_repo(tmp_path, {"tests/integration/test_x.py": "import jubilant\n"})
+    assert detect_feature(charm_root, _catalogue_feature("testing.zaza")) == []

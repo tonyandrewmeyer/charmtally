@@ -470,6 +470,25 @@ features:
     verified: []
     negative: []
 
+  - name: testing.zaza
+    library: zaza
+    summary: Integration tests are driven by zaza (tests/tests.yaml bundles).
+    scope: any
+    detect:
+      - kind: zaza-config
+    notes: |
+      The third harness in the adoption dashboard's integration-testing
+      split, alongside jubilant and pytest-operator. Zaza is the OpenStack
+      charms' framework: the suite is `tests/tests.yaml` naming bundles and
+      `zaza.*` test classes rather than a `tests/integration/` directory of
+      pytest modules, so neither Python-file detector can see it and these
+      charms read as having no integration tests at all without this one.
+      The detector follows the charm's `tests/` up to the repo root, which
+      is where `sunbeam-charms` keeps its `tests/<suite>/tests.yaml` set for
+      all 80-odd charms beneath. Descriptive-only; absent → not-applicable.
+    verified: []
+    negative: []
+
   - name: testing.pytest-jubilant
     library: pytest-jubilant
     summary: Integration tests use the pytest-jubilant plugin.

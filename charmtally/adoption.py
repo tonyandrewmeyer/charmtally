@@ -14,7 +14,7 @@ history page reads, so a metric is only as old as the data behind it:
     date yields *no point* for that date, rather than a misleading zero.
     `ops.typed-relation` and `jubilant.integration-tests` have been in the
     catalogue since the first snapshot, so those series run the full history;
-    `testing.pytest-operator`, `ops.typed-config` and
+    `testing.pytest-operator`, `testing.zaza`, `ops.typed-config` and
     `__meta__.charmlibs_count` were added later. A metric with *several*
     inputs, only some of which are that old, keeps its history and marks the
     thin points `partial` instead — see `compute_integration_testing` and
@@ -295,12 +295,13 @@ def compute_typed_relation(snapshot: Snapshot) -> dict | None:
 
 _JUBILANT = "jubilant"
 _PYTEST_OPERATOR = "pytest-operator"
+_ZAZA = "zaza"
 _OTHER_TESTS = "other-integration-tests"
 _NO_TESTS = "no-integration-tests"
 
 
 def compute_integration_testing(snapshot: Snapshot) -> dict | None:
-    """How charms drive their integration tests, as four shares.
+    """How charms drive their integration tests, as five shares.
 
     Measured against **all active charms**, not `eligible_charms`: jubilant
     talks to a deployed Juju model over the CLI, so a reactive or
@@ -313,11 +314,18 @@ def compute_integration_testing(snapshot: Snapshot) -> dict | None:
     counted first, so a part-migrated charm reads as adopted rather than as
     a pytest-operator holdout.
 
+    `zaza` is the OpenStack charms' harness, read off `tests/tests.yaml`
+    rather than any Python import; before `testing.zaza` joined the
+    catalogue those charms — and every monorepo sub-charm whose suite sits
+    above its root — read as having no integration tests at all, which is
+    what the older points show.
+
     `other-integration-tests` is charms with a `tests/integration/` directory
-    where neither framework was detected — a bespoke harness, or a detector
-    miss. It is reported rather than folded into either framework bucket.
-    When `testing.pytest-operator` wasn't in the catalogue at this date, its
-    charms land in that bucket and the point is flagged `partial`.
+    where no framework was detected — a bespoke harness, or a detector miss.
+    It is reported rather than folded into any framework bucket. When
+    `testing.pytest-operator` or `testing.zaza` wasn't in the catalogue at
+    this date, its charms land in `other` (or `none`) and the point is
+    flagged `partial`.
     """
     if "jubilant.integration-tests" not in snapshot.feature_names:
         return None
@@ -325,24 +333,33 @@ def compute_integration_testing(snapshot: Snapshot) -> dict | None:
     if not charms:
         return None
     scanned_pytest_operator = "testing.pytest-operator" in snapshot.feature_names
+    scanned_zaza = "testing.zaza" in snapshot.feature_names
 
-    counts = {_JUBILANT: 0, _PYTEST_OPERATOR: 0, _OTHER_TESTS: 0, _NO_TESTS: 0}
+    counts = {_JUBILANT: 0, _PYTEST_OPERATOR: 0, _ZAZA: 0, _OTHER_TESTS: 0, _NO_TESTS: 0}
     for charm in charms.values():
         if _present(charm, "jubilant.integration-tests"):
             counts[_JUBILANT] += 1
         elif scanned_pytest_operator and _present(charm, "testing.pytest-operator"):
             counts[_PYTEST_OPERATOR] += 1
+        elif scanned_zaza and _present(charm, "testing.zaza"):
+            counts[_ZAZA] += 1
         elif _meta(charm).get("has_integration_tests"):
             counts[_OTHER_TESTS] += 1
         else:
             counts[_NO_TESTS] += 1
 
     total = len(charms)
+    # Drop an unscanned bucket entirely rather than reporting it as 0%: at
+    # these dates its charms are sitting in `other-integration-tests` (or,
+    # for zaza, in `no-integration-tests`), and a 0% column reads as "nobody
+    # uses it".
+    notes = []
     if not scanned_pytest_operator:
-        # Drop the bucket entirely rather than reporting it as 0%: at these
-        # dates pytest-operator charms are sitting in `other-integration-tests`,
-        # and a 0% column reads as "nobody uses it".
         del counts[_PYTEST_OPERATOR]
+        notes.append("testing.pytest-operator not yet scanned")
+    if not scanned_zaza:
+        del counts[_ZAZA]
+        notes.append("testing.zaza not yet scanned")
     return _point(
         snapshot,
         value=_percent(counts[_JUBILANT], total),
@@ -350,10 +367,7 @@ def compute_integration_testing(snapshot: Snapshot) -> dict | None:
         denominator=total,
         breakdown={k: _percent(v, total) for k, v in counts.items()},
         counts=counts,
-        partial=_partial(
-            snapshot,
-            "" if scanned_pytest_operator else "testing.pytest-operator not yet scanned",
-        ),
+        partial=_partial(snapshot, *notes),
     )
 
 
@@ -698,15 +712,17 @@ METRICS: tuple[Metric, ...] = (
         question="What do charms use to drive their integration tests?",
         unit="percent",
         compute=compute_integration_testing,
-        breakdown_keys=(_JUBILANT, _PYTEST_OPERATOR, _OTHER_TESTS, _NO_TESTS),
+        breakdown_keys=(_JUBILANT, _PYTEST_OPERATOR, _ZAZA, _OTHER_TESTS, _NO_TESTS),
         since="2025-05-05",
         since_note="the first weekly cutoff after jubilant 1.0.0 (2025-04-29)",
-        inputs=("jubilant.integration-tests", "testing.pytest-operator"),
+        inputs=("jubilant.integration-tests", "testing.pytest-operator", "testing.zaza"),
         detail=(
             "Percent of all actively-maintained charms whose integration tests "
-            "import <code>jubilant</code>, split against pytest-operator, "
+            "import <code>jubilant</code>, split against pytest-operator, zaza "
+            "(the OpenStack charms' <code>tests/tests.yaml</code> harness), "
             "other harnesses, and charms with no integration tests found at "
-            "all."
+            "all. A monorepo sub-charm is read against the shared "
+            "<code>tests/integration/</code> above it."
         ),
         denominator_note=(
             "every actively-maintained charm, not just eligible charms — "

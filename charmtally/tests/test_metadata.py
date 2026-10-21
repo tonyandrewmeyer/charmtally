@@ -794,3 +794,78 @@ def test_charmlibs_specifier_stops_at_the_next_item_of_a_flow_sequence(tmp_path:
         "type: charm\nname: x\nparts:\n  charm:\n    python-packages: [charmlibs-apt>=1, ops]\n"
     )
     assert read(tmp_path).charmlibs_specifiers == (("apt", ">=1"),)
+
+
+# ── has_integration_tests: layout fallbacks ──────────────────────────────────
+
+
+def _git_repo(tmp_path: Path) -> Path:
+    (tmp_path / ".git").mkdir(parents=True)
+    return tmp_path
+
+
+def test_integration_tests_found_under_the_charm_root(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    (tmp_path / "tests" / "integration").mkdir(parents=True)
+    (tmp_path / "tests" / "integration" / "test_x.py").write_text("")
+    assert read(tmp_path).has_integration_tests is True
+
+
+def test_integration_tests_found_at_the_monorepo_root(tmp_path: Path) -> None:
+    repo = _git_repo(tmp_path)
+    (repo / "tests" / "integration").mkdir(parents=True)
+    (repo / "tests" / "integration" / "test_x.py").write_text("")
+    charm = _ops_charm(repo / "worker")
+    assert read(charm).has_integration_tests is True
+
+
+def test_integration_tests_found_at_an_intermediate_charms_dir(tmp_path: Path) -> None:
+    repo = _git_repo(tmp_path)
+    (repo / "charms" / "tests" / "integration").mkdir(parents=True)
+    (repo / "charms" / "tests" / "integration" / "test_x.py").write_text("")
+    charm = _ops_charm(repo / "charms" / "garm")
+    assert read(charm).has_integration_tests is True
+
+
+def test_integration_tests_not_borrowed_from_a_sibling(tmp_path: Path) -> None:
+    repo = _git_repo(tmp_path)
+    (repo / "charms" / "other" / "tests" / "integration").mkdir(parents=True)
+    (repo / "charms" / "other" / "tests" / "integration" / "test_x.py").write_text("")
+    charm = _ops_charm(repo / "charms" / "mine")
+    assert read(charm).has_integration_tests is False
+
+
+def test_integration_tests_walk_stops_at_the_repo_root(tmp_path: Path) -> None:
+    (tmp_path / "tests" / "integration").mkdir(parents=True)
+    (tmp_path / "tests" / "integration" / "test_x.py").write_text("")
+    repo = _git_repo(tmp_path / "repo")
+    charm = _ops_charm(repo / "charm")
+    assert read(charm).has_integration_tests is False
+
+
+def test_integration_tests_ignores_an_empty_integration_dir(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    (tmp_path / "tests" / "integration" / "bundles").mkdir(parents=True)
+    assert read(tmp_path).has_integration_tests is False
+
+
+def test_zaza_tests_yaml_counts_as_integration_tests(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "tests.yaml").write_text("smoke_bundles:\n  - jammy\n")
+    assert read(tmp_path).has_integration_tests is True
+
+
+def test_zaza_suite_set_at_the_repo_root_counts_for_every_sub_charm(tmp_path: Path) -> None:
+    repo = _git_repo(tmp_path)
+    (repo / "tests" / "machine").mkdir(parents=True)
+    (repo / "tests" / "machine" / "tests.yaml").write_text("tests:\n  - zaza.x.Y\n")
+    charm = _ops_charm(repo / "charms" / "nova-k8s")
+    assert read(charm).has_integration_tests is True
+
+
+def test_a_tests_yaml_without_zaza_keys_is_not_a_suite(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "tests.yaml").write_text("fixtures: [a]\n")
+    assert read(tmp_path).has_integration_tests is False

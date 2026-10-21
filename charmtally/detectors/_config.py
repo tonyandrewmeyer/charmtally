@@ -9,6 +9,8 @@ own `Evidence` — there is no node to point at.
 `repo-file` is the one that reads above the charm root, at the repo root,
 because the questions it answers — how is this charm built, tested, and
 released — are answered by files a monorepo sub-charm does not own.
+`zaza-config` reads above it too, but only as far as `layout` says the
+charm's integration suite is: nearest `tests/` up to the repo root.
 """
 
 from __future__ import annotations
@@ -17,6 +19,7 @@ import configparser
 import re
 from typing import TYPE_CHECKING
 
+from .. import layout as _layout
 from .. import workflows as _workflows
 from .._toml import tomllib
 from ._files import Evidence
@@ -224,6 +227,34 @@ def _follow_uses(unmatched: list[tuple[str, str]], pattern: re.Pattern[str]) -> 
             out.append(Evidence(rel, hit.origin.line, "repo-file", snippet[:120]))
             break
     return out
+
+
+def _detect_zaza_config(source: CharmSource, config: dict) -> list[Evidence]:
+    """Find a zaza test description — `tests/tests.yaml` naming bundles and test classes.
+
+    No config. The OpenStack charms drive their integration tests with zaza,
+    whose suite is a YAML file of bundles plus dotted `zaza.*` class names,
+    not a `tests/integration/` directory of pytest modules — so nothing a
+    Python-file detector can see. `layout.zaza_configs` finds the file(s):
+    the charm's own `tests/tests.yaml` or `tests/<suite>/tests.yaml`, else
+    the nearest set above it up to the repo root, which is how
+    `sunbeam-charms` keeps one description for all of its charms. The
+    snippet is the first key that marks the file as zaza's.
+
+    Evidence paths are charm-root-relative like every other detector's, so a
+    repo-root description above a sub-charm reports with `..` segments.
+    """
+    results: list[Evidence] = []
+    for path in _layout.zaza_configs(source.charm_root):
+        text = source.repo_text(path)
+        match = _ZAZA_KEY_RE.search(text)
+        line = text.count("\n", 0, match.start()) + 1 if match else 0
+        snippet = match.group(0) if match else "tests.yaml"
+        results.append(Evidence(source.rel_to_charm(path), line, "zaza-config", snippet))
+    return results
+
+
+_ZAZA_KEY_RE = re.compile(r"^(?:gate_bundles|smoke_bundles|dev_bundles|tests):", re.MULTILINE)
 
 
 def _detect_requires_interface(source: CharmSource, config: dict) -> list[Evidence]:

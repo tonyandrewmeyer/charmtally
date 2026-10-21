@@ -223,20 +223,24 @@ def test_typed_relation_absent_from_catalogue_yields_no_point() -> None:
 # --- integration testing ----------------------------------------------------
 
 
-def _testing_charm(*, jubilant: bool, pytest_operator: bool, has_tests: bool) -> dict:
+def _testing_charm(
+    *, jubilant: bool, pytest_operator: bool, has_tests: bool, zaza: bool = False
+) -> dict:
     return _charm(
         features={
             "jubilant.integration-tests": jubilant,
             "testing.pytest-operator": pytest_operator,
+            "testing.zaza": zaza,
         },
         meta={"has_integration_tests": has_tests},
     )
 
 
-def test_integration_testing_splits_four_ways() -> None:
+def test_integration_testing_splits_five_ways() -> None:
     snap = _snapshot({
         "jub": _testing_charm(jubilant=True, pytest_operator=False, has_tests=True),
         "pyop": _testing_charm(jubilant=False, pytest_operator=True, has_tests=True),
+        "zaza": _testing_charm(jubilant=False, pytest_operator=False, has_tests=True, zaza=True),
         "other": _testing_charm(jubilant=False, pytest_operator=False, has_tests=True),
         "none": _testing_charm(jubilant=False, pytest_operator=False, has_tests=False),
     })
@@ -244,13 +248,34 @@ def test_integration_testing_splits_four_ways() -> None:
     point = adoption.compute_integration_testing(snap)
 
     assert point is not None
-    assert point["value"] == 25.0  # the headline is the jubilant share
+    assert point["value"] == 20.0  # the headline is the jubilant share
     assert point["counts"] == {
         "jubilant": 1,
         "pytest-operator": 1,
+        "zaza": 1,
         "other-integration-tests": 1,
         "no-integration-tests": 1,
     }
+    assert point["partial"] == ""
+
+
+def test_integration_testing_without_zaza_scanned_drops_the_bucket_and_is_partial() -> None:
+    snap = _snapshot({
+        "jub": _charm(
+            features={"jubilant.integration-tests": True, "testing.pytest-operator": False},
+            meta={"has_integration_tests": True},
+        ),
+        "none": _charm(
+            features={"jubilant.integration-tests": False, "testing.pytest-operator": False},
+            meta={"has_integration_tests": False},
+        ),
+    })
+
+    point = adoption.compute_integration_testing(snap)
+
+    assert point is not None
+    assert "zaza" not in point["counts"]
+    assert point["partial"] == "testing.zaza not yet scanned"
 
 
 def test_part_migrated_charm_counts_as_jubilant() -> None:
@@ -557,10 +582,12 @@ def test_replay_inputs_grow_as_metrics_start() -> None:
     assert adoption.replay_inputs("2025-05-05") == {
         "jubilant.integration-tests",
         "testing.pytest-operator",
+        "testing.zaza",
     }
     assert adoption.replay_inputs("2025-07-07") == {
         "jubilant.integration-tests",
         "testing.pytest-operator",
+        "testing.zaza",
         "ops.typed-relation",
         "ops.typed-config",
     }
