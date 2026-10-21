@@ -132,6 +132,34 @@ snapshot so `trend` leaves it out (its diff compares only the features both
 ends of the range scanned). `--force` redoes a thin replay but never thins a
 full snapshot. Follow with `--rocks` for the rocks half, as for a full replay.
 
+Refresh
+-------
+`--refresh` re-reads a few named features into snapshots that already exist,
+for the case where a detector was wrong and the fix is known::
+
+    uv run python -m charmtally.tools.backfill --refresh \
+        jubilant.integration-tests,testing.pytest-operator,testing.zaza \
+        --refresh-meta has_integration_tests \
+        --start 2024-05-13 --workdir /tmp/charmtally-backfill \
+        --overrides corpus-overrides.yaml
+
+A merge like `--rocks` and `--commit-dates`: every other reading in the file
+is left byte-for-byte alone. Each charm is re-read at the `repo_sha` its
+record already names — not re-resolved by date, so a refreshed reading is of
+exactly the tree the original was — and only the named feature records (and
+`__meta__` keys) are rewritten. A feature the snapshot never carried is
+added, which is how a detector that post-dates the history gets one. The
+named features are re-scored where the snapshot carries scores, with the
+rules of today; nothing else is, so a score elsewhere that depends on a
+refreshed value (`testing.concierge` reads `has_integration_tests`) keeps
+its old verdict until the next full pass.
+
+The scan is a pure function of `(repo, sha, subpath)`, so each distinct one
+is read once however many dates share it — a dormant charm's forty
+snapshots cost one checkout. A charm whose commit git can no longer find, or
+whose clone is missing, keeps its old reading, and the `__refreshed__` block
+each snapshot gains says how many did.
+
 Cost, at ~350 corpus repos: the prepare phase is the long pole (full clones,
 minutes to tens of minutes and a few GiB), and each replayed date then costs
 about what one weekly scan costs, minus the network.
@@ -151,16 +179,19 @@ import json
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from .. import adoption as _adoption
 from .. import catalogue, corpus, scan
+from .. import metadata as _metadata
 from .. import rocks as _rocks
+from .. import scoring as _scoring
 from .. import snapshot as _snapshot
 from .. import trend as _trend
 from ..cli import _apply_feature_excludes
+from ..detectors import CharmSource, detect_feature
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -185,6 +216,11 @@ NOT_YET_CREATED = "not-yet-created"
 NO_CHARM_YET = "no-charm-yet"
 UNREADABLE = "unreadable"
 EXCLUDED = "excluded"
+
+#: `--refresh` outcomes, per reading. `NO_SHA` is a record with no `repo_sha`
+#: to re-read at; `REFRESHED` covers both "changed" and "same as before".
+REFRESHED = "refreshed"
+NO_SHA = "no-sha"
 
 #: The rocks-side sibling of `NO_CHARM_YET`: the repo was there on the date,
 #: but this rockcraft.yaml was not in it yet.
@@ -1067,6 +1103,249 @@ def run_commit_dates(args: argparse.Namespace, dates: list[dt.date]) -> int:
     return 0
 
 
+# ── refresh mode ────────────────────────────────────────────────────────────
+
+
+#: What one `(repo_url, sha, subpath)` reads as, for the features and meta
+#: keys a refresh asked for. `None` features means the tree at that commit
+#: had no charm at that path — a sub-charm added later than the commit the
+#: record names should not happen, but a record that *was* written says the
+#: scan saw one, so this is left alone rather than blanked.
+Reading = tuple[dict[str, dict], dict[str, object]]
+
+
+def snapshot_readings(snap: dict) -> dict[str, dict[str, set[str]]]:
+    """Map repo_url → sha → the subpaths this snapshot read at that commit.
+
+    The refresh key. A monorepo's sub-charms share a `repo_sha`, so the
+    checkout is shared and only the per-root scan is repeated.
+    """
+    out: dict[str, dict[str, set[str]]] = {}
+    for slug, charm in snap.items():
+        if slug.startswith("__"):
+            continue
+        meta = charm.get("features", {}).get("__meta__")
+        sha = meta.get("repo_sha") if isinstance(meta, dict) else None
+        repo_url = charm.get("repo_url")
+        if sha and repo_url:
+            out.setdefault(repo_url, {}).setdefault(sha, set()).add(charm.get("subpath") or "")
+    return out
+
+
+def read_at(root: Path, feats: list, meta_keys: list[str]) -> Reading | None:
+    """Scan `root` for `feats` and read `meta_keys` off its metadata, or None if no charm there."""
+    if not _metadata._find_metadata_files(root):
+        return None
+    source = CharmSource(root)
+    features: dict[str, dict] = {}
+    for feat in feats:
+        ev = detect_feature(root, feat, source)
+        features[feat.name] = {"present": bool(ev), "evidence": [asdict(e) for e in ev]}
+    meta = _metadata.read(root).to_dict()
+    return features, {k: meta[k] for k in meta_keys if k in meta}
+
+
+def refresh_repo(
+    dest: Path, shas: dict[str, set[str]], feats: list, meta_keys: list[str]
+) -> dict[tuple[str, str], Reading | None]:
+    """Read every (sha, subpath) of one repo. Missing commits are absent from the result.
+
+    One checkout per SHA, however many sub-charms and dates hang off it.
+    """
+    out: dict[tuple[str, str], Reading | None] = {}
+    for sha in sorted(shas):
+        if not checkout(dest, sha):
+            continue
+        for subpath in sorted(shas[sha]):
+            out[sha, subpath] = read_at(dest / subpath if subpath else dest, feats, meta_keys)
+    return out
+
+
+def _rescore(
+    features: dict, names: list[str], overrides: corpus.CorpusOverrides, charm: dict
+) -> None:
+    """Re-score `names` in one charm's features dict, as `cli.cmd_score` would.
+
+    Only those: a score elsewhere may read a refreshed value, but re-scoring
+    the lot would also pick up every rule change since the snapshot was
+    written, which is a different edit from the one this mode makes.
+    """
+    meta_raw = features.get("__meta__", {})
+    meta = _metadata.CharmMeta.from_dict(meta_raw)
+    architecture = list(meta_raw.get("architecture") or [])
+    for name in names:
+        rec = features[name]
+        if rec.get("present"):
+            note = _scoring.annotate_present(name, meta)
+            if note:
+                rec["score"], rec["rationale"] = note.label, note.rationale
+            else:
+                rec.pop("score", None)
+                rec.pop("rationale", None)
+        else:
+            verdict = _scoring.score_absent(name, features, meta, architecture)
+            rec["score"], rec["rationale"] = verdict.label, verdict.rationale
+    _apply_feature_excludes(
+        features, overrides, charm.get("repo_url", ""), charm.get("subpath", "")
+    )
+
+
+def _with_features_before_meta(features: dict, added: dict[str, dict]) -> dict:
+    """Insert new feature records where a scan writes them: before `__meta__`."""
+    out = {k: v for k, v in features.items() if k != "__meta__"}
+    out.update(added)
+    if "__meta__" in features:
+        out["__meta__"] = features["__meta__"]
+    return out
+
+
+def merge_refresh(
+    path: Path,
+    readings: dict[tuple[str, str, str], Reading | None],
+    feature_names: list[str],
+    meta_keys: list[str],
+    overrides: corpus.CorpusOverrides,
+    features_path: Path,
+) -> dict[str, int]:
+    """Write the refreshed readings into one existing snapshot; return the outcome tally.
+
+    Shape-preserving in both directions: a thin snapshot stays thin (the new
+    records carry `present` and `score` only) and a fat one keeps its
+    evidence, and a snapshot with no scores — an `--adoption-only` replay —
+    gets none. `__meta__` keys are assigned in place, so a key that already
+    exists keeps its position and the diff against the committed file is
+    the changed values and nothing else.
+    """
+    snap: dict = json.loads(path.read_text())
+    adoption_only = (snap.get("__backfill__") or {}).get("scope") == _trend.ADOPTION_SCOPE
+    tally = {REFRESHED: 0, UNREADABLE: 0, NO_CHARM_YET: 0, NO_SHA: 0}
+    for slug, charm in snap.items():
+        if slug.startswith("__"):
+            continue
+        features = charm.get("features", {})
+        meta = features.get("__meta__")
+        sha = meta.get("repo_sha") if isinstance(meta, dict) else None
+        if not sha:
+            tally[NO_SHA] += 1
+            continue
+        key = (charm.get("repo_url", ""), sha, charm.get("subpath") or "")
+        if key not in readings:
+            tally[UNREADABLE] += 1
+            continue
+        reading = readings[key]
+        if reading is None:
+            tally[NO_CHARM_YET] += 1
+            continue
+        fresh, fresh_meta = reading
+        fat = any("evidence" in rec for name, rec in features.items() if name != "__meta__")
+        # Copies: `readings` is shared by every date that read the same
+        # commit, and the thin branch below strips keys off the target.
+        added = {name: dict(rec) for name, rec in fresh.items() if name not in features}
+        if added:
+            charm["features"] = features = _with_features_before_meta(features, added)
+        for name, rec in fresh.items():
+            target = features[name]
+            target["present"] = rec["present"]
+            if fat:
+                target["evidence"] = rec["evidence"]
+            else:
+                target.pop("evidence", None)
+        if isinstance(meta, dict):
+            meta.update(fresh_meta)
+        if not adoption_only:
+            _rescore(features, list(fresh), overrides, charm)
+        if not fat:
+            charm["features"] = _snapshot.thin_features(features)
+        tally[REFRESHED] += 1
+
+    provenance = snap.get("__backfill__")
+    if adoption_only and isinstance(provenance, dict):
+        scanned = provenance.get("features_scanned") or []
+        provenance["features_scanned"] = sorted(set(scanned) | set(feature_names))
+    snap.setdefault("__refreshed__", []).append({
+        "at": dt.date.today().isoformat(),
+        "features": list(feature_names),
+        "meta_keys": list(meta_keys),
+        "catalogue_digest": catalogue_digest(features_path),
+        "outcomes": tally,
+        "tool": "charmtally.tools.backfill --refresh",
+    })
+    path.write_text(json.dumps(snap, indent=2) + "\n")
+    return tally
+
+
+def run_refresh(args: argparse.Namespace, dates: list[dt.date]) -> int:
+    """`--refresh` mode: re-read named features into the snapshots that exist."""
+    feature_names = [n for n in args.refresh.split(",") if n]
+    meta_keys = [k for k in (args.refresh_meta or "").split(",") if k]
+    feats = [f for f in catalogue.load(args.features) if f.name in feature_names]
+    unknown = set(feature_names) - {f.name for f in feats}
+    if unknown:
+        print(f"not in the catalogue: {', '.join(sorted(unknown))}", file=sys.stderr)
+        return 1
+
+    planned = [
+        (date, path)
+        for date in dates
+        if (path := _snapshot_path(args.snapshots_dir, date)).is_file()
+    ]
+    if not planned:
+        print("nothing to do", file=sys.stderr)
+        return 0
+
+    wanted: dict[str, dict[str, set[str]]] = {}
+    for _, path in planned:
+        for repo_url, shas in snapshot_readings(json.loads(path.read_text())).items():
+            for sha, subpaths in shas.items():
+                wanted.setdefault(repo_url, {}).setdefault(sha, set()).update(subpaths)
+    repo_urls = sorted(wanted)
+    commits = sum(len(v) for v in wanted.values())
+    roots = sum(len(s) for v in wanted.values() for s in v.values())
+    print(
+        f"plan: {len(planned)} snapshots ({planned[0][0]} → {planned[-1][0]}), "
+        f"{roots} readings at {commits} commits across {len(repo_urls)} repos; "
+        f"features {', '.join(feature_names)}; meta {', '.join(meta_keys) or '-'}",
+        file=sys.stderr,
+    )
+    if args.dry_run:
+        return 0
+
+    clones = args.workdir / "charms"
+    if not args.skip_prepare:
+        print(f"… cloning {len(repo_urls)} repos with full history", file=sys.stderr)
+        failures = prepare_url_clones(repo_urls, clones, jobs=args.jobs)
+        print(f"prepare done ({failures} failed)", file=sys.stderr)
+
+    overrides = (
+        corpus.load_overrides(args.overrides) if args.overrides else corpus.CorpusOverrides.empty()
+    )
+    readings: dict[tuple[str, str, str], Reading | None] = {}
+    done = 0
+
+    def one(repo_url: str) -> dict[tuple[str, str, str], Reading | None]:
+        dest = clones / repo_slug(repo_url)
+        if not (dest / ".git").exists():
+            return {}
+        got = refresh_repo(dest, wanted[repo_url], feats, meta_keys)
+        return {(repo_url, sha, sub): reading for (sha, sub), reading in got.items()}
+
+    # Repos are independent trees, so they check out in parallel; within a
+    # repo the SHAs go one at a time, since they share a working tree.
+    with ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:
+        for got in pool.map(one, repo_urls):
+            readings.update(got)
+            done += 1
+            if done % 25 == 0 or done == len(repo_urls):
+                print(
+                    f"  [{done}/{len(repo_urls)}] read ({len(readings)}/{roots})", file=sys.stderr
+                )
+
+    for _date, path in planned:
+        tally = merge_refresh(path, readings, feature_names, meta_keys, overrides, args.features)
+        print(f"refreshed {path}: {tally}")
+    return 0
+
+
 def prepare_url_clones(repo_urls: list[str], clones: Path, *, jobs: int = DEFAULT_JOBS) -> int:
     """Full-clone (or refresh) every repo named by URL. Returns the failure count.
 
@@ -1194,6 +1473,20 @@ def build_parser() -> argparse.ArgumentParser:
         "dates further back than the History page needs to go.",
     )
     p.add_argument(
+        "--refresh",
+        metavar="FEATURE[,FEATURE...]",
+        default=None,
+        help="Re-read only these catalogue features into the snapshots that "
+        "already exist, at the repo_sha each record names, and re-score "
+        "them. Everything else in the file is left alone.",
+    )
+    p.add_argument(
+        "--refresh-meta",
+        metavar="KEY[,KEY...]",
+        default=None,
+        help="With --refresh: __meta__ keys to re-read as well (e.g. has_integration_tests).",
+    )
+    p.add_argument(
         "--rocks-csv",
         type=Path,
         default=DEFAULT_ROCKS_CSV,
@@ -1258,6 +1551,9 @@ def main(argv: list[str] | None = None) -> int:
         # for the same reason --rocks does.
         args.workdir.mkdir(parents=True, exist_ok=True)
         return run_commit_dates(args, dates)
+    if args.refresh:
+        args.workdir.mkdir(parents=True, exist_ok=True)
+        return run_refresh(args, dates)
     if args.rocks:
         # The rocks half merges into snapshots that already exist, so it plans
         # its own range rather than sharing the "skip dates already written"

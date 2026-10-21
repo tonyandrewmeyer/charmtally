@@ -87,19 +87,33 @@ def _has_python(directory: Path) -> bool:
     return directory.is_dir() and any(p.is_file() for p in directory.rglob("*.py"))
 
 
-def integration_tests_dir(charm_root: Path) -> Path | None:
-    """Return the `tests/integration/` directory holding this charm's pytest suite, or None.
+#: Where a pytest-driven integration suite lives, relative to a charm or
+#: repo root. `tests/functional/` is the BootStack charms' name for the same
+#: thing — a suite that deploys the charm — and nothing else in the corpus
+#: uses the name for anything else.
+_PYTEST_SUITE_DIRS = (("tests", "integration"), ("tests", "functional"))
 
-    The charm's own wins. Failing that, the nearest ancestor up to the repo
-    root that has one — a monorepo's shared suite — on the reading that a
-    `tests/integration/` above a sub-charm covers the sub-charms beneath it.
-    A directory with no Python in it does not count: an empty or
-    bundles-only directory is not a suite.
+#: Where a zaza `tests.yaml` (or a `<suite>/tests.yaml` set) lives, relative
+#: to a charm or repo root. `src/tests/` is the reactive `src/` layout the
+#: OpenStack charms use; `tests/functional/` is the BootStack charms', whose
+#: description sits at `tests/functional/tests/tests.yaml`.
+_ZAZA_DIRS = (("tests",), ("src", "tests"), ("tests", "functional"))
+
+
+def integration_tests_dir(charm_root: Path) -> Path | None:
+    """Return the directory holding this charm's pytest integration suite, or None.
+
+    `tests/integration/` or `tests/functional/`. The charm's own wins.
+    Failing that, the nearest ancestor up to the repo root that has one — a
+    monorepo's shared suite — on the reading that a suite above a sub-charm
+    covers the sub-charms beneath it. A directory with no Python in it does
+    not count: an empty or bundles-only directory is not a suite.
     """
     for base in _candidates(charm_root):
-        candidate = base / "tests" / "integration"
-        if _has_python(candidate):
-            return candidate
+        for parts in _PYTEST_SUITE_DIRS:
+            candidate = base.joinpath(*parts)
+            if _has_python(candidate):
+                return candidate
     return None
 
 
@@ -116,18 +130,19 @@ def zaza_configs(charm_root: Path) -> list[Path]:
 
     `tests/tests.yaml` is the classic single-charm layout; `tests/*/tests.yaml`
     is one suite per directory, which is how `sunbeam-charms` keeps its
-    machine, identity and tempest suites at the repo root. Same walk as
+    machine, identity and tempest suites at the repo root; `src/tests/` and
+    `tests/functional/` are the reactive and BootStack spellings. Same walk as
     `integration_tests_dir`, and the first level that has any wins, so a
     charm with its own description never also reports the repo's.
     """
     for base in _candidates(charm_root):
-        tests = base / "tests"
-        if not tests.is_dir():
-            continue
-        found = [
-            p for p in (tests / "tests.yaml", *sorted(tests.glob("*/tests.yaml"))) if p.is_file()
-        ]
-        found = [p for p in found if _is_zaza_config(p)]
+        found: list[Path] = []
+        for parts in _ZAZA_DIRS:
+            tests = base.joinpath(*parts)
+            if not tests.is_dir():
+                continue
+            candidates = (tests / "tests.yaml", *sorted(tests.glob("*/tests.yaml")))
+            found.extend(p for p in candidates if p.is_file() and _is_zaza_config(p))
         if found:
             return found
     return []

@@ -256,6 +256,7 @@ class TestAdoptionOnly:
 
 
 def _written(tmp_path: Path, snap: dict) -> Path:
+    tmp_path.mkdir(parents=True, exist_ok=True)
     path = tmp_path / "scored-x.json"
     path.write_text(json.dumps(snap, indent=2) + "\n")
     return path
@@ -582,3 +583,225 @@ class TestCommitDates:
         }
 
         assert backfill.snapshot_shas(snap) == {"https://x/a": {"aa"}}
+
+
+class TestRefresh:
+    """`--refresh`: re-read a few features into snapshots that already exist."""
+
+    @staticmethod
+    def _monorepo(root: Path) -> tuple[Path, str]:
+        """A checkout with a sub-charm and a shared `tests/integration/` above it."""
+        root.mkdir(parents=True)
+        _git(["init", "-q", "-b", "main"], root)
+        _git(["config", "user.email", "t@example.com"], root)
+        _git(["config", "user.name", "T"], root)
+        (root / "worker" / "src").mkdir(parents=True)
+        (root / "worker" / "charmcraft.yaml").write_text("name: worker\ntype: charm\n")
+        (root / "worker" / "src" / "charm.py").write_text("import ops\n")
+        (root / "tests" / "integration").mkdir(parents=True)
+        (root / "tests" / "integration" / "test_x.py").write_text("import jubilant\n")
+        _git(["add", "-A"], root)
+        _git(["-c", "commit.gpgsign=false", "commit", "-q", "-m", "one"], root)
+        sha = backfill._git_out(["rev-parse", "HEAD"], root)
+        assert sha is not None
+        return root, sha
+
+    @staticmethod
+    def _record(repo_url: str, sha: str, *, thin: bool, scored: bool = True) -> dict:
+        jub: dict = {"present": False}
+        other: dict = {"present": True}
+        if scored:
+            jub["score"] = "not-applicable"
+            other["score"] = "worth-considering"
+        if not thin:
+            jub["evidence"] = []
+            jub["rationale"] = "no integration tests present"
+            other["evidence"] = [
+                {"file": "src/charm.py", "line": 1, "detector_kind": "x", "snippet": "y"}
+            ]
+        return {
+            "name": "demo/worker",
+            "team": "t",
+            "repo_url": repo_url,
+            "subpath": "worker",
+            "features": {
+                "jubilant.integration-tests": jub,
+                "ops.stored-state": other,
+                "__meta__": {
+                    "has_integration_tests": False,
+                    "repo_sha": sha,
+                    "last_commit": "2026-04-01T00:00:00+00:00",
+                    "architecture": [],
+                },
+            },
+        }
+
+    def _run(self, tmp_path: Path, snap: dict) -> dict:
+        origin, sha = self._monorepo(tmp_path / "origin")
+        repo_url = str(origin)
+        snap = {k: (v(repo_url, sha) if callable(v) else v) for k, v in snap.items()}
+        path = _written(tmp_path, snap)
+        clones = tmp_path / "clones"
+        backfill.ensure_full_clone(repo_url, clones / backfill.repo_slug(repo_url), branch="main")
+        feats = [
+            f
+            for f in backfill.catalogue.load(backfill.catalogue.default_path())
+            if f.name in ("jubilant.integration-tests", "testing.zaza")
+        ]
+        wanted = backfill.snapshot_readings(snap)
+        readings = {}
+        for url, shas in wanted.items():
+            got = backfill.refresh_repo(
+                clones / backfill.repo_slug(url), shas, feats, ["has_integration_tests"]
+            )
+            readings.update({(url, s, sub): r for (s, sub), r in got.items()})
+        backfill.merge_refresh(
+            path,
+            readings,
+            ["jubilant.integration-tests", "testing.zaza"],
+            ["has_integration_tests"],
+            backfill.corpus.CorpusOverrides.empty(),
+            backfill.catalogue.default_path(),
+        )
+        return json.loads(path.read_text())
+
+    def test_rewrites_only_the_named_readings_in_a_thin_snapshot(self, tmp_path: Path):
+        out = self._run(tmp_path, {"demo/worker": lambda u, s: self._record(u, s, thin=True)})
+
+        feats = out["demo/worker"]["features"]
+        assert feats["jubilant.integration-tests"] == {"present": True}
+        assert feats["testing.zaza"] == {
+            "present": False,
+            "score": "not-applicable",
+        }
+        assert feats["ops.stored-state"] == {"present": True, "score": "worth-considering"}
+        assert feats["__meta__"]["has_integration_tests"] is True
+        assert feats["__meta__"]["last_commit"] == "2026-04-01T00:00:00+00:00"
+        # New records land before `__meta__`, where a scan writes them.
+        assert list(feats) == [
+            "jubilant.integration-tests",
+            "ops.stored-state",
+            "testing.zaza",
+            "__meta__",
+        ]
+        assert out["__refreshed__"][0]["outcomes"] == {
+            "refreshed": 1,
+            "unreadable": 0,
+            "no-charm-yet": 0,
+            "no-sha": 0,
+        }
+
+    def test_a_fat_snapshot_keeps_evidence_and_rationale(self, tmp_path: Path):
+        out = self._run(tmp_path, {"demo/worker": lambda u, s: self._record(u, s, thin=False)})
+
+        feats = out["demo/worker"]["features"]
+        jub = feats["jubilant.integration-tests"]
+        assert jub["present"] is True
+        assert jub["evidence"][0]["file"] == "../tests/integration/test_x.py"
+        assert "score" not in jub  # present, and jubilant has no present-annotation
+        assert feats["testing.zaza"]["rationale"].startswith("descriptive signal")
+        assert feats["ops.stored-state"]["evidence"]  # untouched
+
+    def test_a_reading_shared_by_two_dates_is_not_consumed_by_the_first(self, tmp_path: Path):
+        """A thin merge strips evidence off its target; that must not be the shared reading."""
+        origin, sha = self._monorepo(tmp_path / "origin")
+        repo_url = str(origin)
+        thin = _written(tmp_path / "a", {"demo/worker": self._record(repo_url, sha, thin=True)})
+        fat = _written(tmp_path / "b", {"demo/worker": self._record(repo_url, sha, thin=False)})
+        clones = tmp_path / "clones"
+        backfill.ensure_full_clone(repo_url, clones / backfill.repo_slug(repo_url), branch="main")
+        feats = [
+            f
+            for f in backfill.catalogue.load(backfill.catalogue.default_path())
+            if f.name == "testing.zaza"
+        ]
+        got = backfill.refresh_repo(
+            clones / backfill.repo_slug(repo_url), {sha: {"worker"}}, feats, []
+        )
+        readings = {(repo_url, s, sub): r for (s, sub), r in got.items()}
+        for path in (thin, fat):
+            backfill.merge_refresh(
+                path,
+                readings,
+                ["testing.zaza"],
+                [],
+                backfill.corpus.CorpusOverrides.empty(),
+                backfill.catalogue.default_path(),
+            )
+
+        assert json.loads(thin.read_text())["demo/worker"]["features"]["testing.zaza"] == {
+            "present": False,
+            "score": "not-applicable",
+        }
+        assert "evidence" in json.loads(fat.read_text())["demo/worker"]["features"]["testing.zaza"]
+
+    def test_an_adoption_only_snapshot_gets_no_scores(self, tmp_path: Path):
+        out = self._run(
+            tmp_path,
+            {
+                "demo/worker": lambda u, s: self._record(u, s, thin=True, scored=False),
+                "__backfill__": {
+                    "scope": "adoption",
+                    "features_scanned": ["jubilant.integration-tests"],
+                },
+            },
+        )
+
+        feats = out["demo/worker"]["features"]
+        assert feats["testing.zaza"] == {"present": False}
+        assert out["__backfill__"]["features_scanned"] == [
+            "jubilant.integration-tests",
+            "testing.zaza",
+        ]
+
+    def test_a_commit_git_cannot_find_leaves_the_record_alone(self, tmp_path: Path):
+        out = self._run(
+            tmp_path,
+            {
+                "demo/worker": lambda u, s: self._record(u, "0" * 40, thin=True),
+            },
+        )
+
+        feats = out["demo/worker"]["features"]
+        assert feats["jubilant.integration-tests"] == {"present": False, "score": "not-applicable"}
+        assert "testing.zaza" not in feats
+        assert out["__refreshed__"][0]["outcomes"]["unreadable"] == 1
+
+    def test_dry_run_plans_without_clones(self, tmp_path: Path, capsys):
+        snaps = tmp_path / "snapshots"
+        snaps.mkdir()
+        _written(snaps, {})
+        (snaps / "scored-2026-05-04.json").write_text(
+            json.dumps({"a": self._record("https://x/demo", "abc", thin=True)})
+        )
+        rc = backfill.main([
+            "--refresh",
+            "jubilant.integration-tests",
+            "--start",
+            "2026-05-01",
+            "--end",
+            "2026-05-10",
+            "--workdir",
+            str(tmp_path / "wd"),
+            "--snapshots-dir",
+            str(snaps),
+            "--dry-run",
+        ])
+        assert rc == 0
+        err = capsys.readouterr().err
+        assert "1 snapshots" in err
+        assert "1 readings at 1 commits across 1 repos" in err
+
+    def test_unknown_feature_is_refused(self, tmp_path: Path, capsys):
+        rc = backfill.main([
+            "--refresh",
+            "no.such-feature",
+            "--start",
+            "2026-05-01",
+            "--workdir",
+            str(tmp_path / "wd"),
+            "--snapshots-dir",
+            str(tmp_path),
+        ])
+        assert rc == 1
+        assert "no.such-feature" in capsys.readouterr().err

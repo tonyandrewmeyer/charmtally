@@ -2933,3 +2933,17 @@ def test_zaza_config_ignores_a_tests_yaml_that_is_not_zaza_s(tmp_path: Path) -> 
 def test_zaza_config_absent_without_a_tests_yaml(tmp_path: Path) -> None:
     charm_root = _write_repo(tmp_path, {"tests/integration/test_x.py": "import jubilant\n"})
     assert detect_feature(charm_root, _catalogue_feature("testing.zaza")) == []
+
+
+def test_zaza_config_finds_the_reactive_src_tests_layout(tmp_path: Path) -> None:
+    charm_root = _write_repo(tmp_path, {})
+    (charm_root / "src" / "tests").mkdir()
+    (charm_root / "src" / "tests" / "tests.yaml").write_text(_ZAZA_TESTS_YAML)
+    ev = detect_feature(charm_root, _catalogue_feature("testing.zaza"))
+    assert [e.file for e in ev] == ["src/tests/tests.yaml"]
+
+
+def test_zaza_config_finds_the_functional_layout(tmp_path: Path) -> None:
+    charm_root = _write_repo(tmp_path, {"tests/functional/tests/tests.yaml": _ZAZA_TESTS_YAML})
+    ev = detect_feature(charm_root, _catalogue_feature("testing.zaza"))
+    assert [e.file for e in ev] == ["tests/functional/tests/tests.yaml"]

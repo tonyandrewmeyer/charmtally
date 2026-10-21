@@ -16,6 +16,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -28,7 +31,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -78,6 +81,9 @@
       },
       "ops.typed-config": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -166,6 +172,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -178,7 +187,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -231,6 +240,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -243,7 +255,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -292,6 +304,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -350,6 +365,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -411,6 +429,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -532,6 +553,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -644,6 +668,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -712,6 +739,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -857,6 +887,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -936,6 +969,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -1045,6 +1081,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -1172,6 +1211,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -1317,6 +1359,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -1378,6 +1423,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -1508,6 +1556,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -1654,6 +1705,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -1804,6 +1858,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -1940,6 +1997,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -2079,6 +2139,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -2244,6 +2307,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -2420,6 +2486,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [],
@@ -2473,6 +2542,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -2567,6 +2639,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -2683,6 +2758,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -2794,6 +2872,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -2925,6 +3006,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -2996,6 +3080,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -3145,6 +3232,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -3303,6 +3393,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -3467,6 +3560,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -3606,6 +3702,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -3796,6 +3895,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -3872,6 +3974,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -4009,6 +4114,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -4159,6 +4267,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -4250,6 +4361,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -4314,6 +4428,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -4376,6 +4493,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -4446,6 +4566,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -4473,7 +4596,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": true,
@@ -4524,6 +4647,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -4591,6 +4717,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -4680,6 +4809,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -4747,6 +4879,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -4846,6 +4981,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -4965,6 +5103,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -5106,6 +5247,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -5162,6 +5306,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -5242,6 +5389,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -5317,6 +5467,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -5442,6 +5595,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -5501,6 +5657,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -5583,6 +5742,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -5670,6 +5832,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -5789,6 +5954,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -5868,6 +6036,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -5934,6 +6105,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -6024,6 +6198,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -6076,7 +6253,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -6126,6 +6303,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -6204,6 +6384,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -6269,6 +6452,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -6331,6 +6517,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -6403,6 +6592,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -6479,6 +6671,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -6535,6 +6730,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -6699,6 +6897,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -6778,6 +6979,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -6834,6 +7038,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -6943,6 +7150,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -7015,6 +7225,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -7114,6 +7327,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -7191,6 +7407,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -7281,6 +7500,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -7385,6 +7607,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -7483,6 +7708,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -7556,6 +7784,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -7671,6 +7902,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -7764,6 +7998,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -7874,6 +8111,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -7960,6 +8200,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -8037,6 +8280,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -8112,6 +8358,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -8227,6 +8476,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -8295,6 +8547,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -8396,6 +8651,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -8473,6 +8731,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -8548,6 +8809,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -8616,6 +8880,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -8702,6 +8969,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -8768,6 +9038,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -8850,6 +9123,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -8959,6 +9235,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -9089,6 +9368,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -9187,6 +9469,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -9245,6 +9530,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -9355,6 +9643,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -9438,6 +9729,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -9547,6 +9841,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -9621,6 +9918,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -9709,6 +10009,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -9833,6 +10136,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -9918,6 +10224,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -9978,6 +10287,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -10064,6 +10376,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -10175,6 +10490,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -10273,6 +10591,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -10360,6 +10681,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -10441,6 +10765,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -10603,6 +10930,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -10700,6 +11030,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -10811,6 +11144,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -10935,6 +11271,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -11043,6 +11382,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -11176,6 +11518,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -11375,6 +11720,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -11532,6 +11880,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -11685,6 +12036,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -11755,6 +12109,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -11903,6 +12260,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -12074,6 +12434,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -12182,6 +12545,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -12267,6 +12633,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -12341,6 +12710,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -12489,6 +12861,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -12554,7 +12929,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -12606,6 +12981,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -12651,7 +13029,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -12702,6 +13080,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": false,
@@ -12788,7 +13169,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -12842,13 +13223,16 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [],
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -12898,6 +13282,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -12918,7 +13305,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -12970,6 +13357,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -13015,7 +13405,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -13064,6 +13454,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": false,
@@ -13114,7 +13507,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -13165,6 +13558,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": false,
@@ -13266,7 +13662,7 @@
           "hitachi-mirror-rest-username",
           "hitachi-mirror-rest-password"
         ],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -13318,6 +13714,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -13363,7 +13762,7 @@
         "secret_typed_config": [
           "pure-api-token"
         ],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -13414,6 +13813,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": false,
@@ -13481,7 +13883,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -13533,6 +13935,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -13549,7 +13954,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -13598,6 +14003,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -13659,7 +14067,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -13710,6 +14118,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -13802,7 +14213,7 @@
           "secret"
         ],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -13854,6 +14265,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -13885,7 +14299,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -13936,6 +14350,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -14005,7 +14422,7 @@
         "secret_typed_config": [
           "kubeconfig"
         ],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -14055,6 +14472,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -14085,7 +14505,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -14136,6 +14556,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -14227,7 +14650,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -14279,6 +14702,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -14296,7 +14722,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -14345,6 +14771,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -14416,7 +14845,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -14467,6 +14896,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -14530,7 +14962,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -14582,6 +15014,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -14627,7 +15062,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -14682,6 +15117,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -14762,7 +15200,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -14813,6 +15251,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -14905,7 +15346,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -14957,6 +15398,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -15007,7 +15451,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -15059,6 +15503,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -15081,7 +15528,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -15134,6 +15581,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -15238,7 +15688,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -15289,6 +15739,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -15355,7 +15808,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -15406,6 +15859,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -15473,7 +15929,7 @@
           "maas-api-key"
         ],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -15524,6 +15980,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -15585,7 +16044,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -15636,6 +16095,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -15692,7 +16154,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -15744,6 +16206,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -15786,7 +16251,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -15837,6 +16302,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -15903,7 +16371,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -15952,6 +16420,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -16022,7 +16493,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -16075,6 +16546,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -16176,7 +16650,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -16227,6 +16701,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -16288,7 +16765,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -16340,6 +16817,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -16384,7 +16864,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -16436,6 +16916,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -16456,7 +16939,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -16505,6 +16988,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -16566,7 +17052,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -16618,6 +17104,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -16638,7 +17127,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -16689,6 +17178,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -16756,7 +17248,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -16808,6 +17300,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -16833,7 +17328,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -16886,6 +17381,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -16925,7 +17423,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -16976,6 +17474,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -17085,7 +17586,7 @@
         "secret_typed_config": [
           "saml-x509-keypair"
         ],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -17144,6 +17645,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -17185,7 +17689,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -17237,6 +17741,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -17326,6 +17833,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -17419,6 +17929,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -17496,6 +18009,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -17686,6 +18202,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -17905,6 +18424,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -18067,6 +18589,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -18084,7 +18609,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -18137,6 +18662,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -18217,6 +18745,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -18249,7 +18780,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -18305,6 +18836,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -18327,7 +18861,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -18380,6 +18914,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -18480,6 +19017,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -18571,6 +19111,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -18643,7 +19186,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -18697,6 +19240,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -18729,7 +19275,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": true,
@@ -18781,6 +19327,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -18840,6 +19389,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -18926,6 +19478,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -18998,7 +19553,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -19052,6 +19607,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -19074,7 +19632,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": true,
@@ -19128,6 +19686,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -19145,7 +19706,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -19198,6 +19759,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -19230,7 +19794,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": true,
@@ -19282,6 +19846,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -19354,6 +19921,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -19371,7 +19941,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -19424,6 +19994,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -19441,7 +20014,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -19493,6 +20066,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": false,
@@ -19562,6 +20138,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -19630,6 +20209,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -19647,7 +20229,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -19700,6 +20282,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -19772,6 +20357,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -19794,7 +20382,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -19845,6 +20433,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -19924,13 +20515,16 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -19975,6 +20569,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -20116,6 +20713,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -20183,6 +20783,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -20245,6 +20848,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -20303,6 +20909,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -20382,6 +20991,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -20447,6 +21059,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -20521,6 +21136,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -20591,6 +21209,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -20670,6 +21291,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -20728,6 +21352,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -20795,6 +21422,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -20872,6 +21502,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -20924,6 +21557,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -20996,6 +21632,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -21066,6 +21705,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -21120,6 +21762,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": false,
@@ -21188,7 +21833,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -21242,6 +21887,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -21274,7 +21922,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -21328,6 +21976,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -21350,7 +22001,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -21403,6 +22054,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -21440,7 +22094,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": true,
@@ -21494,6 +22148,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -21541,7 +22198,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -21593,6 +22250,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -21659,6 +22319,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -21747,6 +22410,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -21820,6 +22486,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -21847,7 +22516,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -21903,6 +22572,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -21930,7 +22602,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -21984,6 +22656,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -22071,6 +22746,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -22182,6 +22860,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -22270,6 +22951,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -22355,12 +23039,15 @@
         "present": false
       },
       "testing.pytest-operator": {
-        "present": false
+        "present": true
       },
       "ops.typed-relation": {
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -22497,7 +23184,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -22549,6 +23236,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": false,
@@ -22622,7 +23312,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -22676,6 +23366,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -22693,7 +23386,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -22748,6 +23441,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -22765,7 +23461,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -22818,6 +23514,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -22840,7 +23539,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -22891,6 +23590,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -22956,6 +23658,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -23027,6 +23732,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -23087,6 +23795,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -23164,6 +23875,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -23227,6 +23941,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -23304,6 +24021,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -23362,6 +24082,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -23433,6 +24156,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -23532,6 +24258,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -23623,6 +24352,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -23842,6 +24574,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -23981,6 +24716,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -24034,6 +24772,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -24175,6 +24916,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -24306,6 +25050,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -24412,6 +25159,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -24470,6 +25220,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -24532,6 +25285,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -24590,6 +25346,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -24652,6 +25411,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -24704,6 +25466,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -24763,6 +25528,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -24887,6 +25655,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -24966,6 +25737,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -25008,7 +25782,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -25064,6 +25838,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -25076,7 +25853,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -25132,6 +25909,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -25149,7 +25929,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -25204,13 +25984,16 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -25263,6 +26046,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -25280,7 +26066,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -25331,6 +26117,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -25390,6 +26179,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -25412,7 +26204,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -25467,6 +26259,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -25606,6 +26401,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -25742,6 +26540,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -25840,6 +26641,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -25929,6 +26733,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -25946,7 +26753,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -25999,6 +26806,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -26021,7 +26831,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -26074,6 +26884,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -26091,7 +26904,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -26147,6 +26960,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -26189,7 +27005,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -26241,6 +27057,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -26312,6 +27131,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -26359,7 +27181,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -26412,6 +27234,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -26477,6 +27302,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -26589,6 +27417,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -26601,7 +27432,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -26657,6 +27488,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -26674,7 +27508,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -26730,6 +27564,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -26753,7 +27590,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -26813,6 +27650,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -26830,7 +27670,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -26879,6 +27719,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -26973,6 +27816,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -27136,6 +27982,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -27209,6 +28058,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -27256,7 +28108,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -27308,6 +28160,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -27330,7 +28185,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -27386,6 +28241,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -27433,7 +28291,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -27485,6 +28343,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -27561,6 +28422,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -27666,6 +28530,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -27749,6 +28616,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -27806,7 +28676,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -27860,6 +28730,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -27882,7 +28755,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -27935,6 +28808,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -28143,6 +29019,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -28226,13 +29105,16 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -28277,6 +29159,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -28344,6 +29229,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -28408,6 +29296,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -28560,6 +29451,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -28759,6 +29653,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -28962,6 +29859,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -29041,6 +29941,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -29123,6 +30026,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -29140,7 +30046,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -29191,6 +30097,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -29208,7 +30117,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -29261,6 +30170,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -29278,7 +30190,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -29331,6 +30243,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -29348,7 +30263,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -29401,6 +30316,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -29428,7 +30346,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -29489,6 +30407,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -29526,7 +30447,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -29579,6 +30500,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -29596,7 +30520,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -29647,6 +30571,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -29659,7 +30586,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -29716,6 +30643,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -29743,7 +30673,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -29796,6 +30726,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -29818,7 +30751,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -29874,6 +30807,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -29886,7 +30822,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -29940,6 +30876,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -30014,6 +30953,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -30051,7 +30993,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -30106,6 +31048,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -30123,7 +31068,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -30179,6 +31124,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -30201,7 +31149,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -30252,6 +31200,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -30284,7 +31235,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -30340,6 +31291,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": false,
@@ -30428,7 +31382,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -30482,6 +31436,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -30504,7 +31461,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -30560,6 +31517,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -30597,7 +31557,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": true,
@@ -30650,6 +31610,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": false,
@@ -30758,7 +31721,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -30811,6 +31774,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": false,
@@ -30899,7 +31865,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -30953,6 +31919,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -30970,7 +31939,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -31026,6 +31995,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -31058,7 +32030,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -31113,6 +32085,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": false,
@@ -31181,7 +32156,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -31235,6 +32210,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -31252,7 +32230,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -31303,6 +32281,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -31335,7 +32316,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -31384,6 +32365,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -31396,7 +32380,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -31445,6 +32429,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -31457,7 +32444,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -31506,13 +32493,16 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -31561,6 +32551,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -31583,7 +32576,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -31639,6 +32632,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -31651,7 +32647,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -31705,6 +32701,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -31783,6 +32782,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -34516,6 +35518,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -34619,6 +35624,9 @@
       "ops.typed-config": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -34703,6 +35711,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -34773,6 +35784,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -34891,6 +35905,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [],
@@ -34950,6 +35967,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -34962,7 +35982,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -35013,6 +36033,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -35035,7 +36058,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -35094,6 +36117,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -35111,7 +36137,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -35174,6 +36200,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -35254,6 +36283,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -35320,6 +36352,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -35332,7 +36367,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -35385,6 +36420,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -35397,7 +36435,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -35446,6 +36484,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -35605,6 +36646,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -35762,6 +36806,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -35819,6 +36866,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -35901,6 +36951,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -35933,7 +36986,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": true,
@@ -35984,6 +37037,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -36016,7 +37072,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -36067,6 +37123,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -36089,7 +37148,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -36140,6 +37199,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -36167,7 +37229,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -36218,6 +37280,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -36249,7 +37314,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -36309,6 +37374,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -36373,6 +37441,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -36441,6 +37512,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -36453,7 +37527,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -36504,6 +37578,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -36526,7 +37603,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": true,
@@ -36576,6 +37653,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -36690,6 +37770,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -36776,6 +37859,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -36829,6 +37915,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -36901,6 +37990,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -36964,6 +38056,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -37055,6 +38150,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -37127,6 +38225,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -37263,6 +38364,9 @@
       "ops.typed-config": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -37338,6 +38442,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -37454,6 +38561,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -37595,6 +38705,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -37652,6 +38765,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -37764,6 +38880,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [],
@@ -37825,6 +38944,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -37909,6 +39031,9 @@
       },
       "ops.typed-config": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -38014,6 +39139,9 @@
       "ops.typed-config": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [],
@@ -38081,6 +39209,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -38164,6 +39295,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [],
@@ -38223,6 +39357,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -38320,6 +39457,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [],
@@ -38377,6 +39517,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -38486,6 +39629,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -38580,6 +39726,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -38649,6 +39798,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [],
@@ -38708,6 +39860,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -38855,6 +40010,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -38932,6 +40090,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -39013,6 +40174,9 @@
       "ops.typed-config": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -39088,6 +40252,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -39202,6 +40369,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -39266,6 +40436,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -39319,6 +40492,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -39418,6 +40594,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -39505,6 +40684,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -39615,6 +40797,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -39774,6 +40959,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -39852,6 +41040,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -39927,6 +41118,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -40035,6 +41229,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -40140,6 +41337,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -40226,6 +41426,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -40340,6 +41543,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -40447,6 +41653,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -40537,6 +41746,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -40647,6 +41859,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -40734,6 +41949,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -40817,6 +42035,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -40883,6 +42104,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [],
@@ -40938,6 +42162,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -41018,6 +42245,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -41096,6 +42326,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -41193,6 +42426,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -41334,6 +42570,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -41444,6 +42683,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -41507,7 +42749,7 @@
     "subpath": "microovn",
     "features": {
       "jubilant.integration-tests": {
-        "present": false
+        "present": true
       },
       "testing.pytest-operator": {
         "present": false
@@ -41516,6 +42758,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -41547,7 +42792,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -41607,6 +42852,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -41670,6 +42918,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -41782,6 +43033,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -41892,6 +43146,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -41956,6 +43213,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -42041,6 +43301,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -42108,6 +43371,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -42227,6 +43493,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [],
@@ -42282,6 +43551,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -42342,6 +43614,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -42655,6 +43930,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -42737,6 +44015,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -42860,6 +44141,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -42947,6 +44231,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -43079,6 +44366,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -43148,6 +44438,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -43251,6 +44544,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -43326,6 +44622,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -43417,6 +44716,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -43511,6 +44813,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -43577,6 +44882,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -43662,6 +44970,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -43825,6 +45136,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -43896,6 +45210,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -43985,6 +45302,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -44080,6 +45400,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -44153,6 +45476,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [],
@@ -44210,6 +45536,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -44294,6 +45623,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [],
@@ -44347,6 +45679,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -44420,6 +45755,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -44498,6 +45836,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -44581,6 +45922,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -44658,6 +46002,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -44777,6 +46124,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -44846,6 +46196,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -44926,6 +46279,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -45004,6 +46360,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [],
@@ -45057,6 +46416,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -45115,6 +46477,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -45193,6 +46558,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -45334,6 +46702,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [],
@@ -45393,6 +46764,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -45498,6 +46872,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -45637,6 +47014,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [],
@@ -45697,6 +47077,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -45780,6 +47163,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -45827,7 +47213,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -45887,6 +47273,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -45974,6 +47363,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -46035,6 +47427,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -46138,6 +47533,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -46236,6 +47634,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -46309,6 +47710,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -46373,6 +47777,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -46441,6 +47848,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -46529,6 +47939,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -46593,6 +48006,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -46681,6 +48097,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -46755,6 +48174,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -46806,6 +48228,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -46866,6 +48291,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -46923,6 +48351,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -46978,6 +48409,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -47060,6 +48494,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -47134,6 +48571,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -47217,6 +48657,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -47280,6 +48723,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -47350,6 +48796,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -47413,6 +48862,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -47498,6 +48950,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -47569,6 +49024,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -47628,6 +49086,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -47707,6 +49168,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -47803,6 +49267,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -47909,6 +49376,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -47971,6 +49441,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -48048,6 +49521,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -48070,7 +49546,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -48117,6 +49593,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -48186,6 +49665,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -48294,6 +49776,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -48311,7 +49796,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -48367,6 +49852,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -48449,6 +49937,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -48491,7 +49982,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -48556,6 +50047,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -48612,6 +50106,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": false,
@@ -48680,6 +50177,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": false,
@@ -48753,6 +50253,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -48806,6 +50309,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -48884,6 +50390,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -48926,7 +50435,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -48986,6 +50495,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -49076,6 +50588,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -49146,6 +50661,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -49212,6 +50730,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -49267,6 +50788,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -49299,7 +50823,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -49355,6 +50879,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -49421,6 +50948,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -49474,6 +51004,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -49566,6 +51099,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -49879,6 +51415,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -49979,6 +51518,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -50031,6 +51573,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -50127,6 +51672,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -50243,6 +51791,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -50342,6 +51893,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -50445,6 +51999,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -50542,6 +52099,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -50617,6 +52177,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -50711,6 +52274,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -50792,6 +52358,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -50876,6 +52445,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -50946,7 +52518,7 @@
     "subpath": "bacula_fd_operator",
     "features": {
       "jubilant.integration-tests": {
-        "present": false
+        "present": true
       },
       "testing.pytest-operator": {
         "present": false
@@ -50955,6 +52527,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -50987,7 +52562,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -51036,7 +52611,7 @@
     "subpath": "backup_integrator_operator",
     "features": {
       "jubilant.integration-tests": {
-        "present": false
+        "present": true
       },
       "testing.pytest-operator": {
         "present": false
@@ -51045,6 +52620,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -51070,7 +52648,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -51110,7 +52688,7 @@
     "subpath": "bacula_server_operator",
     "features": {
       "jubilant.integration-tests": {
-        "present": false
+        "present": true
       },
       "testing.pytest-operator": {
         "present": false
@@ -51119,6 +52697,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -51152,7 +52733,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -51210,6 +52791,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -51312,6 +52896,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -51389,6 +52976,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -51489,6 +53079,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -51580,6 +53173,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -51646,6 +53242,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -51726,6 +53325,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -51796,6 +53398,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -51870,6 +53475,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -51987,6 +53595,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -52082,6 +53693,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -52104,7 +53718,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -52166,6 +53780,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -52188,7 +53805,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -52244,6 +53861,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -52266,7 +53886,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -52324,6 +53944,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -52346,7 +53969,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -52404,6 +54027,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -52426,7 +54052,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -52481,6 +54107,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": false,
@@ -52554,7 +54183,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -52628,6 +54257,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -52675,7 +54307,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -52736,6 +54368,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -52758,7 +54393,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -52815,6 +54450,9 @@
       },
       "ops.typed-config": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": false,
@@ -52893,7 +54531,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -52947,6 +54585,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -53038,6 +54679,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -53153,6 +54797,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -53234,6 +54881,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -53303,6 +54953,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -53422,6 +55075,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -53506,6 +55162,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [],
@@ -53560,6 +55219,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -53630,6 +55292,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -53710,6 +55375,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -53796,6 +55464,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -53813,7 +55484,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -53865,6 +55536,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -53882,7 +55556,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -53932,6 +55606,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -54024,6 +55701,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -54093,6 +55773,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -54258,6 +55941,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -54341,6 +56027,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -54453,6 +56142,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -54537,6 +56229,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -54618,6 +56313,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -54685,6 +56383,9 @@
       },
       "ops.typed-config": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -54762,6 +56463,9 @@
       "ops.typed-config": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [],
@@ -54822,6 +56526,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -54904,6 +56611,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -54992,7 +56702,7 @@
     "subpath": "charms/planner-operator",
     "features": {
       "jubilant.integration-tests": {
-        "present": false
+        "present": true
       },
       "testing.pytest-operator": {
         "present": false
@@ -55001,6 +56711,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -55025,7 +56738,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -55095,7 +56808,7 @@
     "subpath": "charms/webhook-gateway-operator",
     "features": {
       "jubilant.integration-tests": {
-        "present": false
+        "present": true
       },
       "testing.pytest-operator": {
         "present": false
@@ -55104,6 +56817,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -55129,7 +56845,7 @@
         "secret_typed_config": [
           "webhook-secret"
         ],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -55206,6 +56922,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -55301,6 +57020,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -55447,6 +57169,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -55532,6 +57257,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -55600,6 +57328,9 @@
       },
       "ops.typed-config": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -55673,6 +57404,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -55759,6 +57493,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -55856,6 +57593,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -55935,6 +57675,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -56004,6 +57747,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -56077,6 +57823,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -56148,6 +57897,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -56217,6 +57969,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -56308,6 +58063,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -56383,12 +58141,15 @@
         "present": false
       },
       "testing.pytest-operator": {
-        "present": false
+        "present": true
       },
       "ops.typed-relation": {
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -56397,7 +58158,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -56447,6 +58208,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -56564,6 +58328,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -56636,6 +58403,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -56756,6 +58526,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -56864,6 +58637,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -56926,6 +58702,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -56992,6 +58771,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -57049,6 +58831,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -57118,6 +58903,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -57201,6 +58989,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -57282,6 +59073,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -57377,6 +59171,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -57437,6 +59234,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -57502,6 +59302,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -57561,12 +59364,15 @@
         "present": false
       },
       "testing.pytest-operator": {
-        "present": false
+        "present": true
       },
       "ops.typed-relation": {
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -57575,7 +59381,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -57646,6 +59452,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -57710,6 +59519,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -57828,6 +59640,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -57904,6 +59719,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -57996,6 +59814,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -58071,6 +59892,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -58137,6 +59961,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -58249,6 +60076,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [],
@@ -58301,6 +60131,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -58382,6 +60215,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -58481,6 +60317,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -58585,6 +60424,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -58662,12 +60504,15 @@
         "present": false
       },
       "testing.pytest-operator": {
-        "present": false
+        "present": true
       },
       "ops.typed-relation": {
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -58682,7 +60527,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -58722,12 +60567,15 @@
         "present": false
       },
       "testing.pytest-operator": {
-        "present": false
+        "present": true
       },
       "ops.typed-relation": {
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -58742,7 +60590,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -58782,12 +60630,15 @@
         "present": false
       },
       "testing.pytest-operator": {
-        "present": false
+        "present": true
       },
       "ops.typed-relation": {
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -58802,7 +60653,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -58844,12 +60695,15 @@
         "present": false
       },
       "testing.pytest-operator": {
-        "present": false
+        "present": true
       },
       "ops.typed-relation": {
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -58864,7 +60718,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -58912,6 +60766,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -59009,6 +60866,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -59144,6 +61004,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -59204,6 +61067,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -59274,6 +61140,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -59390,6 +61259,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -59531,6 +61403,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -59588,6 +61463,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -59722,6 +61600,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -59799,6 +61680,9 @@
         "present": false
       },
       "ops.typed-config": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -59987,6 +61871,9 @@
       "ops.typed-config": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -60149,7 +62036,8 @@
       "jubilant.integration-tests",
       "ops.typed-config",
       "ops.typed-relation",
-      "testing.pytest-operator"
+      "testing.pytest-operator",
+      "testing.zaza"
     ]
   },
   "__thin__": {
@@ -67519,5 +69407,26 @@
       },
       "tool": "charmtally.tools.backfill --rocks"
     }
-  }
+  },
+  "__refreshed__": [
+    {
+      "at": "2026-10-20",
+      "features": [
+        "jubilant.integration-tests",
+        "testing.pytest-operator",
+        "testing.zaza"
+      ],
+      "meta_keys": [
+        "has_integration_tests"
+      ],
+      "catalogue_digest": "ee478ec3b49d",
+      "outcomes": {
+        "refreshed": 629,
+        "unreadable": 0,
+        "no-charm-yet": 0,
+        "no-sha": 0
+      },
+      "tool": "charmtally.tools.backfill --refresh"
+    }
+  ]
 }
