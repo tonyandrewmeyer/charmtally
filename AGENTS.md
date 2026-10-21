@@ -121,6 +121,25 @@ rocks.csv ─────────────────► scan-rocks ─�
   nothing in the corpus provides reads as `unknown`, never as "no ceiling".
   Optional-vs-mandatory is not knowable from the metadata, so the claim is
   about the interface rather than the deployment.
+- `charmtally/layout.py` — where a charm's integration tests are, which is
+  not always under its root. Three layouts: `tests/integration/*.py` beside
+  `src/`; a monorepo's one shared `tests/integration/` at the repo root (or
+  an intermediate `charms/` dir) covering every sub-charm beneath it; and
+  zaza, the OpenStack charms' harness, whose suite is `tests/tests.yaml` (or
+  `tests/<suite>/tests.yaml`, how `sunbeam-charms` keeps one set for 80-odd
+  charms) and no `integration/` dir at all. Read from the charm root alone,
+  the second two populations — about 220 charms — report as having **no**
+  integration tests, which is what the adoption page's "none" bucket was
+  mostly made of. `metadata.read` (`has_integration_tests`), the
+  `tests`-scoped detector sweep and the `zaza-config` detector all ask this
+  module, so they cannot disagree. The walk is *up only*, stops at the repo
+  root, and the charm's own suite always wins: a sibling sub-charm's tests
+  are that charm's, and a repo-root suite is only a fallback, never an
+  addition. Evidence found above the charm root carries `..` segments like
+  `repo-file`'s does, so `SourceFile.rel` is a `relpath`, not a
+  `relative_to`. `testing.zaza` is the catalogue feature that comes of it,
+  and `adoption`'s integration-testing metric has a `zaza` bucket, dropped
+  (and the point flagged `partial`) for snapshots that pre-date the feature.
 - `charmtally/snapshot.py` — thins a scored file into the dated snapshot the
   trend and adoption pages read. The snapshots are the entire history and
   cannot be regenerated, so what goes in stays in git forever; `evidence` and
@@ -189,10 +208,11 @@ Per Python file, backing the architecture and component-graph axes:
 File-independent, reading the charm root directly (these are the only ones
 that can see non-Python files — `_select_files` returns `*.py` only):
 `yaml-key` · `pytest-config-key` · `requires-interface` · `relation-count` ·
-`requirement`.
+`requirement` · `zaza-config`. The last reads wherever `layout.zaza_configs`
+says the charm's zaza suite is, which may be above the charm root.
 
 File-independent, reading the *repo* root: `repo-file`. It is the only
-detector that looks above the charm root, and the only one whose sweep
+detector that sweeps above the charm root, and the only one whose sweep
 descends into dotted directories, because the questions it answers — how is
 this charm built, tested and released — are answered in `.github/`, which a
 monorepo sub-charm does not own. The repo root is found by walking up for
@@ -231,6 +251,12 @@ Misses are never written to disk, and a fetch is retried once, because an
 unreadable workflow makes every charm delegating to it read as *not doing* the
 thing, which the output cannot distinguish from having looked and found
 nothing.
+
+The `tests` scope has one exception to "per-file kinds see the charm tree
+only": when the charm has no `tests/integration/` of its own,
+`_select_files` adds the monorepo's shared one that `layout` finds above it,
+so `jubilant.integration-tests` and `testing.pytest-operator` read a
+coordinator/worker pair's suite rather than reporting both as untested.
 
 A charm is matched against every feature and pattern, so `scan_charm`
 builds one `CharmSource` and passes it to every `detect_feature` call;

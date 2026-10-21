@@ -25,6 +25,7 @@ from ._config import (
     _detect_requirement,
     _detect_requires_interface,
     _detect_yaml_key,
+    _detect_zaza_config,
 )
 from ._files import CharmSource, Evidence, _charm_provides_lib
 
@@ -148,6 +149,7 @@ _CHARM_KINDS: dict[str, Callable[[CharmSource, dict], list[Evidence]]] = {
     "requires-interface": _detect_requires_interface,
     "relation-count": _detect_relation_count,
     "yaml-key": _detect_yaml_key,
+    "zaza-config": _detect_zaza_config,
 }
 
 # Prepared once per feature, then run once per Python file in scope.

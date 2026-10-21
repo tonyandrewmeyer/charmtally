@@ -129,6 +129,7 @@ from typing import TYPE_CHECKING
 
 import yaml
 
+from . import layout as _layout
 from ._toml import tomllib
 
 if TYPE_CHECKING:
@@ -901,8 +902,12 @@ def read(charm_root: Path) -> CharmMeta:
     config_keys = list(dict.fromkeys(config_keys))
     secret_typed = list(dict.fromkeys(secret_typed))
 
-    integration_dir = charm_root / "tests" / "integration"
-    has_integration_tests = integration_dir.exists() and any(integration_dir.rglob("*.py"))
+    # Own `tests/integration/`, a monorepo's shared one above the charm, or a
+    # zaza `tests.yaml` — all three are an integration suite, and `layout`
+    # is the one place that knows where to look for them.
+    has_integration_tests = _layout.integration_tests_dir(charm_root) is not None or bool(
+        _layout.zaza_configs(charm_root)
+    )
 
     # Reactive charms (charms.reactive framework) come in two layouts:
     #

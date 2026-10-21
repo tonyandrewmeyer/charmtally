@@ -190,6 +190,18 @@ def test_jubilant_no_integration_tests_is_na():
     assert s.label == SCORE_NOT_APPLICABLE
 
 
+def test_jubilant_absent_from_a_zaza_charm_names_zaza():
+    feats = {"testing.zaza": {"present": True}}
+    s = score_absent("jubilant.integration-tests", feats, _meta(has_integration_tests=True))
+    assert s.label == SCORE_WORTH_CONSIDERING
+    assert "zaza" in s.rationale
+
+
+def test_zaza_absent_is_na():
+    s = score_absent("testing.zaza", {}, _meta(has_integration_tests=True))
+    assert s.label == SCORE_NOT_APPLICABLE
+
+
 # ── testing.concierge ─────────────────────────────────────────────────────────
 
 

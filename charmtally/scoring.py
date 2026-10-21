@@ -188,6 +188,12 @@ def score_absent(
         return Score(SCORE_NOT_APPLICABLE, "no obviously sensitive config options")
 
     if feature_name == "jubilant.integration-tests":
+        if features.get("testing.zaza", {}).get("present"):
+            return Score(
+                SCORE_WORTH_CONSIDERING,
+                "integration tests are zaza-driven (tests/tests.yaml) — jubilant is the "
+                "charm-tech harness for new suites",
+            )
         if meta.has_integration_tests:
             return Score(
                 SCORE_WORTH_CONSIDERING,
@@ -195,6 +201,9 @@ def score_absent(
                 "harness/pytest-operator",
             )
         return Score(SCORE_NOT_APPLICABLE, "no integration tests present")
+
+    if feature_name == "testing.zaza":
+        return Score(SCORE_NOT_APPLICABLE, "descriptive signal — no tests/tests.yaml found")
 
     if feature_name == "testing.concierge":
         # Only a charm with integration tests has an environment to provision,
