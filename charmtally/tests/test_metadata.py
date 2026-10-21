@@ -869,3 +869,25 @@ def test_a_tests_yaml_without_zaza_keys_is_not_a_suite(tmp_path: Path) -> None:
     (tmp_path / "tests").mkdir()
     (tmp_path / "tests" / "tests.yaml").write_text("fixtures: [a]\n")
     assert read(tmp_path).has_integration_tests is False
+
+
+def test_functional_dir_counts_as_integration_tests(tmp_path: Path) -> None:
+    """BootStack charms call the suite that deploys the charm `tests/functional/`."""
+    _ops_charm(tmp_path)
+    (tmp_path / "tests" / "functional").mkdir(parents=True)
+    (tmp_path / "tests" / "functional" / "test_deploy.py").write_text("")
+    assert read(tmp_path).has_integration_tests is True
+
+
+def test_reactive_src_tests_zaza_counts(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    (tmp_path / "src" / "tests").mkdir(parents=True)
+    (tmp_path / "src" / "tests" / "tests.yaml").write_text("gate_bundles: [jammy]\n")
+    assert read(tmp_path).has_integration_tests is True
+
+
+def test_functional_zaza_set_counts(tmp_path: Path) -> None:
+    _ops_charm(tmp_path)
+    (tmp_path / "tests" / "functional" / "tests").mkdir(parents=True)
+    (tmp_path / "tests" / "functional" / "tests" / "tests.yaml").write_text("tests: [t.T]\n")
+    assert read(tmp_path).has_integration_tests is True

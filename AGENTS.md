@@ -127,7 +127,9 @@ rocks.csv ─────────────────► scan-rocks ─�
   an intermediate `charms/` dir) covering every sub-charm beneath it; and
   zaza, the OpenStack charms' harness, whose suite is `tests/tests.yaml` (or
   `tests/<suite>/tests.yaml`, how `sunbeam-charms` keeps one set for 80-odd
-  charms) and no `integration/` dir at all. Read from the charm root alone,
+  charms; `src/tests/` in the reactive layout; `tests/functional/tests/` in
+  BootStack's) and no `integration/` dir at all. `tests/functional/*.py` is
+  BootStack's name for a pytest suite that deploys the charm and counts too. Read from the charm root alone,
   the second two populations — about 220 charms — report as having **no**
   integration tests, which is what the adoption page's "none" bucket was
   mostly made of. `metadata.read` (`has_integration_tests`), the
@@ -390,6 +392,26 @@ Not part of the pipeline; each is run with `uv run python -m charmtally.tools.X`
   of it. Every charm gets the key even when the SHA is gone (a force-push
   drops commits the snapshots still name); the value is then null, because
   `adoption` reads key *presence* to tell "we looked" from "we never did".
+  `--refresh F1,F2 --refresh-meta K1` is the fourth mode, for when a
+  detector was wrong and the fix is known: it re-reads only the named
+  features (and `__meta__` keys) into every snapshot that exists, at the
+  `repo_sha` each record already names rather than re-resolving by date, so
+  the refreshed reading is of exactly the tree the original was. It
+  **merges** like the other two — every other reading stays byte-for-byte,
+  a thin snapshot stays thin, a fat one keeps evidence, an adoption-only one
+  gets no scores — and a feature the snapshot never carried is added, which
+  is how a detector that post-dates the history gets one. Readings are
+  memoised on `(repo, sha, subpath)` across dates, so the whole history
+  costs one checkout per distinct commit (~15k) rather than one per record
+  (~76k). Only the refreshed features are re-scored: a score elsewhere that
+  reads a refreshed value (`testing.concierge` reads
+  `has_integration_tests`) keeps its old verdict, because re-scoring the lot
+  would also pick up every rule change since, which is a different edit.
+  Each snapshot gains a `__refreshed__` list recording what was re-read and
+  how many records git could no longer find a commit for. First used for
+  the integration-test layout fix (`layout.py`), which added `testing.zaza`
+  to 128 snapshots and moved ~100 charms a week out of "no integration
+  tests".
   `--adoption-only` replays dates for the scorecard alone: each date scans
   only `adoption.replay_inputs(date)` — the `inputs` of metrics whose
   `Metric.since` has passed — plus `__meta__`, skipping architecture

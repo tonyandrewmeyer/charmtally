@@ -10,6 +10,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -22,7 +25,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -66,6 +69,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -146,6 +152,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -158,7 +167,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -205,6 +214,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -217,7 +229,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -260,6 +272,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -312,6 +327,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -368,6 +386,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -482,6 +503,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -588,6 +612,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -649,6 +676,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -777,6 +807,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -848,6 +881,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -949,6 +985,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -1064,6 +1103,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -1206,6 +1248,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -1262,6 +1307,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -1376,6 +1424,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -1506,6 +1557,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -1639,6 +1693,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -1770,6 +1827,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -1905,6 +1965,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -2064,6 +2127,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -2235,6 +2301,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [],
@@ -2283,6 +2352,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -2371,6 +2443,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -2480,6 +2555,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -2586,6 +2664,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -2710,6 +2791,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -2776,6 +2860,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -2919,6 +3006,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -3066,6 +3156,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -3223,6 +3316,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -3355,6 +3451,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -3538,6 +3637,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -3609,6 +3711,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -3740,6 +3845,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -3883,6 +3991,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -3963,6 +4074,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -4021,6 +4135,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -4077,6 +4194,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -4141,6 +4261,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -4168,7 +4291,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": true,
@@ -4213,6 +4336,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -4275,6 +4401,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -4357,6 +4486,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -4419,6 +4551,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -4511,6 +4646,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -4623,6 +4761,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -4756,6 +4897,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -4807,6 +4951,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -4879,6 +5026,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -4939,6 +5089,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -5056,6 +5209,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -5109,6 +5265,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -5185,6 +5344,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -5267,6 +5429,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -5375,6 +5540,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -5448,6 +5616,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -5509,6 +5680,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -5592,6 +5766,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -5644,7 +5821,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -5688,6 +5865,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -5760,6 +5940,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -5816,6 +5999,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -5875,6 +6061,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -5941,6 +6130,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -6011,6 +6203,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -6062,6 +6257,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -6222,6 +6420,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -6295,6 +6496,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -6346,6 +6550,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -6446,6 +6653,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -6513,6 +6723,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -6605,6 +6818,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -6673,6 +6889,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -6753,6 +6972,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -6846,6 +7068,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -6934,6 +7159,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -7001,6 +7229,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -7110,6 +7341,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -7197,6 +7431,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": true
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -7221,7 +7458,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -7276,6 +7513,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -7357,6 +7597,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -7428,6 +7671,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -7498,6 +7744,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -7606,6 +7855,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -7669,6 +7921,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -7763,6 +8018,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -7834,6 +8092,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -7903,6 +8164,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -7966,6 +8230,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -8045,6 +8312,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -8105,6 +8375,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -8182,6 +8455,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -8282,6 +8558,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -8376,6 +8655,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -8449,6 +8731,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -8498,6 +8783,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -8576,6 +8864,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -8656,6 +8947,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -8729,6 +9023,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -8794,6 +9091,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -8865,6 +9165,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -8978,6 +9281,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -9046,6 +9352,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -9097,6 +9406,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -9178,6 +9490,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -9256,6 +9571,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -9345,6 +9663,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -9422,6 +9743,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -9494,6 +9818,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -9634,6 +9961,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -9726,6 +10056,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -9833,6 +10166,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -9934,6 +10270,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -10031,6 +10370,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -10159,6 +10501,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -10336,6 +10681,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -10487,6 +10835,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -10633,6 +10984,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -10698,6 +11052,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -10842,6 +11199,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -10999,6 +11359,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -11101,6 +11464,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -11180,6 +11546,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -11249,6 +11618,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -11385,6 +11757,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -11450,7 +11825,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -11495,6 +11870,9 @@
       },
       "testing.pytest-operator": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": false,
@@ -11574,7 +11952,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -11620,13 +11998,16 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [],
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -11670,6 +12051,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -11710,7 +12094,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -11753,6 +12137,9 @@
       },
       "testing.pytest-operator": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": false,
@@ -11802,7 +12189,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -11847,6 +12234,9 @@
       },
       "testing.pytest-operator": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -11929,7 +12319,7 @@
           "secret"
         ],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -11975,6 +12365,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -12006,7 +12399,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -12051,6 +12444,9 @@
       },
       "testing.pytest-operator": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -12113,7 +12509,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -12157,6 +12553,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -12186,7 +12585,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -12231,6 +12630,9 @@
       },
       "testing.pytest-operator": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -12322,7 +12724,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -12367,6 +12769,9 @@
       },
       "testing.pytest-operator": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -12430,7 +12835,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -12475,6 +12880,9 @@
       },
       "testing.pytest-operator": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -12521,7 +12929,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -12570,6 +12978,9 @@
       },
       "testing.pytest-operator": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -12648,7 +13059,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -12693,6 +13104,9 @@
       },
       "testing.pytest-operator": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -12784,7 +13198,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -12829,6 +13243,9 @@
       },
       "testing.pytest-operator": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -12880,7 +13297,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -12926,6 +13343,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -12943,7 +13363,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -12986,6 +13406,9 @@
       },
       "testing.pytest-operator": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -13085,7 +13508,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -13130,6 +13553,9 @@
       },
       "testing.pytest-operator": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -13222,7 +13648,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -13267,6 +13693,9 @@
       },
       "testing.pytest-operator": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -13333,7 +13762,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -13378,6 +13807,9 @@
       },
       "testing.pytest-operator": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -13445,7 +13877,7 @@
           "maas-api-key"
         ],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -13490,6 +13922,9 @@
       },
       "testing.pytest-operator": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -13546,7 +13981,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -13591,6 +14026,9 @@
       },
       "testing.pytest-operator": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": false,
@@ -13658,7 +14096,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -13703,6 +14141,9 @@
       },
       "testing.pytest-operator": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -13769,7 +14210,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -13812,6 +14253,9 @@
       },
       "testing.pytest-operator": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -13897,7 +14341,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -13942,6 +14386,9 @@
       },
       "testing.pytest-operator": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -14003,7 +14450,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -14049,6 +14496,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -14093,7 +14543,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -14138,6 +14588,9 @@
       },
       "testing.pytest-operator": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -14205,7 +14658,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -14251,6 +14704,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -14276,7 +14732,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -14323,6 +14779,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -14360,7 +14819,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -14405,6 +14864,9 @@
       },
       "testing.pytest-operator": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": true,
@@ -14481,7 +14943,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -14530,6 +14992,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -14571,7 +15036,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -14618,6 +15083,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -14691,6 +15159,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -14783,6 +15254,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -14855,6 +15329,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -14993,6 +15470,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -15155,6 +15635,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -15306,6 +15789,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -15323,7 +15809,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -15372,6 +15858,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -15404,7 +15893,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -15454,6 +15943,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -15476,7 +15968,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -15524,6 +16016,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -15617,6 +16112,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -15702,6 +16200,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -15774,7 +16275,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -15822,6 +16323,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -15854,7 +16358,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": true,
@@ -15901,6 +16405,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -15954,6 +16461,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -16033,6 +16543,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -16105,7 +16618,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -16153,6 +16666,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -16175,7 +16691,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": true,
@@ -16223,6 +16739,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -16240,7 +16759,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -16287,6 +16806,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -16319,7 +16841,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": true,
@@ -16366,6 +16888,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -16431,6 +16956,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -16448,7 +16976,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -16495,6 +17023,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -16512,7 +17043,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -16559,6 +17090,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -16576,7 +17110,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -16623,6 +17157,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -16679,6 +17216,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -16701,7 +17241,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -16747,6 +17287,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -16818,13 +17361,16 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -16864,6 +17410,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -16974,6 +17523,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -17035,6 +17587,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -17091,6 +17646,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -17143,6 +17701,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -17216,6 +17777,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -17275,6 +17839,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -17343,6 +17910,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -17407,6 +17977,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -17480,6 +18053,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -17532,6 +18108,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -17593,6 +18172,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -17664,6 +18246,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -17710,6 +18295,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -17776,6 +18364,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -17840,6 +18431,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -17888,6 +18482,9 @@
       },
       "testing.pytest-operator": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": false,
@@ -17956,7 +18553,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -18004,6 +18601,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -18036,7 +18636,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -18084,6 +18684,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -18106,7 +18709,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -18153,6 +18756,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -18190,7 +18796,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": true,
@@ -18237,6 +18843,9 @@
       },
       "testing.pytest-operator": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": false,
@@ -18285,7 +18894,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -18331,6 +18940,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -18392,6 +19004,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -18473,6 +19088,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -18540,6 +19158,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -18567,7 +19188,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -18617,6 +19238,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -18644,7 +19268,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -18693,6 +19317,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -18773,6 +19400,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -18876,6 +19506,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": true
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -19019,7 +19652,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -19062,6 +19695,9 @@
       },
       "testing.pytest-operator": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": false,
@@ -19135,7 +19771,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -19183,6 +19819,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -19200,7 +19839,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -19249,6 +19888,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -19266,7 +19908,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -19313,6 +19955,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -19335,7 +19980,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -19380,6 +20025,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -19439,6 +20087,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -19504,6 +20155,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -19558,6 +20212,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -19629,6 +20286,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -19686,6 +20346,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -19757,6 +20420,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -19809,6 +20475,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -19875,6 +20544,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -19967,6 +20639,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -20053,6 +20728,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -20265,6 +20943,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -20398,6 +21079,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -20445,6 +21129,9 @@
         "present": true
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -20579,6 +21266,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -20685,6 +21375,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -20768,6 +21461,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -20820,6 +21516,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -20876,6 +21575,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -20928,6 +21630,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -20984,6 +21689,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -21030,6 +21738,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -21084,6 +21795,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -21201,6 +21915,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -21274,6 +21991,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -21316,7 +22036,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -21366,6 +22086,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -21378,7 +22101,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -21428,6 +22151,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -21445,7 +22171,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -21494,13 +22220,16 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -21547,6 +22276,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -21564,7 +22296,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -21610,6 +22342,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -21662,6 +22397,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -21684,7 +22422,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -21733,6 +22471,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -21871,6 +22612,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -21963,6 +22707,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [],
@@ -22012,6 +22759,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -22029,7 +22779,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -22076,6 +22826,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -22098,7 +22851,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -22145,6 +22898,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -22162,7 +22918,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -22212,6 +22968,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -22254,7 +23013,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -22300,6 +23059,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -22365,6 +23127,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -22412,7 +23177,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -22460,6 +23225,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -22519,6 +23287,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -22619,6 +23390,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -22631,7 +23405,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -22681,6 +23455,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -22698,7 +23475,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -22748,6 +23525,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -22771,7 +23551,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -22825,6 +23605,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -22842,7 +23625,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -22886,6 +23669,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -22974,6 +23760,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -23131,6 +23920,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -23198,6 +23990,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -23245,7 +24040,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -23291,6 +24086,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -23313,7 +24111,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -23363,6 +24161,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -23410,7 +24211,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -23457,6 +24258,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -23527,6 +24331,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -23630,6 +24437,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -23707,6 +24517,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -23764,7 +24577,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -23812,6 +24625,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -23834,7 +24650,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -23880,6 +24696,9 @@
         "present": true
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -24060,13 +24879,16 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -24106,6 +24928,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -24166,6 +24991,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -24225,6 +25053,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -24390,6 +25221,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -24453,6 +25287,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -24573,6 +25410,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -24648,6 +25488,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -24722,6 +25565,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -24739,7 +25585,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -24784,6 +25630,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -24801,7 +25650,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -24848,6 +25697,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -24865,7 +25717,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -24912,6 +25764,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -24929,7 +25784,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -24976,6 +25831,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -25003,7 +25861,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -25058,6 +25916,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -25095,7 +25956,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -25142,6 +26003,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -25159,7 +26023,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -25204,6 +26068,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -25216,7 +26083,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -25267,6 +26134,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -25294,7 +26164,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -25341,6 +26211,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -25363,7 +26236,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -25413,6 +26286,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -25425,7 +26301,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -25474,6 +26350,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -25541,6 +26420,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -25578,7 +26460,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -25627,6 +26509,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -25644,7 +26529,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -25694,6 +26579,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -25716,7 +26604,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -25761,6 +26649,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -25793,7 +26684,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -25843,6 +26734,9 @@
       },
       "testing.pytest-operator": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": false,
@@ -25931,7 +26825,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -25979,6 +26873,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -26001,7 +26898,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -26051,6 +26948,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -26088,7 +26988,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": true,
@@ -26135,6 +27035,9 @@
       },
       "testing.pytest-operator": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": false,
@@ -26243,7 +27146,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -26290,6 +27193,9 @@
       },
       "testing.pytest-operator": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": false,
@@ -26378,7 +27284,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -26426,6 +27332,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -26443,7 +27352,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -26493,6 +27402,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -26525,7 +27437,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -26574,6 +27486,9 @@
       },
       "testing.pytest-operator": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": false,
@@ -26642,7 +27557,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -26690,6 +27605,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -26707,7 +27625,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -26752,6 +27670,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -26784,7 +27705,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -26827,6 +27748,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -26839,7 +27763,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -26882,6 +27806,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -26894,7 +27821,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -26937,13 +27864,16 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -26986,6 +27916,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -27008,7 +27941,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -27058,6 +27991,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -27070,7 +28006,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -27119,6 +28055,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -29815,6 +30754,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -29912,6 +30854,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [],
@@ -29965,6 +30910,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -29977,7 +30925,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -30022,6 +30970,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -30044,7 +30995,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -30097,6 +31048,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -30114,7 +31068,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -30171,6 +31125,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -30242,6 +31199,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -30302,6 +31262,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -30314,7 +31277,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -30361,6 +31324,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -30373,7 +31339,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -30416,6 +31382,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -30549,6 +31518,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -30666,6 +31638,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -30717,6 +31692,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -30793,6 +31771,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -30825,7 +31806,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": true,
@@ -30870,6 +31851,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -30902,7 +31886,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -30947,6 +31931,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -30969,7 +31956,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -31014,6 +32001,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -31041,7 +32031,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -31086,6 +32076,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -31116,7 +32109,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -31171,6 +32164,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -31230,6 +32226,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -31242,7 +32241,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -31287,6 +32286,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -31309,7 +32311,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": true,
@@ -31354,6 +32356,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -31461,6 +32466,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -31520,6 +32528,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -31568,6 +32579,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -31633,6 +32647,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -31691,6 +32708,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -31772,6 +32792,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -31839,6 +32862,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -31968,6 +32994,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -32078,6 +33107,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -32130,6 +33162,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -32235,6 +33270,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -32312,6 +33350,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [],
@@ -32372,6 +33413,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -32473,6 +33517,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -32560,6 +33607,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -32620,6 +33670,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -32695,6 +33748,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -32768,6 +33824,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -32826,6 +33885,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -32874,6 +33936,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -32963,6 +34028,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -33042,6 +34110,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -33141,6 +34212,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -33292,6 +34366,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -33362,6 +34439,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -33446,6 +34526,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -33546,6 +34629,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -33627,6 +34713,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -33713,6 +34802,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -33814,6 +34906,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -33895,6 +34990,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -33953,6 +35051,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -34027,6 +35128,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -34100,6 +35204,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -34191,6 +35298,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -34316,6 +35426,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -34420,6 +35533,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -34484,6 +35600,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -34542,6 +35661,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -34594,6 +35716,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -34689,6 +35814,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -34783,6 +35911,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -34841,6 +35972,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -34920,6 +36054,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -34978,6 +36115,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -35092,6 +36232,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [],
@@ -35144,6 +36287,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -35198,6 +36344,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -35491,6 +36640,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -35568,6 +36720,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -35678,6 +36833,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -35802,6 +36960,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -35866,6 +37027,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -35962,6 +37126,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -36036,6 +37203,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -36123,6 +37293,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -36184,6 +37357,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -36257,6 +37433,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -36414,6 +37593,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -36477,6 +37659,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -36556,6 +37741,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -36644,6 +37832,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -36711,6 +37902,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [],
@@ -36759,6 +37953,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -36836,6 +38033,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [],
@@ -36884,6 +38084,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -36951,6 +38154,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [],
@@ -36999,6 +38205,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -37130,6 +38339,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -37207,6 +38419,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -37331,6 +38546,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -37406,6 +38624,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -37451,7 +38672,7 @@
         ],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -37506,6 +38727,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -37586,6 +38810,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -37642,6 +38869,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -37738,6 +38968,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -37830,6 +39063,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -37897,6 +39133,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -37956,6 +39195,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -38018,6 +39260,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -38099,6 +39344,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -38158,6 +39406,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -38239,6 +39490,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -38307,6 +39561,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -38353,6 +39610,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -38406,6 +39666,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -38457,6 +39720,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -38507,6 +39773,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -38582,6 +39851,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -38651,6 +39923,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -38727,6 +40002,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -38785,6 +40063,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -38848,6 +40129,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -38906,6 +40190,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -38984,6 +40271,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -39049,6 +40339,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -39103,6 +40396,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -39176,6 +40472,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -39265,6 +40564,9 @@
         "present": true
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -39367,6 +40669,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -39423,6 +40728,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -39494,6 +40802,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -39516,7 +40827,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -39557,6 +40868,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -39619,6 +40933,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": true
+      },
+      "testing.zaza": {
         "present": true
       },
       "__meta__": {
@@ -39722,6 +41039,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -39739,7 +41059,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -39788,6 +41108,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": true
+      },
+      "testing.zaza": {
         "present": true
       },
       "__meta__": {
@@ -39865,6 +41188,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -39907,7 +41233,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -39966,6 +41292,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -40015,6 +41344,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": true
+      },
+      "testing.zaza": {
         "present": true
       },
       "__meta__": {
@@ -40077,6 +41409,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": true
+      },
+      "testing.zaza": {
         "present": true
       },
       "__meta__": {
@@ -40145,6 +41480,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -40192,6 +41530,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -40264,6 +41605,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -40306,7 +41650,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -40360,6 +41704,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -40444,6 +41791,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -40508,6 +41858,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -40568,6 +41921,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -40617,6 +41973,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -40649,7 +42008,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -40699,6 +42058,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -40759,6 +42121,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -40807,6 +42172,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -40893,6 +42261,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -41186,6 +42557,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -41280,6 +42654,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -41326,6 +42703,9 @@
         "present": true
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -41400,6 +42780,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -41476,6 +42859,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -41549,6 +42935,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -41635,6 +43024,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -41696,6 +43088,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -41769,6 +43164,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -41833,6 +43231,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -41903,6 +43304,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -41925,7 +43329,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -41981,6 +43385,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -42003,7 +43410,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -42053,6 +43460,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -42070,7 +43480,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -42122,6 +43532,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -42144,7 +43557,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -42196,6 +43609,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -42218,7 +43634,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -42267,6 +43683,9 @@
       },
       "testing.pytest-operator": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": false,
@@ -42340,7 +43759,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -42408,6 +43827,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -42455,7 +43877,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -42510,6 +43932,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -42532,7 +43957,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": true,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -42583,6 +44008,9 @@
       },
       "testing.pytest-operator": {
         "present": false
+      },
+      "testing.zaza": {
+        "present": true
       },
       "__meta__": {
         "has_containers": false,
@@ -42661,7 +44089,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": true,
         "is_subordinate": false,
@@ -42709,6 +44137,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -42773,6 +44204,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -42882,6 +44316,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -42957,6 +44394,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -43020,6 +44460,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -43133,6 +44576,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -43211,6 +44657,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [],
@@ -43259,6 +44708,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -43314,6 +44766,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": true
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -43331,7 +44786,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": true,
@@ -43376,6 +44831,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -43443,6 +44901,9 @@
         "present": true
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -43577,6 +45038,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -43650,6 +45114,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -43753,6 +45220,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -43828,6 +45298,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -43901,6 +45374,9 @@
         "present": true
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -43979,6 +45455,9 @@
         "present": true
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -44071,6 +45550,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -44144,6 +45626,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -44258,6 +45743,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -44321,6 +45809,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -44402,6 +45893,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -44491,6 +45985,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -44555,6 +46052,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -44621,6 +46121,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -44686,6 +46189,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -44749,6 +46255,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -44825,6 +46334,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": true
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -44833,7 +46345,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -44878,6 +46390,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -44989,6 +46504,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -45068,6 +46586,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -45171,6 +46692,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -45228,6 +46752,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -45287,6 +46814,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -45339,6 +46869,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -45416,6 +46949,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -45504,6 +47040,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -45560,6 +47099,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -45608,6 +47150,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": true
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -45616,7 +47161,7 @@
         "config_keys": [],
         "secret_like_config": [],
         "secret_typed_config": [],
-        "has_integration_tests": false,
+        "has_integration_tests": true,
         "is_reactive": false,
         "is_legacy_classic": false,
         "is_subordinate": false,
@@ -45678,6 +47223,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -45789,6 +47337,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -45860,6 +47411,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -45945,6 +47499,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -46014,6 +47571,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -46073,6 +47633,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -46170,6 +47733,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [],
@@ -46217,6 +47783,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -46281,6 +47850,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -46358,6 +47930,9 @@
         "present": false
       },
       "testing.pytest-operator": {
+        "present": false
+      },
+      "testing.zaza": {
         "present": false
       },
       "__meta__": {
@@ -46446,6 +48021,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [],
@@ -46516,6 +48094,9 @@
       "testing.pytest-operator": {
         "present": true
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -46576,6 +48157,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -46640,6 +48224,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -46750,6 +48337,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": false,
@@ -46883,6 +48473,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": false,
         "relations": [
@@ -46990,6 +48583,9 @@
       "testing.pytest-operator": {
         "present": false
       },
+      "testing.zaza": {
+        "present": false
+      },
       "__meta__": {
         "has_containers": true,
         "relations": [
@@ -47074,6 +48670,9 @@
       },
       "testing.pytest-operator": {
         "present": true
+      },
+      "testing.zaza": {
+        "present": false
       },
       "__meta__": {
         "has_containers": true,
@@ -47306,7 +48905,8 @@
     "scope": "adoption",
     "features_scanned": [
       "jubilant.integration-tests",
-      "testing.pytest-operator"
+      "testing.pytest-operator",
+      "testing.zaza"
     ]
   },
   "__thin__": {
@@ -52849,5 +54449,26 @@
       },
       "tool": "charmtally.tools.backfill --rocks"
     }
-  }
+  },
+  "__refreshed__": [
+    {
+      "at": "2026-10-20",
+      "features": [
+        "jubilant.integration-tests",
+        "testing.pytest-operator",
+        "testing.zaza"
+      ],
+      "meta_keys": [
+        "has_integration_tests"
+      ],
+      "catalogue_digest": "ee478ec3b49d",
+      "outcomes": {
+        "refreshed": 533,
+        "unreadable": 0,
+        "no-charm-yet": 0,
+        "no-sha": 0
+      },
+      "tool": "charmtally.tools.backfill --refresh"
+    }
+  ]
 }
