@@ -3,58 +3,60 @@
 <head>
 <meta charset="utf-8">
 <title>charmtally — history</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ubuntu+Sans:ital,wght@0,100..800;1,100..800&family=Ubuntu+Sans+Mono:wght@400..700&display=swap">
 <style>
-  body { font: 14px/1.4 system-ui, sans-serif; margin: 2em; max-width: 1600px; }
-  h1 { margin-bottom: 0; }
-  .meta { color: #666; font-size: 12px; margin-bottom: 1.5em; }
-  table { border-collapse: collapse; margin-bottom: 2em; }
-  th, td { border: 1px solid #ddd; padding: 4px 8px; text-align: left; vertical-align: top; }
-  th { background: #f4f4f4; }
-  td.num { text-align: right; font-variant-numeric: tabular-nums; }
-  .gap { color: #b00; font-weight: 600; }
-  .worth { color: #b67; }
-  .ok { color: #060; }
-  nav a { margin-right: 1em; }
+{% include "_canonical.css.j2" %}
+  h1 { margin-bottom: .25rem; }
+  .meta { margin-bottom: 1.5em; }
+  table { margin-bottom: 2em; font-size: 14px; }
+  th, td { vertical-align: top; }
+  .gap { color: var(--c-negative); font-weight: 550; }
+  .worth { color: var(--c-caution); }
+  .ok { color: var(--c-positive); }
 
-  .tabbar { display: flex; gap: .5em; margin: 1em 0; }
-  .tabbar button {
-    border: 1px solid #ccc; background: #fff; color: #333;
-    padding: 5px 14px; border-radius: 9px; cursor: pointer; font: inherit;
+  /* Tabs, after Vanilla's p-tabs: an underline on the current one. */
+  .tabbar {
+    display: flex; gap: 1.5rem; margin: 1em 0;
+    border-bottom: 1px solid var(--c-border);
   }
-  .tabbar button:hover { background: #f4f4f4; }
-  .tabbar button.active { background: #224; color: #fff; border-color: #224; }
+  .tabbar button {
+    border: 0; border-bottom: 3px solid transparent; background: transparent;
+    padding: .5rem 0; margin-bottom: -1px; border-radius: 0; cursor: pointer;
+    color: var(--c-text-muted);
+  }
+  .tabbar button:hover { background: transparent; color: var(--c-text); }
+  .tabbar button.active { color: var(--c-text); border-bottom-color: var(--c-brand); }
 
-  .rename-list { font-size: 13px; color: #555; }
+  .rename-list { font-size: 13px; color: var(--c-text-muted); }
 
-  .cell-present         { background: #e6f4e6; color: #163; text-align: center; }
-  .cell-clear-gap       { background: #fbe2e2; color: #900; text-align: center; }
-  .cell-worth-considering { background: #fdf0d8; color: #85560a; text-align: center; }
-  .cell-not-applicable   { background: #f4f4f4; color: #888; text-align: center; }
-  .cell-not-in-corpus    { background: #fff; color: #bbb; text-align: center; font-style: italic; }
-  .cell-not-scanned      { background: #fff; color: #bbb; text-align: center; font-style: italic; }
+  .cell-present           { background: var(--c-positive-bg); color: var(--c-positive); text-align: center; }
+  .cell-clear-gap         { background: var(--c-negative-bg); color: var(--c-negative); text-align: center; }
+  .cell-worth-considering { background: var(--c-caution-bg); color: #9a5b00; text-align: center; }
+  .cell-not-applicable    { background: var(--c-bg-alt); color: var(--c-text-faint); text-align: center; }
+  .cell-not-in-corpus     { background: var(--c-bg); color: #bbb; text-align: center; font-style: italic; }
+  .cell-not-scanned       { background: var(--c-bg); color: #bbb; text-align: center; font-style: italic; }
 
   .filters {
     display: flex; flex-wrap: wrap; gap: .4em .8em;
-    align-items: center; margin: 0 0 .8em 0; font-size: 12px;
+    align-items: center; margin: 0 0 .8em 0; font-size: 13px;
   }
-  .filters select, .filters input[type="search"] {
-    border: 1px solid #ccc; border-radius: 9px; padding: 3px 10px; font: inherit;
-  }
+  .filters select, .filters input[type="search"] { padding: 4px 10px; }
 </style>
 </head>
 <body>
+{% set active = 'trend' %}
+{% include "_header.html.j2" %}
+<main>
 
-<h1>charmtally — history</h1>
+<h1>History</h1>
 <p class="meta">
   Adoption trend across CI snapshots.
   {% if generated_at %}Generated {{ generated_at }}.{% endif %}
   {% if feature_filter %}Filtered to feature <strong>{{ feature_filter }}</strong>.{% endif %}
 </p>
-
-<nav>
-  <a href="dashboard.html">← Current</a>
-  <a href="adoption.html">Adoption →</a>
-</nav>
 
 <div class="tabbar" data-tabbar="history">
   <button data-tab="diff" class="active">Diff</button>
@@ -276,6 +278,7 @@
         crossorigin="anonymous"
         referrerpolicy="no-referrer"></script>
 <script>
+{% include "_plotly_theme.js.j2" %}
 // Adoption chart — progressive enhancement over the static table above.
 // If the CDN script fails to load (offline, CSP), Plotly is undefined and
 // this block is a no-op; the static table remains the source of truth.
@@ -299,13 +302,15 @@
   });
 
   Plotly.newPlot(chartEl, traces, {
-    yaxis: { title: '% of scanned charms present', rangemode: 'tozero' },
-    xaxis: { title: 'snapshot date' },
+    ...CANONICAL_PLOT,
+    yaxis: { ...CANONICAL_AXIS, title: '% of scanned charms present', rangemode: 'tozero' },
+    xaxis: { ...CANONICAL_AXIS, title: 'snapshot date' },
     margin: { t: 20 },
     height: 500,
   }, { responsive: true });
 })();
 </script>
 
+</main>
 </body>
 </html>

@@ -1,0 +1,16 @@
+// Plotly layout defaults matching _canonical.css.j2: the Ubuntu typeface,
+// Vanilla's greys for axes and grid, and a categorical palette drawn from
+// Vanilla's brand, accent and semantic colours. Merge into each layout.
+const CANONICAL_PLOT = {
+  font: { family: '"Ubuntu Sans", "Ubuntu", sans-serif', size: 13, color: '#000' },
+  colorway: ['#e95420', '#24598f', '#0f95a1', '#0e8420', '#cc7900',
+             '#7d42b8', '#c7162b', '#666666', '#69c', '#70bbc2'],
+  paper_bgcolor: '#fff',
+  plot_bgcolor: '#fff',
+  hoverlabel: { font: { family: '"Ubuntu Sans", "Ubuntu", sans-serif' } },
+  legend: { font: { size: 12 } },
+};
+const CANONICAL_AXIS = {
+  gridcolor: '#e5e5e5', linecolor: '#707070', zerolinecolor: '#d9d9d9',
+  tickfont: { color: '#666' },
+};

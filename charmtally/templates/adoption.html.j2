@@ -3,56 +3,69 @@
 <head>
 <meta charset="utf-8">
 <title>charmtally — charm tech adoption</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ubuntu+Sans:ital,wght@0,100..800;1,100..800&family=Ubuntu+Sans+Mono:wght@400..700&display=swap">
 <style>
-  body { font: 14px/1.5 system-ui, sans-serif; margin: 2em; max-width: 1200px; }
-  h1 { margin-bottom: 0; }
-  .meta { color: #666; font-size: 12px; }
-  nav a { margin-right: 1em; }
-  table { border-collapse: collapse; margin: 0 0 1em 0; font-size: 13px; }
-  th, td { border: 1px solid #ddd; padding: 3px 8px; text-align: left; }
-  th { background: #f4f4f4; }
-  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+{% include "_canonical.css.j2" %}
+  :root { --page-width: 1200px; }
+  h1 { margin-bottom: .25rem; }
+  .meta { max-width: 70ch; margin: 0 0 1.5rem 0; }
+  table { margin: 0 0 1em 0; font-size: 13px; }
 
-  .cards { display: flex; flex-wrap: wrap; gap: 1em; margin: 1.5em 0 2em 0; }
-  .card {
-    border: 1px solid #ddd; border-radius: 12px; padding: 1em 1.2em;
-    min-width: 240px; flex: 1 1 240px;
+  /* Headline cards, after Vanilla's p-card: square, hairline-bordered,
+     with a top accent rule. */
+  .cards {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.5rem; margin: 1.5rem 0 2.5rem 0;
   }
-  .card h2 { font-size: 15px; margin: 0 0 .2em 0; }
-  .card .q { color: #666; font-size: 12px; margin: 0 0 .6em 0; }
-  .headline { font-size: 34px; font-variant-numeric: tabular-nums; line-height: 1.1; }
-  .headline .unit { font-size: 18px; color: #666; }
-  .delta { font-size: 13px; margin-left: .4em; }
-  .delta.up { color: #060; }
-  .delta.down { color: #b00; }
-  .delta.flat, .delta.none { color: #888; }
-  .card .basis { color: #666; font-size: 12px; margin-top: .4em; }
-  .card .denom { color: #85560a; }
-  .card.pending { background: #fafafa; }
-  .card.pending .headline { color: #bbb; }
+  .card {
+    border: 1px solid var(--c-border); border-top: 3px solid var(--c-text);
+    padding: 1rem 1.25rem 1.25rem; background: var(--c-bg);
+  }
+  .card h2 { font-size: 1rem; font-weight: 550; margin: 0 0 .2em 0; }
+  .card .q { color: var(--c-text-muted); font-size: 12px; margin: 0 0 .8em 0; }
+  .headline {
+    font-size: 2.75rem; font-weight: 200; font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+  }
+  .headline .unit { font-size: 1.25rem; color: var(--c-text-muted); }
+  .delta { font-size: 13px; margin-left: .4em; font-weight: 550; }
+  .delta.up { color: var(--c-positive); }
+  .delta.down { color: var(--c-negative); }
+  .delta.flat, .delta.none { color: var(--c-text-faint); font-weight: 400; }
+  .card .basis { color: var(--c-text-muted); font-size: 12px; margin-top: .6em; }
+  .card .denom { color: var(--c-caution); }
+  .card.pending { background: var(--c-bg-alt); border-top-color: var(--c-border); }
+  .card.pending .headline { color: var(--c-text-faint); }
 
-  section.metric { border-top: 1px solid #eee; padding-top: 1.2em; margin-top: 2em; }
-  section.metric h2 { margin-bottom: .2em; }
-  .detail { color: #444; max-width: 70ch; margin: 0 0 .8em 0; }
-  .caveats { color: #85560a; font-size: 12px; max-width: 70ch; }
-  .partial { color: #85560a; font-size: 12px; }
-  .since { color: #666; font-size: 12px; max-width: 70ch; margin: -.4em 0 .8em 0; }
+  section.metric { border-top: 1px solid var(--c-border); padding-top: 1.2em; margin-top: 2.5em; }
+  section.metric h2 { margin: 0 0 .3em 0; }
+  .detail { color: var(--c-text); max-width: 70ch; margin: 0 0 .8em 0; }
+  .caveats { color: var(--c-caution); font-size: 12px; max-width: 70ch; }
+  .partial { color: var(--c-caution); font-size: 12px; }
+  .since { color: var(--c-text-muted); font-size: 12px; max-width: 70ch; margin: -.4em 0 .8em 0; }
   .chart { height: 320px; }
   .pending-note {
-    border-left: 3px solid #ddd; padding-left: .8em; color: #666; max-width: 70ch;
+    border-left: 3px solid var(--c-caution); background: var(--c-caution-bg);
+    padding: .6em .9em; color: var(--c-text); max-width: 70ch;
   }
   .counts { display: flex; flex-wrap: wrap; gap: 1.6em; margin: .8em 0 1em 0; }
-  .counts h3 { font-size: 13px; font-weight: 600; margin: 0 0 .3em 0; color: #444; }
+  .counts h3 { font-size: 13px; margin: 0 0 .3em 0; color: var(--c-text-muted); }
   .counts table { font-size: 13px; }
-  .counts td { padding: .1em .8em .1em 0; }
-  .counts .asof { flex-basis: 100%; color: #888; font-size: 12px; margin: 0; }
+  .counts td { padding: .15em .8em .15em 0; }
+  .counts .asof { flex-basis: 100%; color: var(--c-text-faint); font-size: 12px; margin: 0; }
 
   details.fallback { margin: .6em 0 1em 0; }
-  details.fallback summary { color: #666; font-size: 12px; cursor: pointer; }
+  details.fallback summary { font-size: 12px; }
   details.fallback table { margin-top: .6em; }
 </style>
 </head>
 <body>
+{% set active = 'adoption' %}
+{% include "_header.html.j2" %}
+<main>
 
 <h1>charm tech adoption</h1>
 <p class="meta">
@@ -60,10 +73,6 @@
   stable set of metrics across the scanned charm corpus.
   {% if generated_at %}Generated {{ generated_at }}.{% endif %}
 </p>
-
-<nav>
-  <a href="dashboard.html">← Full tally</a>
-</nav>
 
 <div class="cards">
   {% for card in cards %}
@@ -200,6 +209,7 @@
         crossorigin="anonymous"
         referrerpolicy="no-referrer"></script>
 <script>
+{% include "_plotly_theme.js.j2" %}
 // Per-metric charts — progressive enhancement over the static tables above.
 // If the CDN script fails to load (offline, CSP), Plotly is undefined and
 // this block is a no-op; the tables remain the source of truth.
@@ -232,16 +242,17 @@
       x: dates,
       y: m.series.map(p => p.value),
       mode: 'lines+markers',
-      line: { color: '#224', width: 2 },
-      marker: { color: '#224' },
+      line: { color: '#000', width: 2 },
+      marker: { color: '#000' },
       hovertemplate: '%{y}%<extra>' + m.title + '</extra>',
     });
 
     Plotly.newPlot(el, traces, {
+      ...CANONICAL_PLOT,
       // Per-metric denominators differ (see `denominator_note`), so the axis
       // label stays generic; the card names the population.
-      yaxis: { title: '% of charms', range: [0, 100] },
-      xaxis: { title: 'snapshot date' },
+      yaxis: { ...CANONICAL_AXIS, title: '% of charms', range: [0, 100] },
+      xaxis: { ...CANONICAL_AXIS, title: 'snapshot date' },
       margin: { t: 20 },
       height: 320,
     }, { responsive: true, displayModeBar: false });
@@ -249,5 +260,6 @@
 })();
 </script>
 
+</main>
 </body>
 </html>

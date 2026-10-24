@@ -1,0 +1,12 @@
+{#- Top bar shared by every page. The including template sets `active` to
+    the page's own key so its link is marked current. -#}
+<header class="site-header">
+  <div class="inner">
+    <a class="wordmark" href="dashboard.html">charmtally</a>
+    <nav aria-label="Pages">
+      <a href="dashboard.html"{% if active == 'dashboard' %} aria-current="page"{% endif %}>Tally</a>
+      <a href="adoption.html"{% if active == 'adoption' %} aria-current="page"{% endif %}>Adoption</a>
+      <a href="trend.html"{% if active == 'trend' %} aria-current="page"{% endif %}>History</a>
+    </nav>
+  </div>
+</header>

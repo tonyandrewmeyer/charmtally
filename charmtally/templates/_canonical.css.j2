@@ -1,0 +1,119 @@
+{#- Shared look for every page: Canonical's public Vanilla framework
+    (github.com/canonical/vanilla-framework, scss/_settings_colors.scss and
+    _settings_font.scss) — its greys, semantic and link colours, the Ubuntu
+    typeface and the dark top bar canonical.com and ubuntu.com share. No
+    logo: the wordmark is plain text. Included inside each page's <style>,
+    so page rules that follow can still override it. -#}
+  :root {
+    --c-text: #000;
+    --c-text-muted: #666;
+    --c-text-faint: #999;
+    --c-bg: #fff;
+    --c-bg-alt: #f7f7f7;
+    --c-bg-hover: #e5e5e5;
+    --c-border: #d9d9d9;
+    --c-border-strong: #707070;
+    --c-nav-bg: #262626;
+    --c-nav-text: #fff;
+    --c-nav-muted: #c2c2c2;
+    --c-brand: #e95420;
+    --c-link: #06c;
+    --c-focus: #2e96ff;
+    --c-positive: #0e8420;
+    --c-caution: #cc7900;
+    --c-negative: #c7162b;
+    --c-information: #24598f;
+    --c-positive-bg: #edf8eb;
+    --c-caution-bg: #f8efe8;
+    --c-negative-bg: #f8e9e8;
+    --font-base: "Ubuntu Sans", "Ubuntu", -apple-system, "Segoe UI", Roboto,
+                 Oxygen, Cantarell, "Helvetica Neue", sans-serif;
+    --font-mono: "Ubuntu Sans Mono", "Ubuntu Mono", Consolas, Monaco, Courier,
+                 monospace;
+  }
+  html { background: var(--c-bg); color: var(--c-text); }
+  body {
+    font: 15px/1.5 var(--font-base); margin: 0;
+    background: var(--c-bg); color: var(--c-text);
+    -webkit-font-smoothing: antialiased;
+  }
+  main, .site-header .inner { max-width: var(--page-width, 1600px); box-sizing: border-box; }
+  main { margin: 0 auto; padding: 2rem 1.5rem 3rem; }
+  @media (max-width: 620px) { main { padding: 1.5rem 1rem 2rem; } }
+
+  h1, h2, h3, h4 { font-family: var(--font-base); color: var(--c-text); }
+  h1 { font-size: 2.5rem; font-weight: 300; line-height: 1.2;
+       margin: 0 0 .5rem 0; letter-spacing: -.01em; }
+  h2 { font-size: 1.5rem; font-weight: 300; line-height: 1.3;
+       margin: 2rem 0 .75rem 0; }
+  h3 { font-size: 1rem; font-weight: 550; }
+  a { color: var(--c-link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  a:visited { color: var(--c-link); }
+  :focus-visible { outline: 2px solid var(--c-focus); outline-offset: 1px; }
+  code, kbd, pre, samp { font-family: var(--font-mono); }
+  code { background: rgba(0, 0, 0, .03); padding: 0 .2em; }
+  hr { border: 0; border-top: 1px solid var(--c-border); }
+
+  /* Top bar. */
+  .site-header { background: var(--c-nav-bg); color: var(--c-nav-text); }
+  .site-header .inner {
+    display: flex; flex-wrap: wrap; align-items: stretch;
+    margin: 0 auto; padding: 0 1.5rem; min-height: 48px;
+  }
+  .site-header .wordmark {
+    display: flex; align-items: center; padding-right: 1.5rem;
+    color: var(--c-nav-text); font-weight: 550; font-size: 1rem;
+    letter-spacing: .01em;
+  }
+  .site-header .wordmark:hover { text-decoration: none; }
+  .site-header nav { display: flex; flex-wrap: wrap; }
+  .site-header nav a {
+    display: flex; align-items: center; padding: 0 1rem;
+    color: var(--c-nav-muted); font-size: .9rem;
+    border-bottom: 3px solid transparent; border-top: 3px solid transparent;
+  }
+  .site-header nav a:hover { color: var(--c-nav-text); background: #313131;
+                             text-decoration: none; }
+  .site-header nav a[aria-current="page"] {
+    color: var(--c-nav-text); border-bottom-color: var(--c-brand);
+  }
+
+  /* In-page section links, under the page heading. */
+  nav.sections { margin: 0 0 1.5rem 0; border-bottom: 1px solid var(--c-border); }
+  nav.sections a {
+    display: inline-block; margin-right: 1.5rem; padding: .4rem 0;
+    color: var(--c-text); border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  nav.sections a:hover { border-bottom-color: var(--c-text); text-decoration: none; }
+
+  .meta { color: var(--c-text-muted); font-size: .8rem; }
+
+  /* Tables, after Vanilla's: rules between rows, none between columns. */
+  table { border-collapse: collapse; }
+  th, td {
+    border: 0; border-bottom: 1px solid var(--c-border);
+    padding: .4rem .75rem .4rem 0; text-align: left;
+  }
+  th {
+    background: transparent; color: var(--c-text);
+    font-weight: 550; font-size: .8rem;
+    border-bottom: 1px solid var(--c-border-strong);
+  }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.num { padding-right: .75rem; }
+
+  /* Controls. */
+  button, select, input { font: inherit; color: var(--c-text); }
+  button {
+    border: 1px solid var(--c-border-strong); background: var(--c-bg);
+    border-radius: .125rem;
+  }
+  button:hover { background: var(--c-bg-hover); }
+  input[type="search"], input[list], select {
+    border: 0; border-bottom: 1px solid var(--c-border-strong);
+    background: var(--c-bg-alt); border-radius: 0;
+  }
+
+  details summary { cursor: pointer; color: var(--c-link); }
