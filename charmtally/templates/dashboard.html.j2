@@ -3,21 +3,26 @@
 <head>
 <meta charset="utf-8">
 <title>charmtally — charm feature adoption</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ubuntu+Sans:ital,wght@0,100..800;1,100..800&family=Ubuntu+Sans+Mono:wght@400..700&display=swap">
 <style>
-  body { font: 14px/1.4 system-ui, sans-serif; margin: 2em; max-width: 1600px; }
-  h1 { margin-bottom: 0; }
-  .meta { color: #666; font-size: 12px; margin-bottom: 1.5em; }
-  table { border-collapse: collapse; margin-bottom: 3em; }
-  th, td { border: 1px solid #ddd; padding: 4px 8px; text-align: left; vertical-align: top; }
-  th { background: #f4f4f4; cursor: pointer; user-select: none; }
-  th:hover { background: #e8e8e8; }
-  th.sorted-asc::after { content: " ▲"; color: #888; }
-  th.sorted-desc::after { content: " ▼"; color: #888; }
-  td.num { text-align: right; font-variant-numeric: tabular-nums; }
-  .gap { color: #b00; font-weight: 600; }
-  .worth { color: #b67; }
-  .ok { color: #060; }
-  .lib-ops { color: #036; }
+{% include "_canonical.css.j2" %}
+  h1 { margin-bottom: .25rem; }
+  .tagline { font-size: 1.25rem; font-weight: 300; margin: 0 0 .25rem 0; }
+  .meta { margin-bottom: 1.5em; }
+  table { margin-bottom: 3em; font-size: 14px; }
+  th, td { vertical-align: top; }
+  th { cursor: pointer; user-select: none; }
+  th:hover { background: var(--c-bg-alt); }
+  th.sorted-asc::after { content: " ▲"; color: var(--c-text-faint); }
+  th.sorted-desc::after { content: " ▼"; color: var(--c-text-faint); }
+  tbody tr:hover { background: var(--c-bg-alt); }
+  .gap { color: var(--c-negative); font-weight: 550; }
+  .worth { color: var(--c-caution); }
+  .ok { color: var(--c-positive); }
+  .lib-ops { color: var(--c-information); }
   .lib-pebble { color: #063; }
   .lib-jubilant { color: #630; }
   .lib-ops-scenario { color: #306; }
@@ -25,19 +30,15 @@
   .lib-python { color: #408; }
   .lib-metadata { color: #660; }
   details { margin-top: 1em; }
-  details summary { cursor: pointer; color: #06b; }
-  .ev { font-family: ui-monospace, monospace; font-size: 12px; color: #444; }
-  .ev a { color: #06b; text-decoration: none; }
-  .ev a:hover { text-decoration: underline; }
-  nav a { margin-right: 1em; }
+  .ev { font-family: var(--font-mono); font-size: 12px; color: var(--c-text-muted); }
 
   /* Architecture / stack chips on charm rows */
   .chip {
     display: inline-block; font-size: 11px; line-height: 1; padding: 3px 7px;
-    border-radius: 9px; background: #eef; color: #224; margin-right: 4px;
+    border-radius: 1rem; background: #eef; color: #224; margin-right: 4px;
     margin-bottom: 2px; white-space: nowrap;
   }
-  .chip-arch-delta              { background: #f0f0f0; color: #555; }
+  .chip-arch-delta              { background: var(--c-bg-hover); color: #444; }
   .chip-arch-part-reconcile     { background: #fdf0d8; color: #7a5600; }
   .chip-arch-unconditional-init { background: #fde4c0; color: #7a4a00; }
   .chip-arch-reconcile          { background: #fde8c0; color: #6a4000; }
@@ -48,18 +49,18 @@
   .chip-flag                  { background: #e8f4e8; color: #145; }
   .low-count {
     display: inline-block; font-size: 11px; padding: 1px 6px; margin-left: 6px;
-    border-radius: 9px; background: #fff3cd; color: #7a5600; cursor: help;
+    border-radius: 1rem; background: var(--c-caution-bg); color: #9a5b00; cursor: help;
     white-space: nowrap;
   }
   .stack {
-    font-family: ui-monospace, monospace; font-size: 11.5px; color: #444;
+    font-family: var(--font-mono); font-size: 11.5px; color: #444;
     white-space: nowrap;
   }
-  .stack .sep { color: #aaa; margin: 0 4px; }
+  .stack .sep { color: var(--c-text-faint); margin: 0 4px; }
   /* An inherited ceiling is a derived claim about the charm's partners,
      not something read out of its own files — coloured so it does not
      read as another fact from the charm's own metadata. */
-  .stack .ceiling { color: #a33; }
+  .stack .ceiling { color: var(--c-negative); }
 
   /* Top-of-page summary widget */
   .summary {
@@ -69,17 +70,17 @@
     margin: 1em 0 2em 0;
   }
   .summary section {
-    border: 1px solid #ddd; border-radius: 4px; padding: .6em .9em;
-    background: #fafafa;
+    border: 1px solid var(--c-border); border-top: 3px solid var(--c-text);
+    padding: .75em 1em; background: var(--c-bg);
   }
-  .summary h3 { margin: 0 0 .3em 0; font-size: 13px; color: #335;
-                text-transform: uppercase; letter-spacing: .5px; }
+  .summary h3 { margin: 0 0 .5em 0; font-size: 12px; color: var(--c-text-muted);
+                text-transform: uppercase; letter-spacing: .05em; }
   .summary dl { margin: 0; font-size: 13px; }
-  .summary dt { display: inline-block; min-width: 8em; color: #555; }
-  .summary dd { display: inline; margin-left: .4em; color: #112;
+  .summary dt { display: inline-block; min-width: 8em; color: var(--c-text-muted); }
+  .summary dd { display: inline; margin-left: .4em; color: var(--c-text);
                 font-variant-numeric: tabular-nums; }
   .summary dd::after { content: ""; display: block; }
-  .summary .pct { color: #678; font-size: 11px; margin-left: .4em; }
+  .summary .pct { color: var(--c-text-faint); font-size: 11px; margin-left: .4em; }
 
   /* Filter bar above the charm view */
   .filters {
@@ -87,90 +88,79 @@
     align-items: center; margin: 0 0 .8em 0;
     font-size: 12px;
   }
-  .filters .label { color: #555; text-transform: uppercase;
-                    letter-spacing: .5px; font-weight: 600; }
+  .filters .label { color: var(--c-text-muted); text-transform: uppercase;
+                    letter-spacing: .05em; font-weight: 550; }
   .filters button {
-    border: 1px solid #ccc; background: #fff; color: #333;
-    padding: 3px 9px; border-radius: 9px; cursor: pointer;
-    font: inherit;
+    padding: 3px 10px; cursor: pointer;
   }
-  .filters button:hover { background: #f4f4f4; }
-  .filters button.active { background: #224; color: #fff; border-color: #224; }
+  .filters button.active { background: var(--c-text); color: var(--c-bg); border-color: var(--c-text); }
   .filters .group { display: flex; gap: .3em; }
-  .filters .visible-count { margin-left: auto; color: #777; }
-  .filters input[type="search"] {
-    border: 1px solid #ccc; border-radius: 9px;
-    padding: 3px 10px; font: inherit; min-width: 14em;
-  }
-  .filters input[type="search"]:focus { outline: 2px solid #ace; outline-offset: -1px; }
-  .filters input[list] {
-    border: 1px solid #ccc; border-radius: 9px;
-    padding: 3px 10px; font: inherit; min-width: 12em;
-  }
-  .filters input[list]:focus { outline: 2px solid #ace; outline-offset: -1px; }
+  .filters .visible-count { margin-left: auto; color: var(--c-text-muted); }
+  .filters input[type="search"] { padding: 4px 10px; min-width: 14em; }
+  .filters input[list] { padding: 4px 10px; min-width: 12em; }
   .feature-chips { display: flex; flex-wrap: wrap; gap: 4px; }
   .feature-chip {
     display: inline-flex; align-items: center; gap: 4px;
-    font-size: 11px; padding: 2px 4px 2px 8px; border-radius: 9px;
-    background: #224; color: #fff; white-space: nowrap;
+    font-size: 11px; padding: 2px 4px 2px 8px; border-radius: 1rem;
+    background: var(--c-text); color: var(--c-bg); white-space: nowrap;
   }
   .feature-chip button {
     border: none; background: transparent; color: #fff;
     cursor: pointer; padding: 0 4px; font-size: 13px; line-height: 1;
   }
-  .feature-chip button:hover { color: #f88; }
+  .feature-chip button:hover { color: var(--c-brand); background: transparent; }
   .feature-chip .mode { opacity: .65; font-variant: small-caps; }
-  .feature-chip-lacks { background: #7a2030; }
-  .feature-chip-gap { background: #7a5600; }
+  .feature-chip-lacks { background: var(--c-negative); }
+  .feature-chip-gap { background: #9a5b00; }
   tr.hidden { display: none; }
 
-  .filters select {
-    border: 1px solid #ccc; border-radius: 9px;
-    padding: 3px 6px; font: inherit; background: #fff; color: #333;
-  }
-  .filters select.set { background: #224; color: #fff; border-color: #224; }
+  .filters select { padding: 4px 6px; }
+  .filters select.set { background: var(--c-text); color: var(--c-bg); }
   .filters button.clear-all {
-    border-color: #ddd; color: #777;
+    border-color: var(--c-border); color: var(--c-text-muted);
   }
   .filters .help {
-    color: #999; cursor: help; border-bottom: 1px dotted #bbb;
+    color: var(--c-text-faint); cursor: help; border-bottom: 1px dotted var(--c-text-faint);
   }
-  .filters .visible-count.filtered { color: #224; font-weight: 600; }
+  .filters .visible-count.filtered { color: var(--c-text); font-weight: 550; }
   /* Cross-links that pre-set the charm view's filters. */
   a.xlink { color: inherit; text-decoration: none;
-            border-bottom: 1px dotted #bbb; }
+            border-bottom: 1px dotted var(--c-text-faint); }
   a.xlink:hover { border-bottom-style: solid; }
   .empty-state {
-    color: #777; font-style: italic; margin: 0 0 3em 0;
+    color: var(--c-text-muted); font-style: italic; margin: 0 0 3em 0;
   }
   table.all-hidden { display: none; }
 
   /* Per-architecture adoption pill in the feature view. */
   .arch-pct {
     display: inline-flex; align-items: baseline; gap: 4px;
-    font-size: 11px; padding: 2px 7px; border-radius: 9px;
-    background: #f0f0f0; color: #335; margin: 0 4px 2px 0;
+    font-size: 11px; padding: 2px 7px; border-radius: 1rem;
+    background: var(--c-bg-alt); color: var(--c-text); margin: 0 4px 2px 0;
     white-space: nowrap;
   }
-  .arch-pct .name { color: #678; }
+  .arch-pct .name { color: var(--c-text-muted); }
   .arch-pct .pct { font-variant-numeric: tabular-nums; font-weight: 600; }
-  .arch-pct .pct-hi { color: #060; }
-  .arch-pct .pct-mid { color: #b67; }
-  .arch-pct .pct-lo { color: #b00; }
-  .arch-pct .pct-na { color: #888; font-weight: 400; }
+  .arch-pct .pct-hi { color: var(--c-positive); }
+  .arch-pct .pct-mid { color: var(--c-caution); }
+  .arch-pct .pct-lo { color: var(--c-negative); }
+  .arch-pct .pct-na { color: var(--c-text-faint); font-weight: 400; }
 
   /* AI-escalated badge (LLM upgraded worth-considering → clear-gap) */
   .ai-badge {
     display: inline-block; font-size: 10px; padding: 1px 5px; margin-left: 4px;
-    border-radius: 9px; background: #e8f0fe; color: #1a56db;
-    border: 1px solid #c0d4f7; white-space: nowrap; cursor: help;
+    border-radius: 1rem; background: #e8eef5; color: var(--c-information);
+    border: 1px solid #b8c9dc; white-space: nowrap; cursor: help;
     vertical-align: middle;
   }
 </style>
 </head>
 <body>
+{% set active = 'dashboard' %}
+{% include "_header.html.j2" %}
+<main>
 
-<h1>charmtally</h1>
+<h1>Charm feature adoption</h1>
 <p class="tagline">A feature-adoption survey of the Canonical charm fleet.</p>
 <p class="meta">
   Scanned {{ charms|length }} charm{{ "" if charms|length == 1 else "s" }}
@@ -178,14 +168,12 @@
   {% if generated_at %}Generated {{ generated_at }}.{% endif %}
 </p>
 
-<nav>
+<nav class="sections" aria-label="Sections">
   <a href="#summary">Summary</a>
   <a href="#feature-view">Feature view</a>
   <a href="#charm-view">Charm view</a>
   <a href="#team-view">Team view</a>
   {% if pairs %}<a href="#pairs-view">Pairs</a>{% endif %}
-  <a href="adoption.html">Adoption →</a>
-  <a href="trend.html">History →</a>
 </nav>
 
 {% if summary %}
@@ -456,7 +444,7 @@
 <p class="empty-state" data-empty-for="charm-table" hidden>No charms match these filters.</p>
 
 <h2 id="team-view">By team</h2>
-<p class="meta" style="margin-top:-1em">
+<p class="meta" style="margin-top:-.5em">
   Aggregates per team. Rows sorted by total clear-gap count (most to least).
   Avg gap = clear-gap labels per charm, a rough "how much migration work
   is in this team's queue" signal that controls for team size.
@@ -984,5 +972,6 @@
 })();
 </script>
 
+</main>
 </body>
 </html>
