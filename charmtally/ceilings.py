@@ -17,7 +17,7 @@ anything new to collect, and it is done here — at render time, over the same
 question needs all of them, and a derived value in a snapshot is bytes that
 stay in git forever to say something recomputable from the bytes next to it.
 
-Three rules, and the reasoning for each matters more than the code:
+Four rules, and the reasoning for each matters more than the code:
 
 * **Every provider must be capped.** An interface hands its ceiling to a
   requirer only when *all* of the interface's in-corpus providers declare
@@ -27,10 +27,27 @@ Three rules, and the reasoning for each matters more than the code:
   100+ unconstrained providers each, so a single-provider rule caps a third
   of the corpus at Juju 4 for the sole reason that a scrape target happens
   to be a database. The cost of unanimity is that one uncapped provider
-  silences the interface — ``postgresql_client`` is silenced by pgbouncer
-  (a proxy that itself fronts postgres) and two dead legacy charms — but
-  under-claiming is the right way to be wrong here: a ceiling this reports
-  is one the charm cannot dodge by choosing a different backend.
+  silences the interface, but under-claiming is the right way to be wrong
+  here: a ceiling this reports is one the charm cannot dodge by choosing a
+  different backend.
+
+* **A proxy is not an alternative backend.** A provider that also
+  *requires* the interface it provides — pgbouncer fronting postgres over
+  ``postgresql_client``, mysql-router over ``mysql_client`` — needs one of
+  the other providers behind it, so choosing it does not dodge their
+  ceiling. When an interface has at least one provider that is not a proxy
+  (an *origin*), unanimity is asked of the origins alone; a proxy still
+  contributes its own ceiling if it declares one, but an uncapped proxy no
+  longer silences the interface. Before this rule pgbouncer silenced
+  ``postgresql_client`` and its 75-odd requirers. The proxy itself inherits
+  the origins' ceiling through the interface it fronts. An interface whose
+  providers are *all* proxies has nothing behind it to defer to, so it falls
+  back to every provider — and a proxy asks nothing of itself there, which
+  is what keeps postgres from inheriting its own assertion back through the
+  ``postgresql_async`` it both provides and requires for replication. The
+  proxy's upstream might in principle be outside the corpus, but a proxy
+  has to be shown a real backend to be one, and every in-corpus backend
+  for it is capped.
 
 * **Test fixtures are not providers.** ``any-charm`` provides 263
   interfaces. It exists to stand in for whatever an integration test needs
@@ -95,34 +112,54 @@ def _endpoints(meta: dict, role: str) -> Iterable[str]:
             yield rel["interface"]
 
 
-def interface_ceilings(charms: dict[str, dict]) -> dict[str, str | None]:
-    """Map each provided interface to the ceiling it imposes on a requirer.
+class _Provider(NamedTuple):
+    name: str
+    proxy: bool
+    ceiling: str | None
 
-    The value is the lowest ``max_juju_version`` across the interface's
-    providers when every one of them declares a ceiling, and None when any
-    provider is unconstrained. An interface absent from the mapping has no
-    in-corpus provider at all, which is a different answer again — see
-    `Ceiling.unresolved`.
 
-    `charms` is the ``__`` -stripped results/scored mapping: charm name to
-    record, each record carrying ``features.__meta__``.
-    """
-    capped: dict[str, list[str]] = {}
-    uncapped: set[str] = set()
+def _providers(charms: dict[str, dict]) -> dict[str, list[_Provider]]:
+    """Index every in-corpus provider of each interface, fixtures excluded."""
+    out: dict[str, list[_Provider]] = {}
     for name, record in charms.items():
         if name in _TEST_FIXTURES:
             continue
         meta = record.get("features", {}).get("__meta__", {})
-        ceiling = meta.get("max_juju_version")
-        for interface in _endpoints(meta, "provides"):
-            if ceiling:
-                capped.setdefault(interface, []).append(ceiling)
-            else:
-                uncapped.add(interface)
-    return {
-        interface: (None if interface in uncapped else min(versions, key=juju_version_key))
-        for interface, versions in capped.items()
-    }
+        ceiling = meta.get("max_juju_version") or None
+        requires = set(_endpoints(meta, "requires"))
+        for interface in dict.fromkeys(_endpoints(meta, "provides")):
+            out.setdefault(interface, []).append(_Provider(name, interface in requires, ceiling))
+    return out
+
+
+def _imposed(providers: list[_Provider]) -> str | None:
+    """Return the ceiling `providers` impose on a requirer, or None if dodgeable.
+
+    Unanimity is asked of the origins when there are any, and of every
+    provider otherwise; see the module docstring.
+    """
+    origins = [p for p in providers if not p.proxy]
+    voters = origins or providers
+    if any(p.ceiling is None for p in voters):
+        return None
+    # An origin-backed proxy may still lower the bar with a cap of its own.
+    versions = [p.ceiling for p in providers if p.ceiling is not None]
+    return min(versions, key=juju_version_key)
+
+
+def interface_ceilings(charms: dict[str, dict]) -> dict[str, str | None]:
+    """Map each provided interface to the ceiling it imposes on a requirer.
+
+    The value is the lowest ``max_juju_version`` across the interface's
+    providers when every origin (or, with no origins, every provider)
+    declares a ceiling, and None when one is unconstrained. An interface
+    absent from the mapping has no in-corpus provider at all, which is a
+    different answer again — see `Ceiling.unresolved`.
+
+    `charms` is the ``__`` -stripped results/scored mapping: charm name to
+    record, each record carrying ``features.__meta__``.
+    """
+    return {interface: _imposed(providers) for interface, providers in _providers(charms).items()}
 
 
 def derive(charms: dict[str, dict]) -> dict[str, Ceiling]:
@@ -131,24 +168,29 @@ def derive(charms: dict[str, dict]) -> dict[str, Ceiling]:
     Every charm gets an entry, including the ones that inherit nothing, so a
     caller can tell "derived: no ceiling" from "not in the corpus".
     """
-    imposed = interface_ceilings(charms)
+    providers = _providers(charms)
+    imposed = {interface: _imposed(ps) for interface, ps in providers.items()}
     out: dict[str, Ceiling] = {}
     for name, record in charms.items():
         meta = record.get("features", {}).get("__meta__", {})
-        # A charm providing the interface it requires (postgres replicating
-        # to itself over `postgresql_async`) would otherwise inherit its own
-        # assertion back, dressed up as a corpus finding.
         own = set(_endpoints(meta, "provides"))
         found: dict[str, str] = {}
         unresolved: list[str] = []
         for interface in _endpoints(meta, "requires"):
             if interface in own:
-                continue
-            if interface not in imposed:
+                # A proxy inherits what is behind it: the origins, never
+                # itself. With no origin there is nothing behind it in the
+                # corpus, and asking the remaining proxies would hand
+                # postgres its own `postgresql_async` assertion back via its
+                # other-substrate twin, dressed up as a corpus finding.
+                origins = [p for p in providers.get(interface, ()) if not p.proxy]
+                ceiling = _imposed(origins) if origins else None
+            elif interface not in imposed:
                 if interface not in unresolved:
                     unresolved.append(interface)
                 continue
-            ceiling = imposed[interface]
+            else:
+                ceiling = imposed[interface]
             if ceiling:
                 found[interface] = ceiling
         via = sorted(found, key=lambda i: (juju_version_key(found[i]), i))
