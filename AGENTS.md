@@ -117,8 +117,11 @@ rocks.csv ─────────────────► scan-rocks ─�
   declares one — a single-capped-provider rule caps a third of the corpus
   because `postgresql-k8s` also happens to be a scrape target — and
   `any-charm` is excluded from the provider side, being a test fixture that
-  provides 263 interfaces and is nobody's deployment choice. An endpoint
-  nothing in the corpus provides reads as `unknown`, never as "no ceiling".
+  provides 263 interfaces and is nobody's deployment choice. A provider that
+  also *requires* the interface (pgbouncer, mysql-router) is a proxy, not an
+  alternative backend: unanimity is asked of the other providers, and the
+  proxy inherits their ceiling. An endpoint nothing in the corpus provides
+  reads as `unknown`, never as "no ceiling".
   Optional-vs-mandatory is not knowable from the metadata, so the claim is
   about the interface rather than the deployment.
 - `charmtally/layout.py` — where a charm's integration tests are, which is

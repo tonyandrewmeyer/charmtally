@@ -36,13 +36,69 @@ def test_one_uncapped_provider_silences_the_interface() -> None:
     with no ceiling is a backend the charm could deploy against instead."""
     corpus = _corpus(
         _charm("db", provides=["sql"], ceiling="4"),
-        _charm("proxy", provides=["sql"]),
+        _charm("other-db", provides=["sql"]),
         _charm("app", requires=["sql"]),
     )
     assert interface_ceilings(corpus)["sql"] is None
     app = derive(corpus)["app"]
     assert app.version is None
     assert not app.unknown  # looked, and found no ceiling that binds
+
+
+def test_interface_with_only_uncapped_providers_is_resolved() -> None:
+    """Provided by nobody capped is still provided: the charm was checked and
+    cleared, which is `none`, not `unknown`."""
+    corpus = _corpus(
+        _charm("ingress-a", provides=["ingress"]),
+        _charm("app", requires=["ingress"]),
+    )
+    assert interface_ceilings(corpus) == {"ingress": None}
+    app = derive(corpus)["app"]
+    assert app.version is None
+    assert app.unresolved == ()
+    assert not app.unknown
+
+
+def test_an_uncapped_proxy_does_not_silence_the_interface() -> None:
+    """pgbouncer provides `postgresql_client` uncapped, but it also requires
+    it: it needs postgres behind it, so choosing it dodges nothing."""
+    corpus = _corpus(
+        _charm("db", provides=["sql"], ceiling="4"),
+        _charm("bouncer", provides=["sql"], requires=["sql"]),
+        _charm("app", requires=["sql"]),
+    )
+    assert interface_ceilings(corpus)["sql"] == "4"
+    assert derive(corpus)["app"].version == "4"
+
+
+def test_a_proxy_inherits_from_what_is_behind_it() -> None:
+    corpus = _corpus(
+        _charm("db", provides=["sql"], ceiling="4"),
+        _charm("bouncer", provides=["sql"], requires=["sql"]),
+    )
+    bouncer = derive(corpus)["bouncer"]
+    assert bouncer.version == "4"
+    assert bouncer.via == ("sql",)
+
+
+def test_a_capped_proxy_still_lowers_the_ceiling() -> None:
+    corpus = _corpus(
+        _charm("db", provides=["sql"], ceiling="4"),
+        _charm("bouncer", provides=["sql"], requires=["sql"], ceiling="3.6"),
+        _charm("app", requires=["sql"]),
+    )
+    assert derive(corpus)["app"].version == "3.6"
+
+
+def test_an_uncapped_origin_still_silences_a_proxied_interface() -> None:
+    corpus = _corpus(
+        _charm("db", provides=["sql"], ceiling="4"),
+        _charm("other-db", provides=["sql"]),
+        _charm("bouncer", provides=["sql"], requires=["sql"]),
+        _charm("app", requires=["sql"]),
+    )
+    assert derive(corpus)["app"].version is None
+    assert derive(corpus)["bouncer"].version is None
 
 
 def test_test_fixture_charms_are_not_providers() -> None:
@@ -90,10 +146,13 @@ def test_lowest_ceiling_leads_and_via_is_ordered_by_it() -> None:
 def test_a_charm_does_not_inherit_from_itself() -> None:
     """Postgres requires the `postgresql_async` it also provides, for
     replication; reflecting its own assertion back would be circular."""
-    corpus = _corpus(_charm("db", provides=["async"], requires=["async"], ceiling="4"))
-    db = derive(corpus)["db"]
-    assert db.version is None
-    assert db.unresolved == ()
+    corpus = _corpus(
+        _charm("db", provides=["async"], requires=["async"], ceiling="4"),
+        _charm("db-k8s", provides=["async"], requires=["async"], ceiling="4"),
+    )
+    for db in derive(corpus).values():
+        assert db.version is None
+        assert db.unresolved == ()
 
 
 def test_every_charm_gets_an_entry() -> None:

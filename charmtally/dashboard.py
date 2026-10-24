@@ -215,10 +215,10 @@ def _ceiling_state(ceiling: _ceilings.Ceiling | None) -> str:
     Three states, because the question has three answers: the corpus showed
     a ceiling, the corpus showed there is none, or the corpus could not
     tell. Only `inherited` gets a chip in the row — it is the one that is
-    news, and `unknown` is the majority state (most charms require at least
-    one interface nobody in the corpus provides), so a chip for it would
-    label two thirds of the table with a non-finding. The axis keeps all
-    three visible and countable.
+    news, and `unknown` (a charm requiring some interface nobody in the
+    corpus provides) is a fifth of the table, so a chip for it would label
+    every one of those rows with a non-finding. The axis keeps all three
+    visible and countable.
     """
     if ceiling is None:
         return "unknown"
