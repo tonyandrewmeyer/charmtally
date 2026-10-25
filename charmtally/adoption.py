@@ -50,7 +50,8 @@ from dataclasses import dataclass, field
 from datetime import date, timedelta
 from typing import TYPE_CHECKING
 
-from . import charmhub, charmlib_pairs, rocks
+from . import ceilings, charmhub, charmlib_pairs, rocks
+from .metadata import juju_version_key
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -66,6 +67,8 @@ INTEGRATION_TESTING = "integration-testing"
 CHARMLIBS_SHARE = "charmlibs-share"
 ROOTLESS = "rootless"
 CHARMHUB_LISTED = "charmhub-listed"
+JUJU_VERSIONS = "juju-versions"
+JUJU_TESTED = "juju-tested"
 
 
 @dataclass(frozen=True)
@@ -682,6 +685,216 @@ def compute_charmhub_listed(snapshot: Snapshot) -> dict | None:
     )
 
 
+# ── metric: Juju major versions ─────────────────────────────────────────────
+
+_JUJU_29 = "2.9 only"
+_JUJU_29_AND_3 = "2.9 and 3.x"
+_JUJU_3 = "3.x only"
+_JUJU_NO_CEILING = "floor only, no ceiling"
+_JUJU_4 = "4.x stated"
+_JUJU_UNKNOWN = "unknown (no juju in assumes)"
+#: Charms whose own `assumes:` reaches Juju 4, and those of them a relation
+#: partner caps below it anyway — see `ceilings`.
+_JUJU_REACHES_4 = "reaches-4-by-own-assumes"
+_JUJU_INHERITS_CAP = "reaches-4-but-inherits-cap"
+#: Charms in a snapshot that has ceilings but whose own reading lacks one —
+#: a backfill that could not resolve the commit. Dropped, not bucketed.
+_JUJU_UNREAD = "unread"
+
+
+def _major(version: str) -> int:
+    return juju_version_key(version)[0]
+
+
+def _top_major(ceiling: str) -> int:
+    """Highest Juju major a ceiling admits.
+
+    `max_juju_version` is the version alone, without its operator, and the
+    ceilings charms write are exclusive (`juju < 4`, `juju < 4.0.0`), so a
+    ceiling on a major's first release bars that major and one anywhere
+    later in it does not: `< 4.1` admits 4.0. An inclusive `<= 4.0` would
+    read one major low, which is the same one-bugfix-release blur
+    `metadata._extract_juju_versions` already accepts.
+    """
+    parts = juju_version_key(ceiling)
+    return parts[0] - 1 if not any(parts[1:]) else parts[0]
+
+
+def _juju_bucket(meta: dict) -> str:
+    """Bucket one charm by the Juju majors its `assumes:` admits.
+
+    Read as a window: the floor's major up to the ceiling's top major. A
+    charm stating only a ceiling admits everything below it, so a missing
+    floor reads as 2.9 — the oldest Juju anyone still runs, and the only
+    2.x the buckets name.
+
+    Juju 4 is split two ways because the two mean different things. A
+    ceiling above 4 (`juju < 5`) or a floor at it is the charm saying it
+    runs there; a floor with no ceiling is a charm Juju 4 will deploy
+    because nothing stops it, which is how nearly every charm reads and
+    says nothing about whether anyone tried.
+    """
+    floor, ceiling = meta.get("min_juju_version"), meta.get("max_juju_version")
+    if not floor and not ceiling:
+        return _JUJU_UNKNOWN
+    low = _major(floor) if floor else 2
+    if not ceiling:
+        return _JUJU_4 if low >= 4 else _JUJU_NO_CEILING
+    top = _top_major(ceiling)
+    if top >= 4:
+        return _JUJU_4
+    if top <= 2:
+        return _JUJU_29
+    return _JUJU_3 if low >= 3 else _JUJU_29_AND_3
+
+
+def _has_juju_ceiling_data(snapshot: Snapshot) -> bool:
+    """Whether this snapshot's `__meta__` carries `max_juju_version` at all.
+
+    Key presence, not value, for the same reason as `_has_charmlibs_data`:
+    None is what a charm with no ceiling records, so it cannot also mean
+    "this scan didn't look". Floors alone cannot tell "3.x only" from "no
+    ceiling", which is the split the metric exists for, so a snapshot
+    without ceilings yields no point rather than a partial one.
+    """
+    return any("max_juju_version" in _meta(charm) for charm in snapshot.charms.values())
+
+
+def compute_juju_versions(snapshot: Snapshot) -> dict | None:
+    """Which Juju majors active charms say they run on, from `assumes:`.
+
+    Measured against **all active charms**, not `eligible_charms`: `assumes:`
+    is read by Juju whatever the charm is written in, and a reactive charm
+    capped at 2.9 is as much a part of the answer as an ops one.
+
+    The headline is the share whose stated range reaches Juju 4 — the two
+    4-ish buckets together. Charms with no Juju version in `assumes:` are
+    their own bucket and not in the headline: Juju will deploy them
+    anywhere, but they have not said so, and the point of the metric is
+    what charms *say*.
+
+    The point also counts how many of the charms reaching 4 inherit a
+    ceiling below it from a relation partner (`ceilings.derive`, over the
+    whole snapshot so that every in-corpus provider votes). Those are
+    charms whose own metadata is not what keeps them off Juju 4.
+    """
+    if not _has_juju_ceiling_data(snapshot):
+        return None
+    charms = active_charms(snapshot)
+    inherited = ceilings.derive(snapshot.charms)
+    counts = {
+        k: 0 for k in (_JUJU_29, _JUJU_29_AND_3, _JUJU_3, _JUJU_NO_CEILING, _JUJU_4, _JUJU_UNKNOWN)
+    }
+    reaches_4 = inherits_cap = unread = 0
+    for slug, charm in charms.items():
+        meta = _meta(charm)
+        if "max_juju_version" not in meta:
+            unread += 1
+            continue
+        bucket = _juju_bucket(meta)
+        counts[bucket] += 1
+        if bucket in (_JUJU_NO_CEILING, _JUJU_4):
+            reaches_4 += 1
+            ceiling = inherited[slug].version if slug in inherited else None
+            if ceiling and _top_major(ceiling) < 4:
+                inherits_cap += 1
+
+    total = sum(counts.values())
+    if not total:
+        return None
+    return _point(
+        snapshot,
+        value=_percent(reaches_4, total),
+        numerator=reaches_4,
+        denominator=total,
+        breakdown={k: _percent(v, total) for k, v in counts.items()},
+        counts={
+            **counts,
+            _JUJU_REACHES_4: reaches_4,
+            _JUJU_INHERITS_CAP: inherits_cap,
+            _JUJU_UNREAD: unread,
+        },
+        partial=_partial(snapshot),
+    )
+
+
+# ── metric: Juju versions tested in CI ──────────────────────────────────────
+
+_CI_JUJU = {
+    "2": "testing.juju-2",
+    "3": "testing.juju-3",
+    "4": "testing.juju-4",
+    "4.0": "testing.juju-4.0",
+    "4.1": "testing.juju-4.1",
+}
+_CI_41 = "4.1"
+_CI_40 = "4.0"
+_CI_4_OTHER = "4.x, other or bare track"
+_CI_3 = "3.x"
+_CI_29 = "2.9 only"
+_CI_NONE = "no pinned Juju found in CI"
+#: Per-version counts, overlapping — a charm tested on 3.6 and 4.0 is in both.
+_CI_TESTS = {version: f"tests-{version}" for version in _CI_JUJU}
+
+
+def _ci_bucket(charm: dict) -> str:
+    """Bucket a charm by the newest Juju its CI installs."""
+    if _present(charm, _CI_JUJU["4.1"]):
+        return _CI_41
+    if _present(charm, _CI_JUJU["4.0"]):
+        return _CI_40
+    if _present(charm, _CI_JUJU["4"]):
+        return _CI_4_OTHER
+    if _present(charm, _CI_JUJU["3"]):
+        return _CI_3
+    if _present(charm, _CI_JUJU["2"]):
+        return _CI_29
+    return _CI_NONE
+
+
+def compute_juju_tested(snapshot: Snapshot) -> dict | None:
+    """Which Juju versions active charms' CI installs to test against.
+
+    The `assumes:` card's companion: that one reports what charms *say*,
+    which for two thirds of them is nothing; this reports what their CI
+    *runs*, read from the `testing.juju-*` features (see `ci_juju`). Pass or
+    fail does not matter — a 4.0 job allowed to fail is still a charm being
+    tried on 4.0.
+
+    Measured against **all active charms**, like the integration-testing
+    card: the version CI installs has nothing to do with what the charm is
+    written in. Bucketed by the newest version tested, so the stack reads as
+    how far each charm's testing reaches; a charm tested on 3.6 *and* 4.0
+    sits in the 4.0 band, and the per-version counts beside it overlap.
+
+    All five features joined the catalogue together, so a snapshot either
+    has them all or none, and one with none yields no point.
+    """
+    if not all(f in snapshot.feature_names for f in _CI_JUJU.values()):
+        return None
+    charms = active_charms(snapshot)
+    if not charms:
+        return None
+    counts = {k: 0 for k in (_CI_41, _CI_40, _CI_4_OTHER, _CI_3, _CI_29, _CI_NONE)}
+    tests = dict.fromkeys(_CI_TESTS.values(), 0)
+    for charm in charms.values():
+        counts[_ci_bucket(charm)] += 1
+        for version, feature in _CI_JUJU.items():
+            if _present(charm, feature):
+                tests[_CI_TESTS[version]] += 1
+    total = len(charms)
+    on_4 = counts[_CI_41] + counts[_CI_40] + counts[_CI_4_OTHER]
+    return _point(
+        snapshot,
+        value=_percent(on_4, total),
+        numerator=on_4,
+        denominator=total,
+        breakdown={k: _percent(v, total) for k, v in counts.items()},
+        counts={**counts, **tests},
+        partial=_partial(snapshot),
+    )
+
+
 # ── the scorecard ───────────────────────────────────────────────────────────
 
 METRICS: tuple[Metric, ...] = (
@@ -870,6 +1083,114 @@ METRICS: tuple[Metric, ...] = (
             "The corpus is hyrum's list of charm <em>repositories</em>, so a "
             "charm that was never meant for Charmhub (a test fixture, an "
             "internal-only charm) counts against this number.",
+        ),
+    ),
+    Metric(
+        key=JUJU_VERSIONS,
+        title="Juju versions",
+        question="Which Juju major versions do charms say they run on?",
+        unit="percent",
+        compute=compute_juju_versions,
+        # Newest major first, so the two bands the headline adds up sit at
+        # the bottom of the stack and the line rides their boundary.
+        breakdown_keys=(
+            _JUJU_4,
+            _JUJU_NO_CEILING,
+            _JUJU_3,
+            _JUJU_29_AND_3,
+            _JUJU_29,
+            _JUJU_UNKNOWN,
+        ),
+        detail=(
+            "Percent of actively-maintained charms whose <code>assumes:</code> "
+            "admits Juju 4, read as a window from the floor it states "
+            "(<code>juju &gt;= 3.6</code>) to the ceiling (<code>juju &lt; "
+            "4</code>). Split by the majors that window covers: capped at 2.9, "
+            "spanning 2.9 and 3, capped below 4, a floor with no ceiling — "
+            "which Juju 4 will deploy without the charm having said so — and "
+            "a range that names 4 itself. Charms whose <code>assumes:</code> "
+            "has no Juju version are their own band."
+        ),
+        denominator_note=(
+            "every actively-maintained charm, not just eligible charms — "
+            "Juju reads <code>assumes:</code> whatever the charm is built on"
+        ),
+        count_tables=(
+            (
+                "Charms, by the Juju majors their assumes admits",
+                (
+                    (_JUJU_4, "a range that names Juju 4"),
+                    (_JUJU_NO_CEILING, "a floor and no ceiling"),
+                    (_JUJU_3, "3.x only (capped below 4)"),
+                    (_JUJU_29_AND_3, "2.9 and 3.x"),
+                    (_JUJU_29, "2.9 only"),
+                    (_JUJU_UNKNOWN, "no Juju version in <code>assumes:</code>"),
+                ),
+            ),
+            (
+                "Charms reaching Juju 4 on their own metadata",
+                (
+                    (_JUJU_REACHES_4, "reach Juju 4 by their own <code>assumes:</code>"),
+                    (
+                        _JUJU_INHERITS_CAP,
+                        "… of which every in-corpus provider of a required interface caps below 4",
+                    ),
+                ),
+            ),
+        ),
+        caveats=(
+            "A floor with no ceiling counts towards the headline because Juju "
+            "4 will deploy the charm, not because anyone has run it there.",
+            "Floors below 2.9 read as 2.9, and the operator is not kept, so an "
+            "inclusive <code>juju &lt;= 4.0</code> reads as capped below 4.",
+            "Split assertions (<code>any-of</code> 2.9 or 3.4+) read as the "
+            "hull of their ranges: postgresql-k8s&rsquo;s reads as 2.9 and 3.x.",
+            "The inherited cap is about the interface rather than the "
+            "deployment: an optional relation caps a charm here exactly as a "
+            "mandatory one does.",
+        ),
+    ),
+    Metric(
+        key=JUJU_TESTED,
+        title="Juju versions tested",
+        question="Which Juju versions does charms' CI test against?",
+        unit="percent",
+        compute=compute_juju_tested,
+        breakdown_keys=(_CI_41, _CI_40, _CI_4_OTHER, _CI_3, _CI_29, _CI_NONE),
+        inputs=tuple(_CI_JUJU.values()),
+        detail=(
+            "Percent of actively-maintained charms whose CI installs some Juju "
+            "4 to test against, pass or fail. Split by the newest version each "
+            "charm's CI installs. Read by evaluating the workflows — inputs "
+            "bound over their defaults, matrices expanded, shared workflows "
+            "followed — rather than by searching them, so a version a shared "
+            "workflow only defaults to counts only where nobody overrides it. "
+            "Backed by the <code>testing.juju-*</code> features."
+        ),
+        denominator_note=(
+            "every actively-maintained charm, not just eligible charms — the "
+            "Juju a charm is tested on does not depend on what it is built on"
+        ),
+        count_tables=(
+            (
+                "Charms whose CI installs each version (overlapping)",
+                (
+                    (_CI_TESTS["4.1"], "Juju 4.1"),
+                    (_CI_TESTS["4.0"], "Juju 4.0"),
+                    (_CI_TESTS["4"], "any Juju 4, the bare <code>4/stable</code> track included"),
+                    (_CI_TESTS["3"], "Juju 3.x"),
+                    (_CI_TESTS["2"], "Juju 2.9"),
+                ),
+            ),
+        ),
+        caveats=(
+            "An install whose channel is a repo variable (<code>vars.*</code>) "
+            "or names none at all — whatever <code>latest/stable</code> was "
+            "that day — counts towards no version.",
+            "Read per repo: one workflow covering five sub-charms counts five times.",
+            "Shared workflows are read as they stood at each date when the "
+            "caller pins a ref that a backfill can date; a branch ref such as "
+            "<code>@main</code> is read as it stood on that date too.",
         ),
     ),
 )

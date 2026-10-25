@@ -237,6 +237,17 @@ def enabled() -> bool:
     return _CACHE is not None
 
 
+def fetch(url: str) -> str | None:
+    """Read `url` through this run's cache, or None when resolution is off.
+
+    For callers that want one named file rather than `resolve`'s walk over
+    `uses:` edges — `ci_juju` reads action metadata and spread configs as
+    well as workflows, and follows its own edges because it binds inputs as
+    it goes.
+    """
+    return None if _CACHE is None else _CACHE.get(url)
+
+
 @contextlib.contextmanager
 def session(cache_dir: Path | None, fetch: Callable[[str], str | None] = fetch_text):
     """Enable resolution for the duration of the block, then put it back.

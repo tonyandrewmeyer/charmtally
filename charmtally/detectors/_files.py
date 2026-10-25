@@ -21,6 +21,7 @@ from typing import TypeVar, overload
 
 import yaml
 
+from .. import ci_juju as _ci_juju
 from .. import layout as _layout
 from .. import metadata as _metadata
 
@@ -360,6 +361,7 @@ class CharmSource:
         self._repo_root: Path | None = None
         self._repo_sweeps: dict[tuple[str, ...], list[Path]] = {}
         self._repo_texts: dict[Path, str] = {}
+        self._ci_juju: dict[bool, list] = {}
 
     @property
     def charm_name(self) -> str | None:
@@ -435,6 +437,19 @@ class CharmSource:
         cached = self._repo_texts.get(path)
         if cached is None:
             cached = self._repo_texts[path] = _read_text(path)
+        return cached
+
+    def ci_juju(self, *, follow: bool) -> list:
+        """Return the Juju installs the repo's CI makes, evaluated once per charm.
+
+        Every `testing.juju-*` feature asks the same question of the same
+        workflows, and the walk is the expensive part: it reads, binds and
+        follows every workflow the repo has. Keyed on `follow` because an
+        offline reading is a different answer, not a cheaper one.
+        """
+        cached = self._ci_juju.get(follow)
+        if cached is None:
+            cached = self._ci_juju[follow] = _ci_juju.read(self.repo_root, follow=follow)
         return cached
 
     def rel_to_charm(self, path: Path) -> str:

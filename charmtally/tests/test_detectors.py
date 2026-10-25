@@ -2947,3 +2947,61 @@ def test_zaza_config_finds_the_functional_layout(tmp_path: Path) -> None:
     charm_root = _write_repo(tmp_path, {"tests/functional/tests/tests.yaml": _ZAZA_TESTS_YAML})
     ev = detect_feature(charm_root, _catalogue_feature("testing.zaza"))
     assert [e.file for e in ev] == ["tests/functional/tests/tests.yaml"]
+
+
+# ── ci-juju-channel ──────────────────────────────────────────────────────────
+
+_JUJU_MATRIX_WORKFLOW = """\
+on: [pull_request]
+jobs:
+  integration:
+    strategy:
+      matrix:
+        juju: ["3.6/stable", "4/stable", "4.1/beta"]
+    steps:
+      - run: sudo snap install juju --channel=${{ matrix.juju }}
+"""
+
+
+def test_ci_juju_channel_fires_on_a_major_ci_installs(tmp_path: Path) -> None:
+    charm_root = _write_repo(tmp_path, {".github/workflows/ci.yaml": _JUJU_MATRIX_WORKFLOW})
+    ev = detect_feature(charm_root, _feature("ci-juju-channel", major=3))
+    assert [(e.file, e.line, e.detector_kind, e.snippet) for e in ev] == [
+        (".github/workflows/ci.yaml", 6, "ci-juju-channel", "3.6/stable")
+    ]
+
+
+def test_ci_juju_channel_absent_for_a_major_ci_never_installs(tmp_path: Path) -> None:
+    charm_root = _write_repo(tmp_path, {".github/workflows/ci.yaml": _JUJU_MATRIX_WORKFLOW})
+    assert detect_feature(charm_root, _feature("ci-juju-channel", major=2)) == []
+
+
+def test_ci_juju_channel_minor_needs_a_channel_that_names_it(tmp_path: Path) -> None:
+    """`4/stable` is a 4 but not a 4.0: the track names no minor."""
+    charm_root = _write_repo(tmp_path, {".github/workflows/ci.yaml": _JUJU_MATRIX_WORKFLOW})
+    assert detect_feature(charm_root, _feature("ci-juju-channel", major=4, minor=0)) == []
+    assert [
+        e.snippet
+        for e in detect_feature(charm_root, _feature("ci-juju-channel", major=4, minor=1))
+    ] == ["4.1/beta"]
+    # One hit per file, however many channels in the major it installs.
+    assert len(detect_feature(charm_root, _feature("ci-juju-channel", major=4))) == 1
+
+
+def test_ci_juju_channel_reaches_above_a_monorepo_sub_charm(tmp_path: Path) -> None:
+    charm_root = _write_repo(
+        tmp_path, {".github/workflows/ci.yaml": _JUJU_MATRIX_WORKFLOW}, charm_dir="charms/foo"
+    )
+    ev = detect_feature(charm_root, _feature("ci-juju-channel", major=3))
+    assert [e.file for e in ev] == ["../../.github/workflows/ci.yaml"]
+
+
+def test_testing_juju_features_are_in_the_catalogue() -> None:
+    names = {f.name for f in catalogue_load(default_path())}
+    assert {
+        "testing.juju-2",
+        "testing.juju-3",
+        "testing.juju-4",
+        "testing.juju-4.0",
+        "testing.juju-4.1",
+    } <= names

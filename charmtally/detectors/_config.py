@@ -229,6 +229,46 @@ def _follow_uses(unmatched: list[tuple[str, str]], pattern: re.Pattern[str]) -> 
     return out
 
 
+def _detect_ci_juju_channel(source: CharmSource, config: dict) -> list[Evidence]:
+    """Find a Juju version the repo's CI installs, by major or major.minor.
+
+    config:
+      major:       the Juju major to look for (required).
+      minor:       the minor, if the feature is about one; omitted, any
+                   channel in the major matches — including a bare track
+                   like `4/stable`, which names no minor and so matches no
+                   minor-specific feature.
+      follow_uses: read remote reusable workflows and actions too. Like
+                   `repo-file`'s flag, a no-op unless the run installed a
+                   workflow cache.
+
+    The reading is `ci_juju`'s evaluation of the workflows, not a text match,
+    and is computed once per charm however many features ask. Evidence cites
+    the local file the install was reached from — the channel itself where
+    that file spells it out, otherwise the `uses:` that led to a shared
+    workflow, which the snippet names. One hit per file, like `repo-file`.
+    """
+    if "major" not in config:
+        return []
+    major = int(config["major"])
+    minor = config.get("minor")
+    results: list[Evidence] = []
+    cited: set[str] = set()
+    for install in source.ci_juju(follow=bool(config.get("follow_uses"))):
+        if not install.matches(major, None if minor is None else int(minor)):
+            continue
+        if install.path in cited:
+            continue
+        cited.add(install.path)
+        path = source.repo_root / install.path
+        text = source.repo_text(path) if path.is_file() else ""
+        at = text.find(install.anchor) if install.anchor else -1
+        line = text.count("\n", 0, at) + 1 if at >= 0 else 0
+        snippet = f"{install.channel} — via {install.via[-1]}" if install.via else install.channel
+        results.append(Evidence(source.rel_to_charm(path), line, "ci-juju-channel", snippet[:120]))
+    return results
+
+
 def _detect_zaza_config(source: CharmSource, config: dict) -> list[Evidence]:
     """Find a zaza test description — `tests/tests.yaml` naming bundles and test classes.
 

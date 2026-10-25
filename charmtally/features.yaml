@@ -489,6 +489,106 @@ features:
     verified: []
     negative: []
 
+  - name: testing.juju-2
+    library: juju
+    summary: CI installs a Juju 2.x (in practice 2.9) to test against.
+    scope: any
+    detect:
+      - kind: ci-juju-channel
+        major: 2
+        follow_uses: true
+    notes: |
+      Read by evaluating the repo's CI (`charmtally/ci_juju.py`) rather than
+      by matching text: inputs are bound over their defaults, strategy
+      matrices expanded and reusable workflows followed, so a channel a
+      shared workflow merely *defaults* to — `operator-workflows`'
+      `integration_test.yaml` defaults to 2.9/stable, and almost every caller
+      overrides it — counts only where nobody overrides it. Pass or fail
+      does not matter (`continue-on-error` is ignored): the question is what
+      CI runs against. An install whose channel is `vars.*` or otherwise
+      unknowable, or that names no channel at all, counts towards no version.
+      Repo-level, like `testing.concierge`: every sub-charm of a monorepo
+      reads its repo's answer. Descriptive-only; absent → not-applicable.
+    verified: []
+    negative: []
+
+  - name: testing.juju-3
+    library: juju
+    summary: CI installs a Juju 3.x to test against.
+    scope: any
+    detect:
+      - kind: ci-juju-channel
+        major: 3
+        follow_uses: true
+    notes: |
+      Read by evaluating the repo's CI (`charmtally/ci_juju.py`) rather than
+      by matching text: inputs are bound over their defaults, strategy
+      matrices expanded and reusable workflows followed, so a channel a
+      shared workflow merely *defaults* to — `operator-workflows`'
+      `integration_test.yaml` defaults to 2.9/stable, and almost every caller
+      overrides it — counts only where nobody overrides it. Pass or fail
+      does not matter (`continue-on-error` is ignored): the question is what
+      CI runs against. An install whose channel is `vars.*` or otherwise
+      unknowable, or that names no channel at all, counts towards no version.
+      Repo-level, like `testing.concierge`: every sub-charm of a monorepo
+      reads its repo's answer. Descriptive-only; absent → not-applicable.
+    verified: []
+    negative: []
+
+  - name: testing.juju-4
+    library: juju
+    summary: CI installs a Juju 4.x to test against — any minor, or the bare 4 track.
+    scope: any
+    detect:
+      - kind: ci-juju-channel
+        major: 4
+        follow_uses: true
+    notes: |
+      Read by evaluating the repo's CI (`charmtally/ci_juju.py`) rather than
+      by matching text: inputs are bound over their defaults, strategy
+      matrices expanded and reusable workflows followed, so a channel a
+      shared workflow merely *defaults* to — `operator-workflows`'
+      `integration_test.yaml` defaults to 2.9/stable, and almost every caller
+      overrides it — counts only where nobody overrides it. Pass or fail
+      does not matter (`continue-on-error` is ignored): the question is what
+      CI runs against. An install whose channel is `vars.*` or otherwise
+      unknowable, or that names no channel at all, counts towards no version.
+      Repo-level, like `testing.concierge`: every sub-charm of a monorepo
+      reads its repo's answer. Descriptive-only; absent → not-applicable.
+    verified: []
+    negative: []
+
+  - name: testing.juju-4.0
+    library: juju
+    summary: CI installs Juju 4.0 to test against.
+    scope: any
+    detect:
+      - kind: ci-juju-channel
+        major: 4
+        minor: 0
+        follow_uses: true
+    notes: |
+      A channel naming the minor (`4.0/stable`, `4.0/candidate`). The bare
+      `4/stable` track names none, so it counts towards `testing.juju-4`
+      and not here: which minor it was on a given day is the store's, not
+      the repo's, and a snapshot cannot recover it. See `testing.juju-4`.
+    verified: []
+    negative: []
+
+  - name: testing.juju-4.1
+    library: juju
+    summary: CI installs Juju 4.1 to test against.
+    scope: any
+    detect:
+      - kind: ci-juju-channel
+        major: 4
+        minor: 1
+        follow_uses: true
+    notes: |
+      As `testing.juju-4.0`, for 4.1 channels (`4.1/edge`, `4.1/beta`, ...).
+    verified: []
+    negative: []
+
   - name: testing.pytest-jubilant
     library: pytest-jubilant
     summary: Integration tests use the pytest-jubilant plugin.

@@ -205,6 +205,13 @@ def score_absent(
     if feature_name == "testing.zaza":
         return Score(SCORE_NOT_APPLICABLE, "descriptive signal — no tests/tests.yaml found")
 
+    if feature_name.startswith("testing.juju-"):
+        # Which Juju a charm is tested on is reported, not recommended: a
+        # charm missing from `testing.juju-2` is not being told to test on 2.9.
+        return Score(
+            SCORE_NOT_APPLICABLE, "descriptive signal — CI not seen installing this Juju version"
+        )
+
     if feature_name == "testing.concierge":
         # Only a charm with integration tests has an environment to provision,
         # and the signal is read from the repo's CI rather than the charm's
