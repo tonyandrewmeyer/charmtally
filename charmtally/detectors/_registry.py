@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 
 from . import _ast as _ast_kinds
 from ._config import (
+    _detect_ci_juju_channel,
     _detect_pytest_config_key,
     _detect_relation_count,
     _detect_repo_file,
@@ -143,6 +144,7 @@ def _from_nodes(walker: Callable[[SourceFile, dict], Iterator[ast.stmt | ast.exp
 # repo root instead, which is the only scope a monorepo sub-charm's CI
 # configuration is visible from.
 _CHARM_KINDS: dict[str, Callable[[CharmSource, dict], list[Evidence]]] = {
+    "ci-juju-channel": _detect_ci_juju_channel,
     "pytest-config-key": _detect_pytest_config_key,
     "repo-file": _detect_repo_file,
     "requirement": _detect_requirement,

@@ -111,6 +111,18 @@ def test_test_fixture_charms_are_not_providers() -> None:
     assert derive(corpus)["app"].version == "4"
 
 
+def test_a_unit_test_placeholder_charm_is_not_a_provider() -> None:
+    corpus = _corpus(
+        _charm("postgresql-k8s", provides=["postgresql_client"], ceiling="4"),
+        _charm(
+            "postgresql-single-kernel-library/single_kernel_postgresql",
+            provides=["postgresql_client"],
+        ),
+        _charm("app", requires=["postgresql_client"]),
+    )
+    assert derive(corpus)["app"].version == "4"
+
+
 def test_interface_nobody_provides_reads_as_unknown() -> None:
     corpus = _corpus(_charm("app", requires=["ingress"]))
     app = derive(corpus)["app"]

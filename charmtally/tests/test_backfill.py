@@ -805,3 +805,210 @@ class TestRefresh:
         ])
         assert rc == 1
         assert "no.such-feature" in capsys.readouterr().err
+
+
+class TestJujuVersions:
+    """`--juju-versions`: adding the ceiling to readings that recorded only a floor."""
+
+    def _snapshot_file(self, tmp_path: Path, charms: dict[str, dict]) -> Path:
+        snap: dict = {"__thin__": True}
+        for slug, record in charms.items():
+            snap[slug] = {"name": slug, "team": "t", **record}
+        path = tmp_path / "scored-2026-05-04.json"
+        path.write_text(json.dumps(snap, indent=2) + "\n")
+        return path
+
+    def _record(self, repo_url: str, sha: str, floor: str | None, subpath: str = "") -> dict:
+        record: dict = {
+            "repo_url": repo_url,
+            "features": {
+                "__meta__": {
+                    "bases": [],
+                    "min_juju_version": floor,
+                    "charm_user": None,
+                    "repo_sha": sha,
+                }
+            },
+        }
+        if subpath:
+            record["subpath"] = subpath
+        return record
+
+    def test_end_to_end_reads_the_ceiling_at_the_recorded_commit(self, tmp_path: Path):
+        origin = tmp_path / "origin"
+        (origin / "charms" / "a").mkdir(parents=True)
+        (origin / "charms" / "a" / "charmcraft.yaml").write_text(
+            "name: a\nassumes:\n  - juju >= 3.6\n  - juju < 4\n"
+        )
+        _git(["init", "-q", "-b", "main"], origin)
+        _git(["add", "-A"], origin)
+        _git(
+            [
+                "-c",
+                "user.name=T",
+                "-c",
+                "user.email=t@example.com",
+                "-c",
+                "commit.gpgsign=false",
+                "commit",
+                "-q",
+                "-m",
+                "charm",
+            ],
+            origin,
+        )
+        sha = backfill._git_out(["rev-parse", "HEAD"], origin)
+        assert sha is not None
+        repo_url = str(origin)
+        path = self._snapshot_file(
+            tmp_path, {"o/charms/a": self._record(repo_url, sha, "3.6", "charms/a")}
+        )
+        snap = json.loads(path.read_text())
+        wanted = backfill.snapshot_readings(snap)
+        assert wanted == {repo_url: {sha: {"charms/a"}}}
+        clones = tmp_path / "clones"
+        backfill.ensure_full_clone(repo_url, clones / backfill.repo_slug(repo_url))
+
+        resolved = backfill.resolve_juju_versions(wanted, clones)
+        counts = backfill.merge_juju_versions(path, resolved)
+
+        assert counts == (1, 0, 0)
+        meta = json.loads(path.read_text())["o/charms/a"]["features"]["__meta__"]
+        assert meta["max_juju_version"] == "4"
+        # Lands where a scan writes it, straight after the floor.
+        assert list(meta) == [
+            "bases",
+            "min_juju_version",
+            "max_juju_version",
+            "charm_user",
+            "repo_sha",
+        ]
+        assert backfill.has_juju_ceilings(path)
+
+    def test_unresolved_charm_is_left_without_the_key(self, tmp_path: Path):
+        """None means "no ceiling", so it must not stand in for "could not look"."""
+        path = self._snapshot_file(tmp_path, {"a": self._record("https://x/a", "abc", "3.6")})
+
+        assert backfill.merge_juju_versions(path, {}) == (0, 1, 0)
+        meta = json.loads(path.read_text())["a"]["features"]["__meta__"]
+        assert "max_juju_version" not in meta
+        assert not backfill.has_juju_ceilings(path)
+
+    def test_floor_mismatch_is_left_without_the_key(self, tmp_path: Path):
+        path = self._snapshot_file(tmp_path, {"a": self._record("https://x/a", "abc", "3.6")})
+
+        counts = backfill.merge_juju_versions(path, {("https://x/a", "abc", ""): ("3.1", "4")})
+
+        assert counts == (0, 0, 1)
+        assert "max_juju_version" not in json.loads(path.read_text())["a"]["features"]["__meta__"]
+
+    def test_no_ceiling_is_written_as_none(self, tmp_path: Path):
+        path = self._snapshot_file(tmp_path, {"a": self._record("https://x/a", "abc", "3.6")})
+
+        backfill.merge_juju_versions(path, {("https://x/a", "abc", ""): ("3.6", None)})
+
+        meta = json.loads(path.read_text())["a"]["features"]["__meta__"]
+        assert "max_juju_version" in meta and meta["max_juju_version"] is None
+
+
+class TestMergeFeatures:
+    """`--merge-features`: reading new catalogue features at recorded commits."""
+
+    def _commit(self, root: Path, files: dict[str, str], when: str) -> str:
+        for rel, text in files.items():
+            path = root / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text)
+        _git(["add", "-A"], root)
+        _git(
+            [
+                "-c",
+                "user.name=T",
+                "-c",
+                "user.email=t@example.com",
+                "-c",
+                "commit.gpgsign=false",
+                "commit",
+                "-q",
+                "-m",
+                "c",
+            ],
+            root,
+            when=when,
+        )
+        sha = backfill._git_out(["rev-parse", "HEAD"], root)
+        assert sha is not None
+        return sha
+
+    def test_dated_workflows_reads_a_branch_as_of_the_cutoff(self, tmp_path: Path):
+        """A shared workflow that changed later must not read as changed earlier."""
+        origin = tmp_path / "remote" / "acme" / "flows"
+        origin.mkdir(parents=True)
+        _git(["init", "-q", "-b", "main"], origin)
+        path = ".github/workflows/it.yaml"
+        self._commit(origin, {path: "old\n"}, "2026-01-01T00:00:00Z")
+        self._commit(origin, {path: "new\n"}, "2026-03-01T00:00:00Z")
+        # Reading through `origin/main` needs a remote-tracking ref.
+        _git(["update-ref", "refs/remotes/origin/main", "HEAD"], origin)
+        url = f"https://raw.githubusercontent.com/acme/flows/main/{path}"
+
+        fetch = backfill.DatedWorkflows(tmp_path / "remote")
+        fetch.date = dt.date(2026, 2, 2)
+        assert fetch(url) == "old\n"
+        fetch.date = dt.date(2026, 4, 6)
+        assert fetch(url) == "new\n"
+
+    def test_merges_a_ci_feature_at_the_recorded_commit(self, tmp_path: Path):
+        origin = tmp_path / "origin"
+        origin.mkdir()
+        _git(["init", "-q", "-b", "main"], origin)
+        wf = (
+            "on: push\njobs:\n  t:\n    steps:\n"
+            "      - run: sudo snap install juju --channel=4.0/stable\n"
+        )
+        sha = self._commit(
+            origin,
+            {"charmcraft.yaml": "name: demo\n", ".github/workflows/ci.yaml": wf},
+            "2026-04-01T00:00:00Z",
+        )
+        repo_url = str(origin)
+        snaps = tmp_path / "snapshots"
+        snaps.mkdir()
+        path = snaps / "scored-2026-05-04.json"
+        path.write_text(
+            json.dumps({
+                "demo": {
+                    "name": "demo",
+                    "repo_url": repo_url,
+                    "features": {
+                        "ops.secrets": {"present": False, "score": "not-applicable"},
+                        "__meta__": {"repo_sha": sha},
+                    },
+                }
+            })
+        )
+        workdir = tmp_path / "work"
+        backfill.ensure_full_clone(repo_url, workdir / "charms" / backfill.repo_slug(repo_url))
+
+        rc = backfill.main([
+            "--merge-features",
+            "testing.juju-4,testing.juju-4.0,testing.juju-3",
+            "--start",
+            "2026-05-04",
+            "--end",
+            "2026-05-04",
+            "--workdir",
+            str(workdir),
+            "--snapshots-dir",
+            str(snaps),
+            "--skip-prepare",
+        ])
+
+        assert rc == 0
+        features = json.loads(path.read_text())["demo"]["features"]
+        assert features["testing.juju-4"] == {"present": True}
+        assert features["testing.juju-4.0"] == {"present": True}
+        assert features["testing.juju-3"] == {"present": False, "score": "not-applicable"}
+        # New features land before `__meta__`, as a scan writes them.
+        assert list(features)[-1] == "__meta__"
+        assert next(iter(features)) == "ops.secrets"

@@ -507,6 +507,143 @@ def test_charmhub_listed_counts_reactive_charms_too() -> None:
     assert point["denominator"] == 2
 
 
+# --- Juju versions -----------------------------------------------------------
+
+
+def _juju_charm(floor: str | None, ceiling: str | None, **meta: object) -> dict:
+    return _charm(meta={"min_juju_version": floor, "max_juju_version": ceiling, **meta})
+
+
+def test_juju_versions_buckets_by_the_majors_assumes_admits() -> None:
+    snap = _snapshot({
+        "old": _juju_charm("2.9", "3"),
+        "pg": _juju_charm("2.9.49", "4"),
+        "three": _juju_charm("3.6", "4.0.0"),
+        "ceiling-only": _juju_charm(None, "4"),
+        "open": _juju_charm("3.1", None),
+        "five": _juju_charm("3.6", "5.0"),
+        "four-floor": _juju_charm("4.2", None),
+        "four-oh": _juju_charm("3.6", "4.1"),
+        "silent": _juju_charm(None, None),
+    })
+
+    point = adoption.compute_juju_versions(snap)
+
+    assert point is not None
+    counts = point["counts"]
+    assert counts["2.9 only"] == 1
+    assert counts["2.9 and 3.x"] == 2  # a bare ceiling admits 2.9 too
+    assert counts["3.x only"] == 1
+    assert counts["floor only, no ceiling"] == 1
+    assert counts["4.x stated"] == 3  # `< 4.1` admits 4.0
+    assert counts["unknown (no juju in assumes)"] == 1
+    # The headline is the two Juju-4 buckets over every bucket, unknown included.
+    assert point["numerator"] == 4
+    assert point["denominator"] == 9
+
+
+def test_juju_versions_without_ceilings_yields_no_point() -> None:
+    """Floors alone cannot tell 3.x-only from no ceiling."""
+    charm = _charm(meta={"min_juju_version": "3.6"})
+    assert adoption.compute_juju_versions(_snapshot({"a": charm})) is None
+
+
+def test_juju_versions_drops_a_charm_whose_ceiling_was_not_read() -> None:
+    snap = _snapshot({
+        "read": _juju_charm("3.6", None),
+        "unread": _charm(meta={"min_juju_version": "3.6"}),
+    })
+
+    point = adoption.compute_juju_versions(snap)
+
+    assert point is not None
+    assert point["denominator"] == 1
+    assert point["counts"]["unread"] == 1
+
+
+def test_juju_versions_counts_reactive_charms_and_drops_dormant_ones() -> None:
+    snap = _snapshot({
+        "reactive": _juju_charm("2.9", "3", is_reactive=True),
+        "dormant": _juju_charm("3.1", None, last_commit="2023-01-05T09:00:00+00:00"),
+    })
+
+    point = adoption.compute_juju_versions(snap)
+
+    assert point is not None
+    assert point["denominator"] == 1
+    assert point["counts"]["2.9 only"] == 1
+
+
+def test_juju_versions_counts_charms_a_partner_caps_below_4() -> None:
+    def rel(role: str, interface: str) -> dict:
+        return {"role": role, "interface": interface}
+
+    snap = _snapshot({
+        "db": _juju_charm("2.9.49", "4", relations=[rel("provides", "pg")]),
+        "app": _juju_charm("3.6", None, relations=[rel("requires", "pg")]),
+        "other": _juju_charm("3.6", None),
+    })
+
+    point = adoption.compute_juju_versions(snap)
+
+    assert point is not None
+    assert point["counts"]["reaches-4-by-own-assumes"] == 2
+    assert point["counts"]["reaches-4-but-inherits-cap"] == 1
+
+
+# --- Juju versions tested in CI ---------------------------------------------
+
+_CI_FEATURES = (
+    "testing.juju-2",
+    "testing.juju-3",
+    "testing.juju-4",
+    "testing.juju-4.0",
+    "testing.juju-4.1",
+)
+
+
+def _ci_charm(*tested: str, **meta: object) -> dict:
+    return _charm(features={f: f in tested for f in _CI_FEATURES}, meta=meta)
+
+
+def test_juju_tested_buckets_by_the_newest_version_ci_installs() -> None:
+    snap = _snapshot({
+        "both": _ci_charm("testing.juju-3", "testing.juju-4", "testing.juju-4.0"),
+        "edge": _ci_charm("testing.juju-4", "testing.juju-4.1"),
+        "track": _ci_charm("testing.juju-3", "testing.juju-4"),
+        "three": _ci_charm("testing.juju-2", "testing.juju-3"),
+        "old": _ci_charm("testing.juju-2"),
+        "none": _ci_charm(),
+    })
+
+    point = adoption.compute_juju_tested(snap)
+
+    assert point is not None
+    counts = point["counts"]
+    assert counts["4.1"] == 1
+    assert counts["4.0"] == 1
+    assert counts["4.x, other or bare track"] == 1
+    assert counts["3.x"] == 1
+    assert counts["2.9 only"] == 1
+    assert counts["no pinned Juju found in CI"] == 1
+    # The per-version counts overlap; the bands do not.
+    assert counts["tests-3"] == 3
+    assert counts["tests-2"] == 2
+    assert (point["numerator"], point["denominator"]) == (3, 6)
+
+
+def test_juju_tested_needs_the_features_scanned() -> None:
+    snap = _snapshot({"a": _charm(features={"ops.secrets": True})})
+    assert adoption.compute_juju_tested(snap) is None
+
+
+def test_juju_tested_counts_reactive_charms() -> None:
+    snap = _snapshot({"r": _ci_charm("testing.juju-2", is_reactive=True)})
+    point = adoption.compute_juju_tested(snap)
+    assert point is not None
+    assert point["denominator"] == 1
+
+
 def test_charmhub_listed_still_drops_dormant_charms() -> None:
     snap = _snapshot(
         {
@@ -578,13 +715,16 @@ def test_every_since_has_a_note_and_inputs_are_catalogue_features() -> None:
 
 
 def test_replay_inputs_grow_as_metrics_start() -> None:
-    assert adoption.replay_inputs("2024-05-13") == frozenset()
-    assert adoption.replay_inputs("2025-05-05") == {
+    # The CI Juju-version card has no `since`: testing on 2.9 vs 3 means
+    # something at every date, so its features are replayed everywhere.
+    ci = set(_CI_FEATURES)
+    assert adoption.replay_inputs("2024-05-13") == ci
+    assert adoption.replay_inputs("2025-05-05") == ci | {
         "jubilant.integration-tests",
         "testing.pytest-operator",
         "testing.zaza",
     }
-    assert adoption.replay_inputs("2025-07-07") == {
+    assert adoption.replay_inputs("2025-07-07") == ci | {
         "jubilant.integration-tests",
         "testing.pytest-operator",
         "testing.zaza",

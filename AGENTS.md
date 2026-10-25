@@ -145,6 +145,11 @@ rocks.csv ─────────────────► scan-rocks ─�
   `relative_to`. `testing.zaza` is the catalogue feature that comes of it,
   and `adoption`'s integration-testing metric has a `zaza` bucket, dropped
   (and the point flagged `partial`) for snapshots that pre-date the feature.
+- `charmtally/ci_juju.py` — which Juju channels a repo's CI installs, by
+  evaluating its workflows rather than searching them; see `ci-juju-channel`
+  under Detector kinds. The adoption page has two Juju cards for that
+  reason: `juju-versions` reads what `assumes:` *declares* (silent for two
+  thirds of charms), `juju-tested` what CI *runs*, pass or fail.
 - `charmtally/snapshot.py` — thins a scored file into the dated snapshot the
   trend and adoption pages read. The snapshots are the entire history and
   cannot be regenerated, so what goes in stays in git forever; `evidence` and
@@ -216,9 +221,9 @@ that can see non-Python files — `_select_files` returns `*.py` only):
 `requirement` · `zaza-config`. The last reads wherever `layout.zaza_configs`
 says the charm's zaza suite is, which may be above the charm root.
 
-File-independent, reading the *repo* root: `repo-file`. It is the only
-detector that sweeps above the charm root, and the only one whose sweep
-descends into dotted directories, because the questions it answers — how is
+File-independent, reading the *repo* root: `repo-file` and `ci-juju-channel`.
+They are the only detectors that read above the charm root, and the only
+ones that descend into dotted directories, because the questions it answers — how is
 this charm built, tested and released — are answered in `.github/`, which a
 monorepo sub-charm does not own. The repo root is found by walking up for
 `.git` (`CharmSource.repo_root`), the same search `scan.head_sha` does, so
@@ -231,7 +236,23 @@ present for all five: that is the honest per-charm answer, but it counts
 repos once per charm, so anything wanting a count of *decisions* groups by
 `repo_url`.
 
-`repo-file` is also the only detector that can reach the *network*, via
+`ci-juju-channel` asks `charmtally/ci_juju.py` which Juju channels the
+repo's CI installs, and matches a major or major.minor; it backs the
+`testing.juju-*` features. It is not a text match, because the answer is
+rarely written where it is used: `operator-workflows`' `integration_test.yaml`
+*defaults* `juju-channel` to `2.9/stable` and nearly every caller overrides
+it, so following `uses:` with a regex reports all of them as testing on 2.9.
+`ci_juju` evaluates the workflows instead — matrices, `with:` over callee
+defaults, `env`, `needs`/`steps` outputs, composite actions, a small bash
+`if`/`elif` evaluator for `$GITHUB_OUTPUT`, and spread's
+`CONCIERGE_JUJU_CHANNEL/<variant>` — and carries anything it cannot know
+(`vars.*`, `fromJSON`) as an unknown marker, so only an install that actually
+depends on one comes out unresolved. Unresolved and unpinned installs match
+no version. The reading is computed once per `CharmSource`, and
+`ci_juju.memoised()` shares it across a monorepo's sub-charms in a replay.
+
+`repo-file` and `ci-juju-channel` are the only detectors that can reach the
+*network*, the latter through `workflows.fetch`, the former via
 `follow_uses: true` and `charmtally/workflows.py`: a charm whose CI delegates
 to a reusable workflow in another repo has nothing in its own `.github/` to
 match, which is a third of `testing.concierge`'s real population. That module
@@ -415,6 +436,19 @@ Not part of the pipeline; each is run with `uv run python -m charmtally.tools.X`
   the integration-test layout fix (`layout.py`), which added `testing.zaza`
   to 128 snapshots and moved ~100 charms a week out of "no integration
   tests".
+  `--juju-versions` is `--commit-dates`' sibling for
+  `__meta__.max_juju_version`, which the 2026-01 → 2026-09 weekly snapshots
+  pre-date: it checks out each `repo_sha` and asks `metadata.read`, so it
+  needs full clones rather than blobless ones. The opposite rule on absence, though: None is a real
+  ceiling value ("none"), so a charm it cannot read is left *without* the
+  key, and `adoption`'s juju-versions metric drops it from the denominator.
+  `--merge-features a,b` is `--refresh` for features whose reading leaves
+  the repo: it too reads at each snapshot's recorded `repo_sha`, but a
+  reading is a function of (commit, date), not commit alone, because shared
+  workflows are served by `DatedWorkflows` from clones as of that date's cutoff — a
+  moving `@main` must not read as it does today in 2024. Tags are the
+  exception, read at today's target since git keeps no history of a tag
+  moving, and the provenance names every tag so read.
   `--adoption-only` replays dates for the scorecard alone: each date scans
   only `adoption.replay_inputs(date)` — the `inputs` of metrics whose
   `Metric.since` has passed — plus `__meta__`, skipping architecture

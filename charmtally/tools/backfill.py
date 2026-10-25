@@ -164,6 +164,20 @@ Cost, at ~350 corpus repos: the prepare phase is the long pole (full clones,
 minutes to tens of minutes and a few GiB), and each replayed date then costs
 about what one weekly scan costs, minus the network.
 
+Juju ceilings
+-------------
+`--juju-versions` fills `__meta__.max_juju_version` into snapshots written
+before the scan recorded it::
+
+    uv run python -m charmtally.tools.backfill --juju-versions \\
+        --start 2026-01-05 --end 2026-09-14 --workdir /tmp/charmtally-backfill
+
+Like `--commit-dates` it merges rather than re-scans: each reading's
+`repo_sha` is checked out and the charm root handed to `metadata.read`, the
+reader the scan uses. The floor comes back too and must match the recorded
+one; a charm where it does not, or whose commit is gone, is left without the
+key rather than given a None that would read as "no ceiling".
+
 Each snapshot records its own provenance in a `__backfill__` block (cutoff,
 corpus origin, catalogue digest, per-outcome counts). Consumers skip
 `__`-prefixed keys, so it rides along harmlessly — and a later reader can tell
@@ -176,6 +190,7 @@ import argparse
 import datetime as dt
 import hashlib
 import json
+import re
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -185,11 +200,13 @@ from typing import TYPE_CHECKING
 
 from .. import adoption as _adoption
 from .. import catalogue, corpus, scan
+from .. import ci_juju as _ci_juju
 from .. import metadata as _metadata
 from .. import rocks as _rocks
 from .. import scoring as _scoring
 from .. import snapshot as _snapshot
 from .. import trend as _trend
+from .. import workflows as _workflows
 from ..cli import _apply_feature_excludes
 from ..detectors import CharmSource, detect_feature
 
@@ -290,7 +307,12 @@ def _git_out(args: list[str], cwd: Path | None = None, timeout: int = 300) -> st
 
 
 def ensure_full_clone(
-    repo_url: str, dest: Path, *, branch: str | None = None, blobless: bool = False
+    repo_url: str,
+    dest: Path,
+    *,
+    branch: str | None = None,
+    blobless: bool = False,
+    treeless: bool = False,
 ) -> Path | None:
     """Clone `repo_url` into `dest` with full history, or refresh what's there.
 
@@ -305,6 +327,11 @@ def ensure_full_clone(
     It degrades rather than breaks a later replay in the same workdir: the
     checkout still works, it just fetches the blobs it needs first.
 
+    `treeless` (`--filter=tree:0`) goes further and fetches trees on demand
+    too, for `DatedWorkflows`, which dates a ref with `rev-list` and then
+    reads one or two files off the commit it finds: an action repo that
+    commits its `node_modules` costs a commit log rather than every tree.
+
     Returns None if the repo could not be made available at all.
     """
     if dest.exists():
@@ -317,7 +344,9 @@ def ensure_full_clone(
         return dest if (dest / ".git").exists() else None
     dest.parent.mkdir(parents=True, exist_ok=True)
     cmd = ["clone", "--quiet", "--no-single-branch"]
-    if blobless:
+    if treeless:
+        cmd.append("--filter=tree:0")
+    elif blobless:
         cmd.append("--filter=blob:none")
     if branch:
         cmd += ["--branch", branch]
@@ -1346,7 +1375,415 @@ def run_refresh(args: argparse.Namespace, dates: list[dt.date]) -> int:
     return 0
 
 
-def prepare_url_clones(repo_urls: list[str], clones: Path, *, jobs: int = DEFAULT_JOBS) -> int:
+# ── Juju ceilings ───────────────────────────────────────────────────────────
+
+
+def juju_versions_at(dest: Path, sha: str, subpaths: Iterable[str]) -> dict[str, tuple]:
+    """Read `(min_juju_version, max_juju_version)` for each charm root at `sha`.
+
+    Checks the commit out and asks `metadata.read`, the function the scan
+    itself calls, rather than re-parsing `assumes:` here: a replayed reading
+    has to agree with a scanned one, and the only way to be sure it does is
+    for there to be one reader. A root missing from the tree is left out —
+    the snapshot says a charm was there, so absence is a failure to look,
+    not a finding.
+    """
+    if not checkout(dest, sha):
+        return {}
+    out: dict[str, tuple] = {}
+    for subpath in subpaths:
+        root = dest / subpath if subpath else dest
+        if not root.is_dir():
+            continue
+        meta = _metadata.read(root)
+        out[subpath] = (meta.min_juju_version, meta.max_juju_version)
+    return out
+
+
+def resolve_juju_versions(
+    wanted: dict[str, dict[str, set[str]]], clones: Path
+) -> dict[tuple[str, str, str], tuple]:
+    """Resolve every (repo_url, sha, subpath) to its Juju version pair.
+
+    Unresolvable triples — a repo that did not clone, a SHA a force-push
+    dropped — are absent from the result.
+    """
+    resolved: dict[tuple[str, str, str], tuple] = {}
+    total = len(wanted)
+    for done, (repo_url, by_sha) in enumerate(sorted(wanted.items()), 1):
+        dest = clones / repo_slug(repo_url)
+        if (dest / ".git").exists():
+            for sha, subpaths in sorted(by_sha.items()):
+                for subpath, pair in juju_versions_at(dest, sha, subpaths).items():
+                    resolved[repo_url, sha, subpath] = pair
+        if done % 25 == 0:
+            print(f"  [{done}/{total}] repos read", file=sys.stderr)
+    return resolved
+
+
+def has_juju_ceilings(path: Path) -> bool:
+    """Whether this snapshot already carries `max_juju_version` on any charm."""
+    try:
+        snap = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return False
+    return any(
+        "max_juju_version" in (charm.get("features", {}).get("__meta__") or {})
+        for slug, charm in snap.items()
+        if not slug.startswith("__")
+    )
+
+
+def _set_max_juju(meta: dict, ceiling: str | None) -> None:
+    """Set `max_juju_version` straight after `min_juju_version`, as a scan does.
+
+    Positioned rather than appended for the reason `_set_last_commit` gives.
+    """
+    rebuilt = {}
+    for key, value in meta.items():
+        if key == "max_juju_version":
+            continue
+        rebuilt[key] = value
+        if key == "min_juju_version":
+            rebuilt["max_juju_version"] = ceiling
+    if "max_juju_version" not in rebuilt:
+        rebuilt["max_juju_version"] = ceiling
+    meta.clear()
+    meta.update(rebuilt)
+
+
+def merge_juju_versions(
+    path: Path, resolved: dict[tuple[str, str, str], tuple]
+) -> tuple[int, int, int]:
+    """Write `max_juju_version` into each charm of an existing snapshot.
+
+    Unlike `merge_commit_dates`, a charm that could not be resolved is left
+    *without* the key: None is a real value here — no ceiling — so writing it
+    for a charm nobody could read would report a failure to look as a
+    finding. `adoption.compute_juju_versions` drops such a charm from its
+    denominator.
+
+    The floor is re-read alongside the ceiling and must match the one the
+    snapshot already records; a charm where it does not is left alone too,
+    because a re-read that disagrees about half the pair is not evidence
+    about the other half.
+
+    Returns `(written, unresolved, mismatched)`.
+    """
+    snap: dict = json.loads(path.read_text())
+    written = unresolved = mismatched = 0
+    for slug, charm in snap.items():
+        if slug.startswith("__"):
+            continue
+        meta = charm.get("features", {}).get("__meta__")
+        if not isinstance(meta, dict):
+            continue
+        key = (charm.get("repo_url"), meta.get("repo_sha"), charm.get("subpath", ""))
+        pair = resolved.get(key)  # type: ignore[arg-type]
+        if pair is None:
+            meta.pop("max_juju_version", None)
+            unresolved += 1
+        elif pair[0] != meta.get("min_juju_version"):
+            meta.pop("max_juju_version", None)
+            mismatched += 1
+        else:
+            _set_max_juju(meta, pair[1])
+            written += 1
+    provenance = snap.get("__backfill__")
+    if isinstance(provenance, dict):
+        provenance["juju_versions"] = (
+            f"max_juju_version backfilled from repo_sha ({written} read, "
+            f"{unresolved} unresolved, {mismatched} floor mismatches)"
+        )
+    path.write_text(json.dumps(snap, indent=2) + "\n")
+    return written, unresolved, mismatched
+
+
+def run_juju_versions(args: argparse.Namespace, dates: list[dt.date]) -> int:
+    """`--juju-versions` mode: add the Juju ceiling to snapshots that predate it.
+
+    `max_juju_version` joined `__meta__` well after the weekly series began,
+    so the snapshots between the adoption-only replays (which were written
+    after it existed) and the first scan that recorded it carry floors only
+    — and a floor alone cannot tell "3.x only" from "no ceiling". Every
+    reading records the `repo_sha` it came from, so like `--commit-dates`
+    this re-reads at that commit instead of re-scanning; unlike it, it needs
+    file contents, so its clones are full rather than blobless.
+    """
+    planned: list[tuple[dt.date, Path]] = []
+    for date in dates:
+        path = args.snapshots_dir / f"scored-{date.isoformat()}.json"
+        if not path.is_file():
+            continue
+        if not args.force and has_juju_ceilings(path):
+            continue
+        planned.append((date, path))
+    if not planned:
+        print("nothing to do", file=sys.stderr)
+        return 0
+
+    wanted: dict[str, dict[str, set[str]]] = {}
+    for _, path in planned:
+        for repo_url, by_sha in snapshot_readings(json.loads(path.read_text())).items():
+            for sha, subpaths in by_sha.items():
+                wanted.setdefault(repo_url, {}).setdefault(sha, set()).update(subpaths)
+    repo_urls = sorted(wanted)
+    commits = sum(len(v) for v in wanted.values())
+    print(
+        f"plan: {len(planned)} snapshots ({planned[0][0]} → {planned[-1][0]}), "
+        f"{commits} commits across {len(repo_urls)} repos",
+        file=sys.stderr,
+    )
+    if args.dry_run:
+        for date, _ in planned:
+            print(f"  {date}", file=sys.stderr)
+        return 0
+
+    clones = args.workdir / "charms"
+    if not args.skip_prepare:
+        print(f"… cloning {len(repo_urls)} repos with full history", file=sys.stderr)
+        failures = prepare_url_clones(repo_urls, clones, jobs=args.jobs, blobless=False)
+        print(f"prepare done ({failures} failed)", file=sys.stderr)
+
+    print(f"… reading assumes: at {commits} commits", file=sys.stderr)
+    resolved = resolve_juju_versions(wanted, clones)
+
+    for _date, path in planned:
+        written, unresolved, mismatched = merge_juju_versions(path, resolved)
+        print(
+            f"wrote max_juju_version into {path} ({written} read, {unresolved} "
+            f"unresolved, {mismatched} floor mismatches)"
+        )
+    return 0
+
+
+# ── merging new features into existing snapshots ────────────────────────────
+
+
+class DatedWorkflows:
+    """Serve `raw.githubusercontent.com` reads from clones, as of a cutoff.
+
+    A feature that follows `uses:` into another repo reads that repo's file
+    *today* in a weekly scan, which is right for the week. Replayed at a past
+    date it is not: `canonical/observability@v1` is a moving ref, and a
+    shared workflow that only started installing Juju 4 last month must not
+    read as having done so in 2024. So the replay installs this as the fetch
+    hook: each `owner/repo` is cloned once into `root`, and a URL is answered
+    from the commit its ref pointed at on `date` — the last commit before the
+    cutoff for a branch (or `HEAD`), the commit itself for a SHA.
+
+    A tag is read where it points *now*, because git keeps no history of a
+    tag being moved; `@v1`-style tags are moved, so a reading through one is
+    today's file and the snapshot's provenance says so.
+    """
+
+    _URL_RE = re.compile(
+        r"^https://raw\.githubusercontent\.com/(?P<owner>[^/]+)/(?P<repo>[^/]+)/(?P<ref>[^/]+)/(?P<path>.+)$"
+    )
+
+    def __init__(self, root: Path) -> None:
+        self.root = root
+        self.date: dt.date | None = None
+        self._texts: dict[tuple[str, dt.date | None], str | None] = {}
+        self._commits: dict[tuple[str, str, str, dt.date | None], str | None] = {}
+        self._clones: dict[tuple[str, str], Path | None] = {}
+        self.tag_reads: set[str] = set()
+
+    def _clone(self, owner: str, repo: str) -> Path | None:
+        key = (owner, repo)
+        if key not in self._clones:
+            dest = self.root / owner / repo
+            url = f"https://github.com/{owner}/{repo}"
+            self._clones[key] = (
+                ensure_full_clone(url, dest, treeless=True) if not dest.exists() else dest
+            )
+        return self._clones[key]
+
+    def _commit(self, dest: Path, owner: str, repo: str, ref: str) -> str | None:
+        key = (owner, repo, ref, self.date)
+        if key in self._commits:
+            return self._commits[key]
+        sha: str | None
+        if re.fullmatch(r"[0-9a-f]{40}", ref):
+            sha = ref
+        elif _git_out(["rev-parse", "--verify", "--quiet", f"refs/tags/{ref}^{{commit}}"], dest):
+            sha = _git_out(["rev-parse", f"refs/tags/{ref}^{{commit}}"], dest)
+            self.tag_reads.add(f"{owner}/{repo}@{ref}")
+        else:
+            branch = tracking_ref(dest, None if ref == "HEAD" else ref)
+            sha = commit_asof(dest, branch, self.date) if branch and self.date else None
+        self._commits[key] = sha
+        return sha
+
+    def __call__(self, url: str) -> str | None:
+        key = (url, self.date)
+        if key in self._texts:
+            return self._texts[key]
+        text: str | None = None
+        match = self._URL_RE.match(url)
+        if match:
+            dest = self._clone(match["owner"], match["repo"])
+            sha = self._commit(dest, match["owner"], match["repo"], match["ref"]) if dest else None
+            if dest and sha:
+                text = file_at_commit(dest, sha, match["path"])
+        self._texts[key] = text
+        return text
+
+
+def _snapshot_feature_names(snap: dict) -> set[str]:
+    names: set[str] = set()
+    for slug, charm in snap.items():
+        if not slug.startswith("__"):
+            names |= {k for k in charm.get("features", {}) if k != "__meta__"}
+    return names
+
+
+def _merge_record(present: bool, scored: bool) -> dict:
+    """Return the thin record a scan would write for a descriptive feature.
+
+    `score` only where the snapshot carries scores at all: an adoption-only
+    replay never scored anything, and a score on five features out of seventy
+    would make it look as though it had.
+    """
+    record: dict = {"present": present}
+    if scored and not present:
+        record["score"] = _scoring.SCORE_NOT_APPLICABLE
+    return record
+
+
+def run_merge_features(args: argparse.Namespace, dates: list[dt.date]) -> int:
+    """`--merge-features` mode: add catalogue features to existing snapshots.
+
+    Every snapshot is the reading of some commit per repo, and records which
+    (`repo_sha`); a feature added to the catalogue later can be read at those
+    same commits and merged in, leaving every existing reading alone. This is
+    the general form of `--juju-versions`, for features rather than
+    `__meta__` keys, and it is the only way to give a new feature history in
+    the weekly snapshots, which `--adoption-only --force` will not touch.
+
+    Remote reads go through `DatedWorkflows`, so a feature that follows
+    `uses:` sees each shared workflow as it stood on the snapshot's date.
+    That makes a reading a function of (commit, date) rather than of the
+    commit alone, so each repo is evaluated once per pair.
+
+    Only file-independent, deterministic kinds are worth merging this way;
+    anything is accepted, but a per-file kind costs a full parse per charm.
+    """
+    names = [n.strip() for n in args.merge_features.split(",") if n.strip()]
+    feats = [f for f in catalogue.load(args.features) if f.name in names]
+    missing = sorted(set(names) - {f.name for f in feats})
+    if missing:
+        print(f"not in the catalogue: {', '.join(missing)}", file=sys.stderr)
+        return 1
+    overrides = (
+        corpus.load_overrides(args.overrides) if args.overrides else corpus.CorpusOverrides.empty()
+    )
+
+    planned: list[tuple[dt.date, Path, dict]] = []
+    for date in dates:
+        path = _snapshot_path(args.snapshots_dir, date)
+        if not path.is_file():
+            continue
+        snap = json.loads(path.read_text())
+        if not args.force and set(names) <= _snapshot_feature_names(snap):
+            continue
+        planned.append((date, path, snap))
+    if not planned:
+        print("nothing to do", file=sys.stderr)
+        return 0
+
+    # repo_url → sha → date → charm roots read at that commit on that date.
+    wanted: dict[str, dict[str, dict[dt.date, set[str]]]] = {}
+    for date, _, snap in planned:
+        for repo_url, by_sha in snapshot_readings(snap).items():
+            for sha, subpaths in by_sha.items():
+                bucket = wanted.setdefault(repo_url, {}).setdefault(sha, {})
+                bucket.setdefault(date, set()).update(subpaths)
+    if args.limit is not None:
+        wanted = dict(sorted(wanted.items())[: args.limit])
+    pairs = sum(len(by_date) for by_sha in wanted.values() for by_date in by_sha.values())
+    print(
+        f"plan: {len(planned)} snapshots ({planned[0][0]} → {planned[-1][0]}), "
+        f"{len(names)} features, {pairs} (commit, date) pairs across {len(wanted)} repos",
+        file=sys.stderr,
+    )
+    if args.dry_run:
+        return 0
+
+    clones = args.workdir / "charms"
+    if not args.skip_prepare:
+        print(f"… cloning {len(wanted)} repos with full history", file=sys.stderr)
+        failures = prepare_url_clones(sorted(wanted), clones, jobs=args.jobs, blobless=False)
+        print(f"prepare done ({failures} failed)", file=sys.stderr)
+
+    remote = DatedWorkflows(args.workdir / "remote")
+    cache_root = args.workdir / "merge-cache"
+    # (repo_url, sha, subpath, date) → {feature: present}
+    readings: dict[tuple[str, str, str, dt.date], dict[str, bool]] = {}
+    for done, (repo_url, by_sha) in enumerate(sorted(wanted.items()), 1):
+        dest = clones / repo_slug(repo_url)
+        if (dest / ".git").exists():
+            for sha, by_date in sorted(by_sha.items()):
+                if not checkout(dest, sha):
+                    continue
+                for date, subpaths in sorted(by_date.items()):
+                    remote.date = date
+                    session = _workflows.session(cache_root / date.isoformat(), remote)
+                    with session, _ci_juju.memoised():
+                        for subpath in subpaths:
+                            root = dest / subpath if subpath else dest
+                            if not root.is_dir():
+                                continue
+                            source = CharmSource(root)
+                            readings[repo_url, sha, subpath, date] = {
+                                f.name: bool(detect_feature(root, f, source)) for f in feats
+                            }
+        if done % 25 == 0:
+            print(f"  [{done}/{len(wanted)}] repos read", file=sys.stderr)
+
+    for date, path, snap in planned:
+        scored = (snap.get("__backfill__") or {}).get("scope") != "adoption"
+        read = unread = 0
+        for slug, charm in snap.items():
+            if slug.startswith("__"):
+                continue
+            features = charm.get("features")
+            meta = features.get("__meta__") if isinstance(features, dict) else None
+            if not isinstance(meta, dict):
+                continue
+            key = (charm.get("repo_url"), meta.get("repo_sha"), charm.get("subpath", ""), date)
+            found = readings.get(key)  # type: ignore[arg-type]
+            if found is None:
+                # Not written as absent: a charm whose commit could not be
+                # read was not looked at, and `present: false` says it was.
+                unread += 1
+                continue
+            new = {name: _merge_record(found[name], scored) for name in names}
+            _apply_feature_excludes(
+                new, overrides, charm.get("repo_url", ""), charm.get("subpath", "")
+            )
+            # Before `__meta__`, where a scan writes features.
+            rebuilt = {k: v for k, v in features.items() if k not in new and k != "__meta__"}
+            rebuilt.update(new)
+            rebuilt["__meta__"] = meta
+            charm["features"] = rebuilt
+            read += 1
+        provenance = snap.get("__backfill__")
+        note = f"merged at repo_sha ({read} read, {unread} unread)"
+        if remote.tag_reads:
+            note += "; tags read at today's target: " + ", ".join(sorted(remote.tag_reads))
+        if isinstance(provenance, dict):
+            provenance.setdefault("merged_features", {}).update(dict.fromkeys(names, note))
+        else:
+            snap["__merged__"] = dict.fromkeys(names, note)
+        path.write_text(json.dumps(snap, indent=2) + "\n")
+        print(f"merged {len(names)} features into {path} ({read} read, {unread} unread)")
+    return 0
+
+
+def prepare_url_clones(
+    repo_urls: list[str], clones: Path, *, jobs: int = DEFAULT_JOBS, blobless: bool = True
+) -> int:
     """Full-clone (or refresh) every repo named by URL. Returns the failure count.
 
     `prepare_clones`' sibling for a caller holding URLs rather than
@@ -1355,7 +1792,8 @@ def prepare_url_clones(repo_urls: list[str], clones: Path, *, jobs: int = DEFAUL
     cloned twice — a detached HEAD left behind by a replay is no obstacle to
     reading a commit date out of the object store.
 
-    Blobless, because the caller reads `%cI` and nothing else. Cloning the
+    Blobless by default, because `--commit-dates` reads `%cI` and nothing
+    else; `--juju-versions` reads files and asks for full clones. Cloning the
     trees as well is the difference between a few hundred MiB and several
     GiB across ~580 repos, and the big ones (postgresql, opensearch) are
     slow enough to time out when a dozen run at once.
@@ -1366,7 +1804,7 @@ def prepare_url_clones(repo_urls: list[str], clones: Path, *, jobs: int = DEFAUL
 
     def one(repo_url: str) -> bool:
         dest = clones / repo_slug(repo_url)
-        return ensure_full_clone(repo_url, dest, blobless=True) is not None
+        return ensure_full_clone(repo_url, dest, blobless=blobless) is not None
 
     failures = 0
     with ThreadPoolExecutor(max_workers=max(1, jobs)) as pool:
@@ -1465,6 +1903,23 @@ def build_parser() -> argparse.ArgumentParser:
         "have a snapshot are touched.",
     )
     p.add_argument(
+        "--juju-versions",
+        action="store_true",
+        help="Backfill `__meta__.max_juju_version` into existing snapshots that "
+        "predate it, by re-reading each charm's `assumes:` at the `repo_sha` the "
+        "reading already records. One full-clone pass, no re-scan. Only dates "
+        "that already have a snapshot are touched.",
+    )
+    p.add_argument(
+        "--merge-features",
+        default="",
+        metavar="NAME[,NAME...]",
+        help="Read these catalogue features at the `repo_sha` each existing "
+        "snapshot already records, and merge them in. Shared workflows a "
+        "feature follows are read as they stood on each snapshot's date. "
+        "Only dates that already have a snapshot are touched.",
+    )
+    p.add_argument(
         "--adoption-only",
         action="store_true",
         help="Scan only what the adoption scorecard reads at each date — the "
@@ -1554,6 +2009,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.refresh:
         args.workdir.mkdir(parents=True, exist_ok=True)
         return run_refresh(args, dates)
+    if args.merge_features:
+        args.workdir.mkdir(parents=True, exist_ok=True)
+        return run_merge_features(args, dates)
+    if args.juju_versions:
+        args.workdir.mkdir(parents=True, exist_ok=True)
+        return run_juju_versions(args, dates)
     if args.rocks:
         # The rocks half merges into snapshots that already exist, so it plans
         # its own range rather than sharing the "skip dates already written"

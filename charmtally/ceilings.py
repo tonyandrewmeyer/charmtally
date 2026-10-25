@@ -82,7 +82,13 @@ if TYPE_CHECKING:
 # Charms that exist to be a relation partner in someone else's integration
 # test, rather than to be deployed. Excluded from the provider side of the
 # join; see the module docstring. Keyed on the corpus charm name.
-_TEST_FIXTURES = frozenset({"any-charm"})
+# `single_kernel_postgresql` was a placeholder its library kept "only to run
+# unit tests" (never on Charmhub); as an uncapped `postgresql_client`
+# provider it held ~24 requirers' inherited cap off until it was deleted.
+_TEST_FIXTURES = frozenset({
+    "any-charm",
+    "postgresql-single-kernel-library/single_kernel_postgresql",
+})
 
 
 class Ceiling(NamedTuple):
