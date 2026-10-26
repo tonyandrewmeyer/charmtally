@@ -27,8 +27,9 @@ What is evaluated:
   (its own default read from its `action.yaml`), `snap install juju`, and
   `concierge prepare` — by flag, by `CONCIERGE_JUJU_CHANNEL`, or by the config
   file it reads. Spread's `environment:` blocks carry the last as a variant
-  list (`CONCIERGE_JUJU_CHANNEL/juju36: 3.6/stable`), so `spread.yaml` is
-  read for it too, as is charm-ci's `CONCIERGE`, which names the config file.
+  list (`CONCIERGE_JUJU_CHANNEL/juju36: 3.6/stable`), so every `spread.yaml`
+  in the repo — a monorepo keeps one per sub-charm — is read for it too, as
+  is charm-ci's `CONCIERGE`, which names the config file.
 * `$GITHUB_OUTPUT` written from bash, through an `if` / `elif` / `else`
   evaluator that knows `-n`, `-z`, `==` and `!=` over quoted strings and
   `$VAR` / `${VAR#prefix}`. That is the whole of what observability's shared
@@ -55,17 +56,15 @@ from __future__ import annotations
 
 import contextlib
 import itertools
+import os
 import re
 import subprocess
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import yaml
 
 from . import workflows
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 #: How deep reusable-workflow and composite-action calls are followed. The
 #: deepest chain in the corpus is three (charm → observability's
@@ -76,6 +75,10 @@ MAX_DEPTH = 5
 #: corpus is well under this; the cap is what stops a pathological one from
 #: making a single charm take minutes.
 MAX_COMBOS = 128
+
+#: How far below the repo root a `spread.yaml` is looked for. Sub-charms sit
+#: one or two levels down (`machines/`, `charms/foo/`); three leaves room.
+SPREAD_DEPTH = 3
 
 #: Alternatives one templated string may expand to. Alternatives come only
 #: from bash outputs this could not narrow down, so this is generous.
@@ -783,7 +786,30 @@ _SPREAD_CONFIG_RE = re.compile(r"^CONCIERGE(?:/.*)?$")
 _HOST_DEFAULT_RE = re.compile(r"\$\{CONCIERGE:-([^}]+)\}")
 
 
-def _spread(walk: _Walk, text: str, entry: str) -> None:
+def _spread_files(repo_root: Path) -> list[str]:
+    """Every `spread.yaml` in the repo, root first, as repo-relative paths.
+
+    A monorepo keeps one per sub-charm (`mysql-router-operators` has
+    `machines/spread.yaml` and `kubernetes/spread.yaml`), with nothing at the
+    root, so looking only there reads its CI as installing no Juju at all.
+    The walk skips dotted directories and stops `SPREAD_DEPTH` levels down,
+    which is deeper than any sub-charm in the corpus sits.
+
+    Like the workflows, the reading is the repo's, not the charm's: a
+    sibling's `spread.yaml` counts for every sub-charm, as one workflow
+    covering five sub-charms does.
+    """
+    found: list[str] = []
+    for dirpath, dirnames, filenames in os.walk(repo_root):
+        depth = len(Path(dirpath).relative_to(repo_root).parts)
+        keep = depth < SPREAD_DEPTH
+        dirnames[:] = sorted(d for d in dirnames if keep and not d.startswith("."))
+        if "spread.yaml" in filenames:
+            found.append((Path(dirpath) / "spread.yaml").relative_to(repo_root).as_posix())
+    return sorted(found, key=lambda rel: (rel.count("/"), rel))
+
+
+def _spread(walk: _Walk, text: str, entry: str, repo: Repo) -> None:
     """Read the Juju channels a `spread.yaml` sets for Concierge.
 
     Spread expands `KEY/variant: value` into one job per variant, so every
@@ -795,6 +821,8 @@ def _spread(walk: _Walk, text: str, entry: str) -> None:
     `opcli env provision -c "$CONCIERGE"` in a script that lives in charm-ci,
     not here, so for it `CONCIERGE` (and its variants) names a Concierge
     config file, `concierge.yaml` when unset, and the channel is that file's.
+    Spread runs from the directory its `spread.yaml` is in, so `repo` is
+    rooted there and the config file is read beside it.
     """
     doc = _load(text)
     if doc is None:
@@ -827,7 +855,7 @@ def _spread(walk: _Walk, text: str, entry: str) -> None:
                 visit(item)
 
     visit(doc)
-    at = _Where(walk.local, entry)
+    at = _Where(repo, entry)
     for channel in channels:
         walk.add(entry, None, channel, ())
     env = {"CONCIERGE_JUJU_CHANNEL": channels} if channels else {}
@@ -918,7 +946,7 @@ def _read(repo_root: Path, *, follow: bool, branch: str | None) -> list[Install]
         entry = path.relative_to(repo_root).as_posix()
         inputs = _trigger_inputs(doc, "workflow_dispatch")
         _run_workflow(walk, doc, entry, inputs, _Where(local, entry), MAX_DEPTH)
-    spread = repo_root / "spread.yaml"
-    if spread.is_file():
-        _spread(walk, local.read("spread.yaml") or "", "spread.yaml")
+    for rel in _spread_files(repo_root):
+        here = Repo(root=(repo_root / rel).parent)
+        _spread(walk, local.read(rel) or "", rel, here)
     return walk.installs
