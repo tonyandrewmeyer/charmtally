@@ -31,6 +31,7 @@
     line-height: 1.1;
   }
   .headline .unit { font-size: 1.25rem; color: var(--c-text-muted); }
+  .card .headline-label { font-size: 13px; margin: .1em 0 0 0; }
   .delta { font-size: 13px; margin-left: .4em; font-weight: 550; }
   .delta.up { color: var(--c-positive); }
   .delta.down { color: var(--c-negative); }
@@ -45,6 +46,11 @@
   .detail { color: var(--c-text); max-width: 70ch; margin: 0 0 .8em 0; }
   .caveats { color: var(--c-caution); font-size: 12px; max-width: 70ch; }
   .partial { color: var(--c-caution); font-size: 12px; }
+  .chart-key { font-size: 12px; max-width: 70ch; margin: 0 0 .4em 0; }
+  .chart-key .swatch {
+    display: inline-block; width: 1.6em; height: 2px; background: #000;
+    vertical-align: middle; margin-right: .3em;
+  }
   .since { color: var(--c-text-muted); font-size: 12px; max-width: 70ch; margin: -.4em 0 .8em 0; }
   .chart { height: 320px; }
   .pending-note {
@@ -92,6 +98,7 @@
       <span class="delta flat">no change</span>
       {% endif %}
     </div>
+    {% if card.metric.headline %}<p class="headline-label">{{ card.metric.headline }}</p>{% endif %}
     <p class="basis">
       {{ card.latest.numerator }} / {{ card.latest.denominator }} charms,
       {{ card.latest.date }}
@@ -116,6 +123,14 @@
   {% endif %}
 
   {% if card.series %}
+  {% if card.metric.headline %}
+  <p class="chart-key">
+    <span class="swatch"></span>Black line, the headline: <strong>{{ card.metric.headline }}</strong>
+    {%- if card.metric.headline_keys|length > 1 %} — the
+    {% for key in card.metric.headline_keys %}<em>{{ key }}</em>{{ ", " if loop.revindex > 2 else (" and " if loop.revindex == 2 else "") }}{% endfor %}
+    bands added together{% endif %}.
+  </p>
+  {% endif %}
   <div class="chart" id="chart-{{ card.metric.key }}"></div>
 
   <details class="fallback">
@@ -124,7 +139,7 @@
     <thead>
       <tr>
         <th>Date</th>
-        <th class="num">{{ card.metric.title }}</th>
+        <th class="num">{{ card.metric.headline or card.metric.title }}</th>
         {% for key in card.metric.breakdown_keys %}<th class="num">{{ key }}</th>{% endfor %}
         <th class="num">charms</th>
       </tr>
@@ -237,14 +252,18 @@
       mode: 'none',
       hovertemplate: '%{y}% ' + key + '<extra></extra>',
     }));
+    // Named for what it counts, not the card's title: "Juju versions" on a
+    // line drawn over six Juju-version bands does not say which it is.
+    const label = m.headline || m.title;
+    const sum = m.headline_keys.length > 1 ? ' (' + m.headline_keys.join(' + ') + ')' : '';
     traces.push({
-      name: m.title,
+      name: 'headline: ' + label,
       x: dates,
       y: m.series.map(p => p.value),
       mode: 'lines+markers',
       line: { color: '#000', width: 2 },
       marker: { color: '#000' },
-      hovertemplate: '%{y}%<extra>' + m.title + '</extra>',
+      hovertemplate: '%{y}% ' + label + sum + '<extra>headline</extra>',
     });
 
     Plotly.newPlot(el, traces, {

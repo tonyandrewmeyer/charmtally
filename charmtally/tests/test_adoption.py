@@ -540,6 +540,10 @@ def test_juju_versions_buckets_by_the_majors_assumes_admits() -> None:
     # The headline is the two Juju-4 buckets over every bucket, unknown included.
     assert point["numerator"] == 4
     assert point["denominator"] == 9
+    # ... which are the bands the chart's line is labelled as adding up.
+    metric = adoption.metric_by_key(adoption.JUJU_VERSIONS)
+    assert metric is not None
+    assert round(sum(point["breakdown"][k] for k in metric.headline_keys), 1) == point["value"]
 
 
 def test_juju_versions_without_ceilings_yields_no_point() -> None:
@@ -712,6 +716,14 @@ def test_every_since_has_a_note_and_inputs_are_catalogue_features() -> None:
     for metric in adoption.METRICS:
         assert bool(metric.since) == bool(metric.since_note), metric.key
         assert set(metric.inputs) <= names, metric.key
+
+
+def test_every_metric_names_the_bands_its_headline_adds_up() -> None:
+    for metric in adoption.METRICS:
+        assert metric.headline, metric.key
+        assert metric.headline_keys, metric.key
+        # Leading, so the line drawn for the headline rides their top edge.
+        assert metric.breakdown_keys[: len(metric.headline_keys)] == metric.headline_keys
 
 
 def test_replay_inputs_grow_as_metrics_start() -> None:
@@ -889,6 +901,16 @@ def test_render_adoption_does_not_escape_authored_markup() -> None:
     assert "<code>run-user</code>" in html  # a rootless caveat
     assert "actively-maintained charms" in html  # the jubilant detail
     assert "not just eligible charms" in html  # the jubilant denominator_note
+
+
+def test_render_adoption_labels_the_headline_line() -> None:
+    snap = _snapshot({"jub": _testing_charm(jubilant=True, pytest_operator=False, has_tests=True)})
+    series = adoption.compute_series([snap])
+
+    html = render_adoption(list(adoption.METRICS), series)
+
+    assert '<p class="headline-label">use jubilant</p>' in html
+    assert "Black line, the headline: <strong>use jubilant</strong>." in html
 
 
 def test_cli_adoption_writes_html_and_json(tmp_path: Path) -> None:
