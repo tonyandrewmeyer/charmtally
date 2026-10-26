@@ -245,10 +245,22 @@ it, so following `uses:` with a regex reports all of them as testing on 2.9.
 `ci_juju` evaluates the workflows instead — matrices, `with:` over callee
 defaults, `env`, `needs`/`steps` outputs, composite actions, a small bash
 `if`/`elif` evaluator for `$GITHUB_OUTPUT`, and spread's
-`CONCIERGE_JUJU_CHANNEL/<variant>` — and carries anything it cannot know
+`CONCIERGE_JUJU_CHANNEL/<variant>` from every `spread.yaml` in the repo (a
+monorepo keeps one per sub-charm) — and carries anything it cannot know
 (`vars.*`, `fromJSON`) as an unknown marker, so only an install that actually
 depends on one comes out unresolved. Unresolved and unpinned installs match
-no version. The reading is computed once per `CharmSource`, and
+no version.
+
+The OpenStack charms run their zaza suites on **Zuul**, not Actions, so
+`ci_juju` reads Zuul config too: the repo's `.zuul.yaml` / `zuul.d/` /
+`osci.yaml` project stanza, its templates, and each job's `juju_channel` or
+`juju_snap_channel` — variant over definition over parent, then project
+`vars:`, then the default of a role the job's playbooks apply, which is
+Zuul's precedence. The classic `charm-*` repos only *name* their template, so
+the jobs it expands to live in a Zuul tenant's config repo that nothing in the
+charm repo points at; `ci_juju.ZUUL_CONFIG_REPOS` names it
+(`openstack-charmers/zosci-config`) and it is fetched like a remote workflow,
+so only with `follow` and a cache installed, and dated in a replay. The reading is computed once per `CharmSource`, and
 `ci_juju.memoised()` shares it across a monorepo's sub-charms in a replay.
 
 `repo-file` and `ci-juju-channel` are the only detectors that can reach the

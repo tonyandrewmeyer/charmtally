@@ -870,6 +870,263 @@ def _spread(walk: _Walk, text: str, entry: str, repo: Repo) -> None:
             walk.add(entry, cite, _str(channel) or None, (name,))
 
 
+# ── zuul ────────────────────────────────────────────────────────────────────
+
+#: Job variables the Zuul jobs in the corpus install Juju from: Sunbeam's
+#: roles read `juju_channel`, zosci-config's `juju-setup` role
+#: `juju_snap_channel`.
+ZUUL_CHANNEL_VARS = ("juju_channel", "juju_snap_channel")
+
+#: Where a repo keeps its own Zuul config. `osci.yaml` is what the OpenStack
+#: charms' third-party CI (OSCI) reads, beside the `.zuul.yaml` OpenDev reads.
+_ZUUL_FILES = ("zuul.yaml", ".zuul.yaml", "osci.yaml")
+_ZUUL_DIRS = ("zuul.d", ".zuul.d")
+
+#: Config repos whose jobs and templates the in-repo config refers to by name.
+#: A Zuul tenant's config is not visible from the repo, so these are named
+#: here: the classic OpenStack charms' `osci.yaml` lists the
+#: `charm-functional-jobs` template and nothing else, and the template, the
+#: jobs and their Juju channels are all in zosci-config.
+ZUUL_CONFIG_REPOS: tuple[tuple[Repo, tuple[str, ...]], ...] = (
+    (
+        Repo(owner="openstack-charmers", name="zosci-config", ref="master"),
+        ("zuul.d/jobs.yaml", "zuul.d/project-templates.yaml"),
+    ),
+)
+
+
+@dataclass
+class _ZuulConfig:
+    """Job and template definitions, each with the file it came from.
+
+    `repos` maps that file back to the repo it is in, which is where a job's
+    playbooks and their roles are read from.
+    """
+
+    jobs: dict[str, list[tuple[dict, str]]] = field(default_factory=dict)
+    templates: dict[str, tuple[dict, str]] = field(default_factory=dict)
+    repos: dict[str, Repo] = field(default_factory=dict)
+
+    def add(self, item: dict, where: str, repo: Repo) -> None:
+        self.repos[where] = repo
+        job = item.get("job")
+        if isinstance(job, dict) and job.get("name"):
+            self.jobs.setdefault(_str(job["name"]), []).append((job, where))
+        template = item.get("project-template")
+        if isinstance(template, dict) and template.get("name"):
+            self.templates.setdefault(_str(template["name"]), (template, where))
+
+
+def _zuul_items(text: str | None) -> list[dict]:
+    if not text:
+        return []
+    try:
+        doc = yaml.safe_load(text)
+    except yaml.YAMLError:
+        return []
+    return [item for item in doc if isinstance(item, dict)] if isinstance(doc, list) else []
+
+
+def _zuul_files(repo_root: Path) -> list[str]:
+    found = [name for name in _ZUUL_FILES if (repo_root / name).is_file()]
+    for name in _ZUUL_DIRS:
+        paths = (repo_root / name).glob("*")
+        found += sorted(
+            p.relative_to(repo_root).as_posix()
+            for p in paths
+            if p.suffix in (".yml", ".yaml") and p.is_file()
+        )
+    return found
+
+
+def _branch_matches(spec: object, branch: str) -> bool:
+    """Whether a Zuul `branches:` matcher (a regex, or a list of them) takes `branch`."""
+    if spec is None:
+        return True
+    patterns = [spec] if isinstance(spec, str) else spec if isinstance(spec, list) else []
+    for pattern in patterns:
+        pattern = _str(pattern)
+        if pattern == branch:
+            return True
+        with contextlib.suppress(re.error):
+            if re.fullmatch(pattern, branch):
+                return True
+    return False
+
+
+def _pipeline_jobs(body: dict) -> list[tuple[str, dict]]:
+    """Every (job name, variant attributes) a project or template's pipelines list."""
+    out: list[tuple[str, dict]] = []
+    for pipeline in body.values():
+        jobs = pipeline.get("jobs") if isinstance(pipeline, dict) else None
+        for entry in jobs if isinstance(jobs, list) else ():
+            if isinstance(entry, str):
+                out.append((entry, {}))
+            elif isinstance(entry, dict):
+                for name, variant in entry.items():
+                    out.append((_str(name), variant if isinstance(variant, dict) else {}))
+    return out
+
+
+def _zuul_vars(attrs: dict) -> dict:
+    found = attrs.get("vars")
+    return found if isinstance(found, dict) else {}
+
+
+def _job_chain(config: _ZuulConfig, name: str, branch: str) -> list[list[tuple[dict, str]]]:
+    """Job `name`'s variants for `branch`, then its parent's, and so on up.
+
+    The parent is the one the first matching definition names, as in Zuul.
+    """
+    chain: list[list[tuple[dict, str]]] = []
+    seen: set[str] = set()
+    while name and name not in seen and len(chain) < MAX_DEPTH * 4:
+        seen.add(name)
+        variants = [
+            (job, where)
+            for job, where in config.jobs.get(name, ())
+            if _branch_matches(job.get("branches"), branch)
+        ]
+        if not variants:
+            break
+        chain.append(variants)
+        name = _str(variants[0][0].get("parent"))
+    return chain
+
+
+def _channel_var(found: dict) -> object | None:
+    for var in ZUUL_CHANNEL_VARS:
+        if var in found:
+            return found[var]
+    return None
+
+
+def _job_channel(config: _ZuulConfig, name: str, branch: str) -> tuple[object, str] | None:
+    """Return the Juju channel job `name` sets on `branch`, and the file setting it.
+
+    A job's variants apply in definition order over its parent's.
+    """
+    for variants in _job_chain(config, name, branch):
+        for job, where in reversed(variants):
+            value = _channel_var(_zuul_vars(job))
+            if value is not None:
+                return value, where
+    return None
+
+
+def _role_default(config: _ZuulConfig, name: str, branch: str) -> tuple[object, str] | None:
+    """Return the channel a role job `name` runs defaults to, and the file defaulting it.
+
+    zosci-config's `func-target` sets no channel: its parent's pre-run
+    playbook applies the `juju-setup` role, whose `defaults/main.yaml` does.
+    A role default ranks below every job and project variable, so this is
+    only asked once those have all come up empty. Roles are read from the
+    repo that defines the job whose playbook names them.
+    """
+    for variants in _job_chain(config, name, branch):
+        for job, where in variants:
+            repo = config.repos[where]
+            for key in ("pre-run", "run"):
+                playbooks = job.get(key)
+                for playbook in [playbooks] if isinstance(playbooks, str) else playbooks or ():
+                    for role in _playbook_roles(repo, _str(playbook)):
+                        for ext in ("yaml", "yml"):
+                            path = f"roles/{role}/defaults/main.{ext}"
+                            value = _channel_var(_load(repo.read(path)) or {})
+                            if value is not None:
+                                return value, f"{repo.slug}:{path}" if repo.remote else path
+    return None
+
+
+def _playbook_roles(repo: Repo, path: str) -> list[str]:
+    """Return the roles an Ansible playbook's plays apply, by name."""
+    try:
+        doc = yaml.safe_load(repo.read(path) or "")
+    except yaml.YAMLError:
+        return []
+    roles: list[str] = []
+    for play in doc if isinstance(doc, list) else ():
+        listed = play.get("roles") if isinstance(play, dict) else None
+        for role in listed if isinstance(listed, list) else ():
+            name = role.get("role", role.get("name")) if isinstance(role, dict) else role
+            if name:
+                roles.append(_str(name))
+    return roles
+
+
+def _zuul(walk: _Walk, repo_root: Path) -> None:
+    """Record the Juju channels the repo's Zuul jobs install.
+
+    The OpenStack charms run their zaza suites on Zuul, not Actions, so a
+    reading of `.github/` alone puts all of them in the "no Juju found" band.
+    For each job the repo's project stanza runs on `walk.branch` — its own and
+    its templates', each `branches:` matcher honoured — the channel is the
+    job's (variant over definition over parent), else the project's `vars:`
+    — Zuul ranks job variables above project variables — else the default of
+    a role the job's playbooks apply. A job for which none of those names a
+    channel installs none as far as this can tell, and is not recorded: unit
+    test jobs are the common case.
+
+    Remote config repos are read only with `follow`, like a remote workflow.
+    """
+    files = _zuul_files(repo_root)
+    if not files:
+        return
+    projects: list[tuple[dict, str]] = []
+    local: list[tuple[dict, str]] = []
+    for rel in files:
+        for item in _zuul_items(walk.local.read(rel)):
+            local.append((item, rel))
+            project = item.get("project")
+            # A named project stanza in a repo is configuring some other repo.
+            if isinstance(project, dict) and "name" not in project:
+                projects.append((project, rel))
+    if not projects:
+        return
+    config = _ZuulConfig()
+    # Config-repo definitions first: an in-repo variant layers over them.
+    if walk.follow:
+        for repo, paths in ZUUL_CONFIG_REPOS:
+            for path in paths:
+                for item in _zuul_items(repo.read(path)):
+                    config.add(item, f"{repo.slug}:{path}", repo)
+    for item, rel in local:
+        config.add(item, rel, walk.local)
+    project_vars: dict = {}
+    for project, _ in projects:
+        project_vars.update(_zuul_vars(project))
+    for project, rel in projects:
+        # (job, variant, file listing it, the text in `rel` that leads to it)
+        refs = [(name, variant, rel, name) for name, variant in _pipeline_jobs(project)]
+        templates = project.get("templates")
+        for template in templates if isinstance(templates, list) else ():
+            body = config.templates.get(_str(template))
+            if body is not None:
+                listed = body[1]
+                refs += [(n, v, listed, _str(template)) for n, v in _pipeline_jobs(body[0])]
+        for name, variant, listed, lead in refs:
+            if not _branch_matches(variant.get("branches"), walk.branch):
+                continue
+            found = _job_channel(config, name, walk.branch)
+            if _channel_var(_zuul_vars(variant)) is not None:
+                found = (_channel_var(_zuul_vars(variant)), listed)
+            if found is None and _channel_var(project_vars) is not None:
+                found = (_channel_var(project_vars), rel)
+            if found is None:
+                found = _role_default(config, name, walk.branch)
+            if found is None:
+                continue
+            value, where = _str(found[0]), found[1]
+            via = () if where == rel else (where,)
+            # Cite the channel where this file spells it, else the job or
+            # template name that leads to the file that does.
+            cite = None if where == rel else lead
+            if "{{" in value:
+                walk.add(rel, cite, None, via, value, name)
+            else:
+                walk.add(rel, cite, value, via)
+
+
 # ── entry point ─────────────────────────────────────────────────────────────
 
 
@@ -949,4 +1206,5 @@ def _read(repo_root: Path, *, follow: bool, branch: str | None) -> list[Install]
     for rel in _spread_files(repo_root):
         here = Repo(root=(repo_root / rel).parent)
         _spread(walk, local.read(rel) or "", rel, here)
+    _zuul(walk, repo_root)
     return walk.installs

@@ -1187,6 +1187,8 @@ METRICS: tuple[Metric, ...] = (
             "bound over their defaults, matrices expanded, shared workflows "
             "followed — rather than by searching them, so a version a shared "
             "workflow only defaults to counts only where nobody overrides it. "
+            "The OpenStack charms' Zuul jobs are read the same way, through "
+            "their templates and the OpenStack charm CI's job definitions. "
             "Backed by the <code>testing.juju-*</code> features."
         ),
         denominator_note=(
