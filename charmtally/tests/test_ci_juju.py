@@ -304,6 +304,32 @@ prepare: |
     assert {i.path for i in installs} == {"spread.yaml"}
 
 
+def test_spread_files_in_sub_charm_directories(tmp_path: Path) -> None:
+    """mysql-router-operators: one `spread.yaml` per sub-charm, none at the root."""
+    spread = "environment:\n  CONCIERGE_JUJU_CHANNEL/juju36: {}\n"
+    files = {
+        "machines/spread.yaml": spread.format("3.6/stable"),
+        "kubernetes/spread.yaml": spread.format("4.0/edge"),
+        ".hidden/spread.yaml": spread.format("2.9/stable"),
+        "a/b/c/d/spread.yaml": spread.format("3.1/stable"),
+    }
+    installs = _read(tmp_path, files)
+    assert [(i.path, i.channel) for i in installs] == [
+        ("kubernetes/spread.yaml", "4.0/edge"),
+        ("machines/spread.yaml", "3.6/stable"),
+    ]
+
+
+def test_a_sub_charm_spread_reads_its_concierge_config_beside_it(tmp_path: Path) -> None:
+    spread = "project: x\nbackends:\n  it:\n    type: integration-test\n"
+    files = {
+        "charm/spread.yaml": spread,
+        "charm/concierge.yaml": "juju:\n  channel: 4.1/edge\n",
+        "concierge.yaml": "juju:\n  channel: 2.9/stable\n",
+    }
+    assert _channels(_read(tmp_path, files)) == ["4.1/edge"]
+
+
 def test_charm_ci_concierge_config_files(tmp_path: Path) -> None:
     """haproxy-operator: charm-ci's `integration-test` backend provisions from `$CONCIERGE`."""
     spread = """\
