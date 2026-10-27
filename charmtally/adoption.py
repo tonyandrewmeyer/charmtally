@@ -90,6 +90,14 @@ class Metric:
     # Breakdown keys, in the order they should stack in the chart. The last
     # one is conventionally the "not adopted" bucket.
     breakdown_keys: tuple[str, ...] = ()
+    # What the headline counts, as a short phrase ("admit Juju 4"), and the
+    # breakdown bands it adds up. The chart draws the headline as a line over
+    # the stack, and without these that line is labelled with the card's
+    # title, which says what the card is about rather than which of its bands
+    # the number is. `headline_keys` must lead `breakdown_keys`, so the line
+    # rides the top of the bands it names.
+    headline: str = ""
+    headline_keys: tuple[str, ...] = ()
     detail: str = ""
     scope: str = "charms"  # "charms" | "rocks" | "charms+rocks"
     pending: str = ""  # why this metric has no data yet, if it has none
@@ -905,6 +913,8 @@ METRICS: tuple[Metric, ...] = (
         unit="percent",
         compute=compute_typed_relation,
         breakdown_keys=("typed", "untyped"),
+        headline="use a typed API",
+        headline_keys=("typed",),
         since="2025-07-07",
         since_note=(
             "the first weekly cutoff after ops 2.23.0 (2025-06-30), which added "
@@ -926,6 +936,8 @@ METRICS: tuple[Metric, ...] = (
         unit="percent",
         compute=compute_integration_testing,
         breakdown_keys=(_JUBILANT, _PYTEST_OPERATOR, _ZAZA, _OTHER_TESTS, _NO_TESTS),
+        headline="use jubilant",
+        headline_keys=(_JUBILANT,),
         since="2025-05-05",
         since_note="the first weekly cutoff after jubilant 1.0.0 (2025-04-29)",
         inputs=("jubilant.integration-tests", "testing.pytest-operator", "testing.zaza"),
@@ -960,6 +972,8 @@ METRICS: tuple[Metric, ...] = (
         # it drew as nothing. It stays in `breakdown` and `counts` for the
         # fallback table and the JSON.
         breakdown_keys=("charmlibs", "charmhub-libs"),
+        headline="mean charmlibs share of a charm's libraries",
+        headline_keys=("charmlibs",),
         since="2025-04-28",
         since_note=(
             "the first weekly cutoff after charmlibs-pathops 1.0.0 "
@@ -1014,6 +1028,8 @@ METRICS: tuple[Metric, ...] = (
         compute=compute_rootless,
         scope="charms+rocks",
         breakdown_keys=(_DAEMON, _NON_ROOT, _SUDOER, _OTHER_USER, _AS_ROOT),
+        headline="declare a non-root user",
+        headline_keys=(_DAEMON, _NON_ROOT, _SUDOER, _OTHER_USER),
         since="2024-05-13",
         since_note=(
             "the first weekly cutoff after Juju 3.5.0 (2024-05-07), the first "
@@ -1053,6 +1069,8 @@ METRICS: tuple[Metric, ...] = (
         unit="percent",
         compute=compute_charmhub_listed,
         breakdown_keys=(_LISTED, _UNLISTED, _ABSENT),
+        headline="are listed publicly",
+        headline_keys=(_LISTED,),
         # The store is asked at scan time and cannot be asked about the past,
         # so unlike every other metric here this one has no history to
         # backfill: the series starts at the first weekly run that carries
@@ -1101,6 +1119,8 @@ METRICS: tuple[Metric, ...] = (
             _JUJU_29,
             _JUJU_UNKNOWN,
         ),
+        headline="admit Juju 4",
+        headline_keys=(_JUJU_4, _JUJU_NO_CEILING),
         detail=(
             "Percent of actively-maintained charms whose <code>assumes:</code> "
             "admits Juju 4, read as a window from the floor it states "
@@ -1157,6 +1177,8 @@ METRICS: tuple[Metric, ...] = (
         unit="percent",
         compute=compute_juju_tested,
         breakdown_keys=(_CI_41, _CI_40, _CI_4_OTHER, _CI_3, _CI_29, _CI_NONE),
+        headline="test on Juju 4",
+        headline_keys=(_CI_41, _CI_40, _CI_4_OTHER),
         inputs=tuple(_CI_JUJU.values()),
         detail=(
             "Percent of actively-maintained charms whose CI installs some Juju "

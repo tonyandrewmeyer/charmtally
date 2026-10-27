@@ -726,6 +726,8 @@ def render_adoption(
             "key": metric.key,
             "title": metric.title,
             "breakdown_keys": list(metric.breakdown_keys),
+            "headline": metric.headline,
+            "headline_keys": list(metric.headline_keys),
             "series": series.get(metric.key, []),
         }
         for metric in metrics

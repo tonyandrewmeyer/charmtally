@@ -761,6 +761,7 @@ def cmd_adoption(args: argparse.Namespace) -> int:
                     "key": m.key,
                     "title": m.title,
                     "question": m.question,
+                    "headline": m.headline,
                     "unit": m.unit,
                     "scope": m.scope,
                     "pending": m.pending,
