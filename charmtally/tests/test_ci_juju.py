@@ -381,3 +381,173 @@ jobs:
 """
     files = {".github/workflows/on_pr.yaml": caller, ".github/workflows/ci.yaml": callee}
     assert _channels(_read(tmp_path, files)) == ["3.6/stable"]
+
+
+# --- zuul -------------------------------------------------------------------
+
+_ZOSCI = f"{_RAW}/openstack-charmers/zosci-config/master"
+
+_ZOSCI_TEMPLATES = """\
+- project-template:
+    name: charm-functional-jobs
+    check:
+      jobs:
+        - noble-caracal:
+            branches: [main, master]
+        - jammy-caracal:
+            branches: ['^stable/.*$']
+- project-template:
+    name: charm-unit-jobs-py310
+    check:
+      jobs:
+        - tox-py310
+"""
+
+_ZOSCI_JOBS = """\
+- job:
+    name: func-target
+    vars:
+      juju_snap_channel: '2.9/stable'
+- job:
+    name: noble-caracal
+    parent: func-target
+    vars:
+      juju_snap_channel: '3.5/stable'
+- job:
+    name: jammy-caracal
+    parent: func-target
+- job:
+    name: tox-py310
+"""
+
+_ZOSCI_REMOTE = {
+    f"{_ZOSCI}/zuul.d/project-templates.yaml": _ZOSCI_TEMPLATES,
+    f"{_ZOSCI}/zuul.d/jobs.yaml": _ZOSCI_JOBS,
+}
+
+
+def test_zuul_project_vars_set_the_channel(tmp_path: Path) -> None:
+    """sunbeam-charms: `juju_channel` in the project stanza's `vars:`."""
+    zuul = """\
+- project:
+    check:
+      jobs:
+        - func-test-core
+    vars:
+      juju_channel: 3.6/stable
+- job:
+    name: func-test-core
+    run: playbooks/zaza-func-test.yaml
+"""
+    installs = _read(tmp_path, {"zuul.d/zuul.yaml": zuul})
+    assert [(i.path, i.channel, i.anchor, i.via) for i in installs] == [
+        ("zuul.d/zuul.yaml", "3.6/stable", "3.6/stable", ()),
+    ]
+
+
+def test_zuul_template_jobs_come_from_the_config_repo(tmp_path: Path) -> None:
+    """charm-aodh: `osci.yaml` names a zosci-config template, which names the jobs."""
+    osci = "- project:\n    templates:\n      - charm-unit-jobs-py310\n      - charm-functional-jobs\n"
+    installs = _read(tmp_path, {"osci.yaml": osci}, _ZOSCI_REMOTE)
+    # Only the job whose `branches:` takes main runs; the unit job sets no channel.
+    assert [(i.path, i.channel, i.anchor) for i in installs] == [
+        ("osci.yaml", "3.5/stable", "charm-functional-jobs"),
+    ]
+    assert installs[0].via == ("openstack-charmers/zosci-config@master:zuul.d/jobs.yaml",)
+
+
+def test_zuul_job_vars_outrank_project_vars(tmp_path: Path) -> None:
+    osci = """\
+- project:
+    templates: [charm-functional-jobs]
+    vars:
+      juju_snap_channel: 4.0/edge
+"""
+    installs = _read(tmp_path, {"osci.yaml": osci}, _ZOSCI_REMOTE)
+    assert _channels(installs) == ["3.5/stable"]
+
+
+def test_a_zuul_job_variant_overrides_the_definition(tmp_path: Path) -> None:
+    osci = """\
+- project:
+    check:
+      jobs:
+        - noble-caracal:
+            vars:
+              juju_snap_channel: 4.0/edge
+"""
+    installs = _read(tmp_path, {"osci.yaml": osci}, _ZOSCI_REMOTE)
+    assert [(i.channel, i.anchor, i.via) for i in installs] == [("4.0/edge", "4.0/edge", ())]
+
+
+def test_a_zuul_job_inherits_its_parents_channel(tmp_path: Path) -> None:
+    zuul = """\
+- project:
+    check:
+      jobs: [func-smoke]
+- job:
+    name: func-base
+    vars: {juju_channel: 3.6/stable}
+- job:
+    name: func-smoke
+    parent: func-base
+"""
+    assert _channels(_read(tmp_path, {".zuul.yaml": zuul})) == ["3.6/stable"]
+
+
+def test_zuul_config_repos_are_not_read_without_follow(tmp_path: Path) -> None:
+    root = _repo(tmp_path, {"osci.yaml": "- project:\n    templates: [charm-functional-jobs]\n"})
+    with workflows.session(tmp_path / "cache", _ZOSCI_REMOTE.get):
+        assert ci_juju.read(root, follow=False, branch="main") == []
+
+
+def test_a_templated_zuul_channel_is_unresolved(tmp_path: Path) -> None:
+    zuul = """\
+- project:
+    check:
+      jobs: [func]
+    vars:
+      juju_channel: "{{ juju_track }}/stable"
+- job:
+    name: func
+"""
+    installs = _read(tmp_path, {"zuul.yaml": zuul})
+    assert [(i.channel, i.unresolved) for i in installs] == [(None, "{{ juju_track }}/stable")]
+
+
+def test_a_named_zuul_project_is_some_other_repos(tmp_path: Path) -> None:
+    zuul = "- project:\n    name: other\n    vars: {juju_channel: 3.6/stable}\n    check:\n      jobs: [x]\n"
+    assert _read(tmp_path, {"zuul.yaml": zuul}) == []
+
+
+def test_a_zuul_job_falls_back_to_its_roles_default(tmp_path: Path) -> None:
+    """charm-octavia: its own jobs' parent sets no channel; `juju-setup`'s defaults do."""
+    jobs = """\
+- job:
+    name: configure-juju
+    pre-run: playbooks/juju/pre.yaml
+- job:
+    name: func-target
+    parent: configure-juju
+"""
+    remote = {
+        f"{_ZOSCI}/zuul.d/jobs.yaml": jobs,
+        f"{_ZOSCI}/playbooks/juju/pre.yaml": "- hosts: all\n  roles:\n    - juju-setup\n",
+        f"{_ZOSCI}/roles/juju-setup/defaults/main.yaml": 'juju_snap_channel: "2.9/stable"\n',
+    }
+    osci = """\
+- project:
+    check:
+      jobs: [jammy-caracal-ha]
+- job:
+    name: jammy-caracal-ha
+    parent: func-target
+"""
+    installs = _read(tmp_path, {"osci.yaml": osci}, remote)
+    assert [(i.channel, i.anchor, i.via) for i in installs] == [
+        (
+            "2.9/stable",
+            "jammy-caracal-ha",
+            ("openstack-charmers/zosci-config@master:roles/juju-setup/defaults/main.yaml",),
+        )
+    ]
