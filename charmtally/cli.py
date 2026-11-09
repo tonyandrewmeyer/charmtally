@@ -574,7 +574,7 @@ def cmd_dashboard(args: argparse.Namespace) -> int:
     pairs_payload = None
     if args.pairs is not None and args.pairs.is_file():
         pairs_payload = json.loads(args.pairs.read_text()).get("pairs")
-    html = dashboard.render(results, feats, pairs=pairs_payload)
+    html = dashboard.render(results, feats, pairs=pairs_payload, features_path=args.features)
     args.out.write_text(html)
     print(f"wrote {args.out}", file=sys.stderr)
     return 0

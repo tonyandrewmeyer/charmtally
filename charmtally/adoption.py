@@ -127,6 +127,19 @@ class Metric:
     # need. `__meta__` is always written, so a metric reading only that
     # declares nothing here.
     inputs: tuple[str, ...] = ()
+    # Bucket -> the catalogue feature whose evidence is why a charm sits in
+    # it, for buckets that are one feature's reading. The page links each
+    # member of such a bucket to the Tally's charm view with that feature
+    # selected, which shows the matched lines. A bucket that is a metadata
+    # reading, or that several features feed, has no single file:line to
+    # show and is left out.
+    bucket_features: tuple[tuple[str, str], ...] = ()
+
+
+#: Point key holding the bucket membership lists; see `_point`.
+MEMBERS = "members"
+#: Marks a `members` entry as a rock (`rocks.RockRef.slug`) rather than a charm.
+ROCK_PREFIX = "rock:"
 
 
 # ── shared helpers ──────────────────────────────────────────────────────────
@@ -242,9 +255,17 @@ def _point(
     breakdown: dict[str, float] | None = None,
     counts: dict[str, int] | None = None,
     partial: str = "",
+    members: dict[str, list[str]] | None = None,
 ) -> dict:
-    """Assemble one series point. `partial` names an input that wasn't scanned."""
-    return {
+    """Assemble one series point. `partial` names an input that wasn't scanned.
+
+    `members` names who is in each bucket — charm slugs, or `ROCK_PREFIX` plus
+    a rock's slug — so the page can list the charms behind a number rather
+    than only the number. `compute_series` keeps it on the latest point alone:
+    one list per bucket per date is the whole corpus again for every snapshot,
+    and the question it answers ("which charms?") is asked of now.
+    """
+    point = {
         "date": snapshot.date,
         "value": round(value, 1),
         "numerator": numerator,
@@ -253,6 +274,9 @@ def _point(
         "counts": counts or {},
         "partial": partial,
     }
+    if members is not None:
+        point[MEMBERS] = {k: sorted(v) for k, v in members.items()}
+    return point
 
 
 def _percent(numerator: int, denominator: int) -> float:
@@ -287,7 +311,9 @@ def compute_typed_relation(snapshot: Snapshot) -> dict | None:
     features = (
         ("ops.typed-relation", "ops.typed-config") if scanned_config else ("ops.typed-relation",)
     )
-    users = sum(1 for c in charms.values() if any(_present(c, f) for f in features))
+    typed = [slug for slug, c in charms.items() if any(_present(c, f) for f in features)]
+    untyped = sorted(charms.keys() - set(typed))
+    users = len(typed)
     return _point(
         snapshot,
         value=_percent(users, len(charms)),
@@ -299,6 +325,7 @@ def compute_typed_relation(snapshot: Snapshot) -> dict | None:
         },
         counts={"typed": users, "untyped": len(charms) - users},
         partial=_partial(snapshot, "" if scanned_config else "ops.typed-config not yet scanned"),
+        members={"typed": typed, "untyped": untyped},
     )
 
 
@@ -346,18 +373,22 @@ def compute_integration_testing(snapshot: Snapshot) -> dict | None:
     scanned_pytest_operator = "testing.pytest-operator" in snapshot.feature_names
     scanned_zaza = "testing.zaza" in snapshot.feature_names
 
-    counts = {_JUBILANT: 0, _PYTEST_OPERATOR: 0, _ZAZA: 0, _OTHER_TESTS: 0, _NO_TESTS: 0}
-    for charm in charms.values():
+    members: dict[str, list[str]] = {
+        k: [] for k in (_JUBILANT, _PYTEST_OPERATOR, _ZAZA, _OTHER_TESTS, _NO_TESTS)
+    }
+    for slug, charm in charms.items():
         if _present(charm, "jubilant.integration-tests"):
-            counts[_JUBILANT] += 1
+            bucket = _JUBILANT
         elif scanned_pytest_operator and _present(charm, "testing.pytest-operator"):
-            counts[_PYTEST_OPERATOR] += 1
+            bucket = _PYTEST_OPERATOR
         elif scanned_zaza and _present(charm, "testing.zaza"):
-            counts[_ZAZA] += 1
+            bucket = _ZAZA
         elif _meta(charm).get("has_integration_tests"):
-            counts[_OTHER_TESTS] += 1
+            bucket = _OTHER_TESTS
         else:
-            counts[_NO_TESTS] += 1
+            bucket = _NO_TESTS
+        members[bucket].append(slug)
+    counts = {k: len(v) for k, v in members.items()}
 
     total = len(charms)
     # Drop an unscanned bucket entirely rather than reporting it as 0%: at
@@ -366,10 +397,10 @@ def compute_integration_testing(snapshot: Snapshot) -> dict | None:
     # uses it".
     notes = []
     if not scanned_pytest_operator:
-        del counts[_PYTEST_OPERATOR]
+        del counts[_PYTEST_OPERATOR], members[_PYTEST_OPERATOR]
         notes.append("testing.pytest-operator not yet scanned")
     if not scanned_zaza:
-        del counts[_ZAZA]
+        del counts[_ZAZA], members[_ZAZA]
         notes.append("testing.zaza not yet scanned")
     return _point(
         snapshot,
@@ -379,12 +410,17 @@ def compute_integration_testing(snapshot: Snapshot) -> dict | None:
         breakdown={k: _percent(v, total) for k, v in counts.items()},
         counts=counts,
         partial=_partial(snapshot, *notes),
+        members=members,
     )
 
 
 # ── metric: charmlibs share ─────────────────────────────────────────────────
 
 _NO_LIBS = "no-libraries"
+_ANY_CHARMLIB = "charms-using-any-charmlib"
+#: Members only, never a count: the complement of `_ANY_CHARMLIB` among
+#: charms with libraries, which the census does not otherwise name.
+_CHARMHUB_ONLY = "charms-using-only-charmhub-libs"
 
 
 def _has_charmlibs_data(snapshot: Snapshot) -> bool:
@@ -492,19 +528,19 @@ def compute_charmlibs_share(snapshot: Snapshot) -> dict | None:
         return None
 
     ratios: list[float] = []
-    with_any_charmlib = 0
-    no_libs = 0
-    for charm in charms.values():
+    members: dict[str, list[str]] = {_ANY_CHARMLIB: [], _CHARMHUB_ONLY: [], _NO_LIBS: []}
+    for slug, charm in charms.items():
         meta = _meta(charm)
         charmlibs = int(meta.get("charmlibs_count") or 0)
         charmhub = int(meta.get("library_count") or 0)
         total = charmlibs + charmhub
         if total == 0:
-            no_libs += 1
+            members[_NO_LIBS].append(slug)
             continue
         ratios.append(charmlibs / total)
-        if charmlibs:
-            with_any_charmlib += 1
+        members[_ANY_CHARMLIB if charmlibs else _CHARMHUB_ONLY].append(slug)
+    with_any_charmlib = len(members[_ANY_CHARMLIB])
+    no_libs = len(members[_NO_LIBS])
 
     if not ratios:
         return None
@@ -529,11 +565,12 @@ def compute_charmlibs_share(snapshot: Snapshot) -> dict | None:
         },
         counts={
             "charms-with-libraries": len(ratios),
-            "charms-using-any-charmlib": with_any_charmlib,
+            _ANY_CHARMLIB: with_any_charmlib,
             _NO_LIBS: no_libs,
             **census,
         },
         partial=_partial(snapshot),
+        members=members,
     )
 
 
@@ -599,16 +636,19 @@ def compute_rootless(snapshot: Snapshot) -> dict | None:
     if not snapshot.rocks_scanned or not _has_charm_user_data(snapshot):
         return None
 
-    counts = {_DAEMON: 0, _NON_ROOT: 0, _SUDOER: 0, _OTHER_USER: 0, _AS_ROOT: 0}
-    for record in snapshot.rocks.values():
+    members: dict[str, list[str]] = {
+        k: [] for k in (_DAEMON, _NON_ROOT, _SUDOER, _OTHER_USER, _AS_ROOT)
+    }
+    for slug, record in snapshot.rocks.items():
         if not record.get("readable"):
             continue
-        counts[_rock_bucket(record)] += 1
-    for charm in active_charms(snapshot).values():
+        members[_rock_bucket(record)].append(ROCK_PREFIX + slug)
+    for slug, charm in active_charms(snapshot).items():
         meta = _meta(charm)
         if not meta.get("has_containers"):
             continue
-        counts[_charm_bucket(meta)] += 1
+        members[_charm_bucket(meta)].append(slug)
+    counts = {k: len(v) for k, v in members.items()}
 
     total = sum(counts.values())
     if not total:
@@ -622,6 +662,7 @@ def compute_rootless(snapshot: Snapshot) -> dict | None:
         breakdown={k: _percent(v, total) for k, v in counts.items()},
         counts=counts,
         partial=_partial(snapshot),
+        members=members,
     )
 
 
@@ -665,19 +706,17 @@ def compute_charmhub_listed(snapshot: Snapshot) -> dict | None:
     """
     if not _has_charmhub_data(snapshot):
         return None
-    counts = {_LISTED: 0, _UNLISTED: 0, _ABSENT: 0}
-    for charm in active_charms(snapshot).values():
+    buckets = {charmhub.LISTED: _LISTED, charmhub.UNLISTED: _UNLISTED, charmhub.ABSENT: _ABSENT}
+    members: dict[str, list[str]] = {_LISTED: [], _UNLISTED: [], _ABSENT: []}
+    for slug, charm in active_charms(snapshot).items():
         meta = _meta(charm)
         if "charmhub_listing" not in meta:
             continue
-        verdict = meta["charmhub_listing"]
-        if verdict == charmhub.LISTED:
-            counts[_LISTED] += 1
-        elif verdict == charmhub.UNLISTED:
-            counts[_UNLISTED] += 1
-        elif verdict == charmhub.ABSENT:
-            counts[_ABSENT] += 1
+        bucket = buckets.get(meta["charmhub_listing"])
         # None: we asked and the store didn't say. Not a bucket.
+        if bucket is not None:
+            members[bucket].append(slug)
+    counts = {k: len(v) for k, v in members.items()}
 
     total = sum(counts.values())
     if not total:
@@ -690,6 +729,7 @@ def compute_charmhub_listed(snapshot: Snapshot) -> dict | None:
         breakdown={k: _percent(v, total) for k, v in counts.items()},
         counts=counts,
         partial=_partial(snapshot),
+        members=members,
     )
 
 
@@ -790,22 +830,26 @@ def compute_juju_versions(snapshot: Snapshot) -> dict | None:
         return None
     charms = active_charms(snapshot)
     inherited = ceilings.derive(snapshot.charms)
-    counts = {
-        k: 0 for k in (_JUJU_29, _JUJU_29_AND_3, _JUJU_3, _JUJU_NO_CEILING, _JUJU_4, _JUJU_UNKNOWN)
+    members: dict[str, list[str]] = {
+        k: []
+        for k in (_JUJU_29, _JUJU_29_AND_3, _JUJU_3, _JUJU_NO_CEILING, _JUJU_4, _JUJU_UNKNOWN)
     }
-    reaches_4 = inherits_cap = unread = 0
+    capped: list[str] = []
+    reaches_4 = unread = 0
     for slug, charm in charms.items():
         meta = _meta(charm)
         if "max_juju_version" not in meta:
             unread += 1
             continue
         bucket = _juju_bucket(meta)
-        counts[bucket] += 1
+        members[bucket].append(slug)
         if bucket in (_JUJU_NO_CEILING, _JUJU_4):
             reaches_4 += 1
             ceiling = inherited[slug].version if slug in inherited else None
             if ceiling and _top_major(ceiling) < 4:
-                inherits_cap += 1
+                capped.append(slug)
+    counts = {k: len(v) for k, v in members.items()}
+    inherits_cap = len(capped)
 
     total = sum(counts.values())
     if not total:
@@ -823,6 +867,7 @@ def compute_juju_versions(snapshot: Snapshot) -> dict | None:
             _JUJU_UNREAD: unread,
         },
         partial=_partial(snapshot),
+        members={**members, _JUJU_INHERITS_CAP: capped},
     )
 
 
@@ -883,13 +928,16 @@ def compute_juju_tested(snapshot: Snapshot) -> dict | None:
     charms = active_charms(snapshot)
     if not charms:
         return None
-    counts = {k: 0 for k in (_CI_41, _CI_40, _CI_4_OTHER, _CI_3, _CI_29, _CI_NONE)}
+    members: dict[str, list[str]] = {
+        k: [] for k in (_CI_41, _CI_40, _CI_4_OTHER, _CI_3, _CI_29, _CI_NONE)
+    }
     tests = dict.fromkeys(_CI_TESTS.values(), 0)
-    for charm in charms.values():
-        counts[_ci_bucket(charm)] += 1
+    for slug, charm in charms.items():
+        members[_ci_bucket(charm)].append(slug)
         for version, feature in _CI_JUJU.items():
             if _present(charm, feature):
                 tests[_CI_TESTS[version]] += 1
+    counts = {k: len(v) for k, v in members.items()}
     total = len(charms)
     on_4 = counts[_CI_41] + counts[_CI_40] + counts[_CI_4_OTHER]
     return _point(
@@ -900,6 +948,7 @@ def compute_juju_tested(snapshot: Snapshot) -> dict | None:
         breakdown={k: _percent(v, total) for k, v in counts.items()},
         counts={**counts, **tests},
         partial=_partial(snapshot),
+        members=members,
     )
 
 
@@ -941,6 +990,11 @@ METRICS: tuple[Metric, ...] = (
         since="2025-05-05",
         since_note="the first weekly cutoff after jubilant 1.0.0 (2025-04-29)",
         inputs=("jubilant.integration-tests", "testing.pytest-operator", "testing.zaza"),
+        bucket_features=(
+            (_JUBILANT, "jubilant.integration-tests"),
+            (_PYTEST_OPERATOR, "testing.pytest-operator"),
+            (_ZAZA, "testing.zaza"),
+        ),
         detail=(
             "Percent of all actively-maintained charms whose integration tests "
             "import <code>jubilant</code>, split against pytest-operator, zaza "
@@ -1180,6 +1234,13 @@ METRICS: tuple[Metric, ...] = (
         headline="test on Juju 4",
         headline_keys=(_CI_41, _CI_40, _CI_4_OTHER),
         inputs=tuple(_CI_JUJU.values()),
+        bucket_features=(
+            (_CI_41, _CI_JUJU["4.1"]),
+            (_CI_40, _CI_JUJU["4.0"]),
+            (_CI_4_OTHER, _CI_JUJU["4"]),
+            (_CI_3, _CI_JUJU["3"]),
+            (_CI_29, _CI_JUJU["2"]),
+        ),
         detail=(
             "Percent of actively-maintained charms whose CI installs some Juju "
             "4 to test against, pass or fail. Split by the newest version each "
@@ -1232,6 +1293,9 @@ def compute_series(snapshots: list[Snapshot], *, only: str | None = None) -> dic
     present with a null — a consumer plotting the series sees a gap, not a
     dip to zero. A declared-but-undefined metric (`compute=None`) maps to an
     empty list, so the page can still render its card.
+
+    Only the last point of each series keeps its `members`: the page and
+    `--emit-json` list who is in each bucket now, not on every past date.
     """
     out: dict[str, list[dict]] = {}
     for metric in METRICS:
@@ -1241,7 +1305,11 @@ def compute_series(snapshots: list[Snapshot], *, only: str | None = None) -> dic
             out[metric.key] = []
             continue
         points = [metric.compute(s) for s in snapshots if s.date >= metric.since]
-        out[metric.key] = [p for p in points if p is not None]
+        kept = [p for p in points if p is not None]
+        # Membership is for the latest point only; see `_point`.
+        for point in kept[:-1]:
+            point.pop(MEMBERS, None)
+        out[metric.key] = kept
     return out
 
 

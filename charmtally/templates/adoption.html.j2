@@ -66,6 +66,16 @@
   details.fallback { margin: .6em 0 1em 0; }
   details.fallback summary { font-size: 12px; }
   details.fallback table { margin-top: .6em; }
+  .impl { font-size: 12px; color: var(--c-text-muted); margin: .4em 0 .8em 0; }
+  details.members { margin: .6em 0 1em 0; max-width: 90ch; }
+  details.members > summary { font-size: 12px; }
+  details.members details { margin: .3em 0 0 1em; }
+  details.members details summary { font-size: 13px; }
+  details.members .list { font-size: 12px; line-height: 1.7; margin: .3em 0 .6em 1em; }
+  details.members .hint { font-size: 12px; color: var(--c-text-muted); margin: .4em 0 0 0; }
+  section.method { max-width: 70ch; }
+  section.method dt { font-weight: 550; margin-top: .8em; }
+  section.method dd { margin: .2em 0 0 0; }
 </style>
 </head>
 <body>
@@ -78,6 +88,7 @@
   Is the tooling charm tech ships being picked up? A small, deliberately
   stable set of metrics across the scanned charm corpus.
   {% if generated_at %}Generated {{ generated_at }}.{% endif %}
+  <a href="#method">How this is measured</a>.
 </p>
 
 <div class="cards">
@@ -183,6 +194,26 @@
   {% if card.latest and card.latest.partial %}
   <p class="partial">Latest point is partial: {{ card.latest.partial }}.</p>
   {% endif %}
+  {% if card.members %}
+  <details class="members">
+  <summary>Charms behind the {{ card.latest.date }} point, by bucket</summary>
+  {% for group in card.members %}
+  <details>
+    <summary>{{ group.bucket }} — {{ group.names|length }}</summary>
+    {% if group.names %}
+    <p class="list" data-member-href="{{ group.href }}">{{ group.names|join(", ") }}</p>
+    {% endif %}
+  </details>
+  {% endfor %}
+  <p class="hint">
+    Each charm links to its row on the Tally{% if card.metric.bucket_features %}; in a bucket
+    that is one feature&rsquo;s reading, with that feature selected, which lists the
+    file and line the detector matched{% endif %}.
+    {% if card.metric.scope != "charms" %}Rocks link to their <code>rockcraft.yaml</code>.{% endif %}
+    The Tally is the latest scan, so it can disagree with an older point.
+  </p>
+  </details>
+  {% endif %}
   {% else %}
   <p class="pending-note">
     No series yet — {{ card.pending or "no snapshot carries the inputs for this metric" }}.
@@ -194,17 +225,69 @@
     {% for c in card.metric.caveats %}<li>{{ c|safe }}</li>{% endfor %}
   </ul>
   {% endif %}
+  {% if card.source_url %}
+  <p class="impl">
+    How it is computed: <a href="{{ card.source_url }}"><code>{{ card.metric.compute.__name__ }}</code></a>
+    {%- if card.metric.inputs %}, reading
+    {% for f in card.metric.inputs %}<a href="dashboard.html?feature.q=feature:{{ f|urlencode }}#feature-view"><code>{{ f }}</code></a>{{ ", " if not loop.last }}{% endfor %}
+    {%- endif %}.
+  </p>
+  {% endif %}
 </section>
 {% endfor %}
 
-<p class="meta">
+<section class="method" id="method">
+<h2>How this is measured</h2>
+<dl>
+  <dt>What is counted</dt>
+  <dd>
+    One <em>charm</em>: a directory with charm metadata (<code>charmcraft.yaml</code>
+    or <code>metadata.yaml</code>) in a repository the corpus lists. A monorepo
+    contributes one charm per sub-charm, so a repository holding five charms is
+    five data points, and anything read from the repository rather than the
+    charm directory &mdash; its CI workflows, its last commit &mdash; reads the
+    same for all five. The rootless card also counts <em>rocks</em>, one per
+    <code>rockcraft.yaml</code>.
+  </dd>
+  <dt>Which charms</dt>
+  <dd>
+    The corpus is the charm list in
+    <a href="https://github.com/canonical/hyrum/blob/main/charm-list/charms.csv">canonical/hyrum</a>,
+    fetched on every scan, less the exclusions in
+    <a href="{{ overrides_url }}"><code>corpus-overrides.yaml</code></a>.
+  </dd>
+  <dt>Which code</dt>
+  <dd>
+    The head of each repository&rsquo;s default branch (or the branch the corpus
+    names) when the scan ran &mdash; the source, not what is released to any
+    Charmhub channel. Only the Charmhub card asks the store anything, and all it
+    asks is whether the charm is listed.
+  </dd>
+  <dt>When</dt>
+  <dd>
+    A scan runs every Monday at 02:00 UTC and each one is a point on the
+    charts. Points from before the weekly scan existed were backfilled by
+    checking each repository out at its last commit before 02:00 UTC on that
+    date. A card&rsquo;s series starts where the thing it measures was first
+    released.
+  </dd>
+  <dt>How a charm is read</dt>
+  <dd>
+    By static analysis of the charm&rsquo;s files: the detectors for each
+    catalogue feature, described on the
+    <a href="dashboard.html#feature-view">Tally</a>, plus the charm&rsquo;s
+    metadata. Nothing is deployed or run. Each card links to the function that
+    computes it, and the Tally shows the file and line each feature was found on.
+  </dd>
+</dl>
+<p>
   Every denominator on this page counts only <em>actively-maintained</em>
   charms: those whose repository has seen a commit in the two years before
   that snapshot&rsquo;s date. A charm nobody has touched since before these
   APIs existed is not one anyone is going to migrate, so counting it would
   measure abandonment rather than adoption.
 </p>
-<p class="meta">
+<p>
   Unless a card says otherwise, the denominator narrows further to
   <em>eligible</em> charms: active charms minus reactive and legacy-classic
   ones, which pre-date ops and could never adopt these APIs. Metrics about
@@ -212,6 +295,10 @@
   against every active charm instead, and name that on the card. The corpus
   itself grows between scans, so read a series as a share, not as a count.
 </p>
+<p>
+  The metrics are all in <a href="{{ adoption_source_url }}"><code>adoption.py</code></a>.
+</p>
+</section>
 
 <script type="application/json" id="adoption-metrics-data">{{ chart_data|tojson }}</script>
 
@@ -223,6 +310,35 @@
         integrity="sha384-cCVCZkAjYNxaYKbM8lsArLznDF/SvMFr1jcZrvOpSTCa0W40ZAdLzHCEulnUa5i7"
         crossorigin="anonymous"
         referrerpolicy="no-referrer"></script>
+<script>
+// Bucket member lists are rendered as plain comma-separated names (a link
+// apiece was the corpus again per card); this turns each into a link to the
+// charm's Tally row, built from the list's `data-member-href` prefix (see
+// `dashboard._member_href`). A `rock:owner/repo:path` entry links to that
+// rockcraft.yaml instead. Runs before, and independently of, Plotly, so the
+// lists link up even when the CDN is unreachable.
+(function () {
+  document.querySelectorAll('[data-member-href]').forEach(function (list) {
+    const prefix = list.dataset.memberHref;
+    const names = list.textContent.split(',').map(function (n) { return n.trim(); }).filter(Boolean);
+    list.textContent = '';
+    names.forEach(function (name, i) {
+      if (i) list.appendChild(document.createTextNode(', '));
+      const a = document.createElement('a');
+      if (name.indexOf('rock:') === 0) {
+        const slug = name.slice(5);
+        const colon = slug.indexOf(':');
+        a.href = 'https://github.com/' + slug.slice(0, colon) + '/blob/HEAD/' + slug.slice(colon + 1);
+        a.title = 'rock: its rockcraft.yaml at the default branch';
+      } else {
+        a.href = prefix + encodeURIComponent(name) + '#charm-view';
+      }
+      a.textContent = name;
+      list.appendChild(a);
+    });
+  });
+})();
+</script>
 <script>
 {% include "_plotly_theme.js.j2" %}
 // Per-metric charts — progressive enhancement over the static tables above.

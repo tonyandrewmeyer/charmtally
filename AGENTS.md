@@ -185,6 +185,14 @@ are one format and must change together). The page must keep working without
 it: the static tables are the fallback, and are what a `file://` reader sees,
 since fetch is blocked there.
 
+`dashboard.html` carries the charm view's evidence column inline, as one
+compacted index (`dashboard._evidence_index`, read by `paintEvidence` in
+`dashboard.html.j2` — again one format, changed together): per charm a
+blob-URL prefix, per present feature up to three (path index, line) pairs.
+Inline rather than a sidecar because it is ~400 KB, not the timeline's
+megabytes. Adoption points carry `members` (who is in each bucket) on the
+latest point only; `compute_series` strips the rest.
+
 `scored.json`, `llm-scored.json` and `pairs.json` are intermediates: the
 workflow produces them but does not commit them, and they're gitignored.
 Snapshots are thinned (`charmtally snapshot`, see above) but stay

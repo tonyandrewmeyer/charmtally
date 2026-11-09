@@ -32,6 +32,23 @@
   details { margin-top: 1em; }
   .ev { font-family: var(--font-mono); font-size: 12px; color: var(--c-text-muted); }
 
+  /* Feature descriptions and the "how it's detected" panel (#161) */
+  .fsummary { font-size: 12px; color: var(--c-text-muted); max-width: 40ch; margin-top: .2em; }
+  details.how { margin-top: .3em; font-size: 12px; max-width: 60ch; }
+  details.how summary { color: var(--c-text-muted); cursor: pointer; }
+  details.how dl { margin: .3em 0 0 0; }
+  details.how dt { font-weight: 550; margin-top: .4em; }
+  details.how dd { margin: 0; }
+  details.how code { font-size: 11px; word-break: break-word; }
+  details.how .notes p { margin: 0 0 .3em 0; color: var(--c-text-muted); }
+
+  /* Evidence column: shown only while a has-feature chip is selected */
+  #charm-table .ev-col { display: none; }
+  #charm-table.show-evidence .ev-col { display: table-cell; min-width: 18ch; }
+  .ev-col .ev-feature { font-size: 12px; margin-bottom: .3em; overflow-wrap: anywhere; }
+  .ev-col .ev-feature a { font-family: var(--font-mono); font-size: 11px; overflow-wrap: anywhere; }
+  .ev-col .ev-none { color: var(--c-text-faint); }
+
   /* Architecture / stack chips on charm rows */
   .chip {
     display: inline-block; font-size: 11px; line-height: 1; padding: 3px 7px;
@@ -268,16 +285,31 @@
       data-only="{{ 'gaps ' if f.clear_gap }}{{ 'unused ' if not f.present }}{{ 'low-count' if f.low_count }}"
       data-name="{{ f.name|lower }}"
       data-library="{{ f.library|lower }}"
-      data-search="{{ (f.name + ' ' + f.library)|lower }}"
+      data-search="{{ (f.name + ' ' + f.library + ' ' + f.summary)|lower }}"
     >
       <td>
         {{ f.name }}
         {% if f.low_count %}<span class="low-count" title="Fewer than 5 charms detected with this feature across the whole corpus — the detector may be too strict. Add `expected_rare: true` in features.yaml to suppress.">⚠ low-count</span>{% endif %}
+        {% if f.summary %}<div class="fsummary">{{ f.summary }}</div>{% endif %}
+        <details class="how">
+          <summary>how it&rsquo;s detected</summary>
+          <dl>
+            <dt>Present when any of these match</dt>
+            <dd>
+              {% for d in f.detectors %}<div><code>{{ d.kind }}</code>{% if d.config %} <code>{{ d.config }}</code>{% endif %}</div>{% endfor %}
+            </dd>
+            <dt>Looks in</dt>
+            <dd>{{ f.scope_text }} (scope <code>{{ f.scope }}</code>). Detectors that read metadata, YAML or the repository&rsquo;s CI read those files whatever the scope.</dd>
+            {% if f.added_in %}<dt>Available since</dt><dd>{{ f.added_in }}</dd>{% endif %}
+            {% if f.notes %}<dt>Notes</dt><dd class="notes">{% for para in f.notes %}<p>{{ para }}</p>{% endfor %}</dd>{% endif %}
+          </dl>
+          {% if f.definition_url %}<p><a href="{{ f.definition_url }}">Definition in features.yaml</a></p>{% endif %}
+        </details>
       </td>
       <td class="lib-{{ f.library }}">{{ f.library }}</td>
       <td class="num ok">
         <a class="xlink" href="?charm.feat=has:{{ f.name|urlencode }}#charm-view"
-           title="List the charms that have this feature">{{ f.present }}</a>
+           title="List the charms that have this feature, with the lines it was found on">{{ f.present }}</a>
       </td>
       <td class="num{% if f.clear_gap %} gap{% endif %}">
         <a class="xlink" href="?charm.feat=gap:{{ f.name|urlencode }}#charm-view"
@@ -378,7 +410,7 @@
   <span class="visible-count" data-count></span>
 </div>
 
-<table id="charm-table">
+<table id="charm-table" data-evidence="charm-evidence-data">
   <thead>
     <tr>
       <th data-sort="text">Charm</th>
@@ -389,6 +421,7 @@
       <th data-sort="num">Clear gap</th>
       <th data-sort="num">Worth considering</th>
       <th>Gaps</th>
+      <th class="ev-col" title="Where the selected has-features were found: up to three matched lines per feature, at the commit scanned">Evidence</th>
     </tr>
   </thead>
   <tbody>
@@ -404,6 +437,7 @@
       data-features="{{ c.present_features|join(' ') }}"
       data-gaps="{{ c.gap_features|join(' ') }}"
       data-name="{{ c.name|lower }}"
+      data-charm="{{ c.name }}"
       data-repo="{{ c.repo_url|lower }}"
       data-stack="{{ c.stack_text|lower }}"
       data-search="{{ (c.name + ' ' + c.team + ' ' + c.repo_url + ' ' + c.stack_text + ' ' + c.architecture|join(' ') + ' ' + c.flags|join(' '))|lower }}"
@@ -437,6 +471,7 @@
           <span class="gap" title="{{ g.rationale }}">{{ g.feature }}</span>{% if g.ai_escalated %}<span class="ai-badge" title="LLM escalated this from worth-considering to clear-gap">AI</span>{% endif %}{% if not loop.last %}, {% endif %}
         {%- endfor %}
       </td>
+      <td class="ev-col"></td>
     </tr>
   {% endfor %}
   </tbody>
@@ -574,6 +609,7 @@
   </ul>
 </details>
 
+<script type="application/json" id="charm-evidence-data">{{ evidence }}</script>
 <script>
 // Filter + sort machinery for the dashboard's tables.
 //
@@ -652,24 +688,85 @@
       let negate = false;
       if (tok.length > 1 && tok[0] === '-') { negate = true; tok = tok.slice(1); }
       let key = null;
+      let exact = false;
       const colon = tok.indexOf(':');
       if (colon > 0 && fields[tok.slice(0, colon)]) {
         key = fields[tok.slice(0, colon)];
         tok = tok.slice(colon + 1);
+        // `charm:=foo` matches the whole word `foo` only; `charm:foo` is a
+        // substring, which brings `foo-k8s` with it.
+        if (tok.length > 1 && tok[0] === '=') { exact = true; tok = tok.slice(1); }
       }
-      return {key: key, needle: tok, negate: negate};
+      return {key: key, needle: tok, negate: negate, exact: exact};
     }).filter(function (t) { return t.needle; });
   }
 
   function queryMatches(terms, row) {
     return terms.every(function (t) {
       const hay = (row.dataset[t.key || 'search'] || '').toLowerCase();
-      return hay.includes(t.needle) !== t.negate;
+      const hit = t.exact ? hay.split(' ').includes(t.needle) : hay.includes(t.needle);
+      return hit !== t.negate;
     });
   }
 
   function tokens(row, key) {
     return (row.dataset[key] || '').split(' ').filter(Boolean);
+  }
+
+  // ── evidence column ────────────────────────────────────────────────────
+  // The charm view's evidence column lists where each `has:` chip's feature
+  // was found, from a compacted index rendered once into the page
+  // (`dashboard._evidence_index`, which documents the shape): per charm, a
+  // blob-URL prefix at the scanned commit and, per feature index, up to
+  // three (path index, line) pairs, flattened.
+  // Paths come from third-party repositories, so everything is built with
+  // textContent, never innerHTML.
+  function loadEvidence(id) {
+    const el = id && document.getElementById(id);
+    if (!el) return null;
+    const raw = JSON.parse(el.textContent);
+    const featureIndex = {};
+    raw.features.forEach(function (name, i) { featureIndex[name] = String(i); });
+    return {featureIndex: featureIndex, paths: raw.paths, charms: raw.charms};
+  }
+
+  function paintEvidence(table, rows, evidence, features) {
+    const wanted = features.filter(function (f) { return f.mode === 'has'; });
+    table.classList.toggle('show-evidence', wanted.length > 0);
+    if (!wanted.length) return;
+    rows.forEach(function (row) {
+      if (row.classList.contains('hidden')) return;
+      const cell = row.querySelector('td.ev-col');
+      if (!cell) return;
+      cell.textContent = '';
+      const entry = evidence.charms[row.dataset.charm];
+      wanted.forEach(function (f) {
+        const div = document.createElement('div');
+        div.className = 'ev-feature';
+        if (wanted.length > 1) div.appendChild(document.createTextNode(f.name + ': '));
+        const flat = (entry && entry[1][evidence.featureIndex[f.name]]) || [];
+        if (!flat.length) {
+          const none = document.createElement('span');
+          none.className = 'ev-none';
+          none.textContent = 'no located line';
+          none.title = 'The detector that matched reports a structural match (a metadata key, a dependency, a CI channel) rather than a line';
+          div.appendChild(none);
+        }
+        for (let i = 0; i < flat.length; i += 2) {
+          const path = evidence.paths[flat[i]];
+          const line = flat[i + 1];
+          if (i) div.appendChild(document.createTextNode(', '));
+          const a = document.createElement('a');
+          a.href = entry[0] + path + (line > 0 ? '#L' + line : '');
+          // The file name alone keeps the column narrow enough to sit beside
+          // the stack cell; the full path is one hover away.
+          a.textContent = path.split('/').pop() + (line > 0 ? ':' + line : '');
+          a.title = path;
+          div.appendChild(a);
+        }
+        cell.appendChild(div);
+      });
+    });
   }
 
   // ── filter bars ────────────────────────────────────────────────────────
@@ -704,6 +801,7 @@
     });
     const selects = Array.from(bar.querySelectorAll('[data-select]'));
     const state = {search: '', terms: [], features: []};
+    const evidence = loadEvidence(table.dataset.evidence);
 
     function param(key) { return prefix + '.' + key; }
 
@@ -747,6 +845,7 @@
       }
       if (emptyEl) emptyEl.hidden = visible !== 0;
       table.classList.toggle('all-hidden', visible === 0);
+      if (evidence) paintEvidence(table, rows, evidence, state.features);
     }
 
     function paintGroup(g) {

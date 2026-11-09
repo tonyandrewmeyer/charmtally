@@ -76,6 +76,11 @@ class Feature:
     # `expected_rare: true` for features genuinely held by only a handful
     # of charms.
     expected_rare: bool = False
+    # Free-text caveats and the release the feature shipped in. Neither
+    # affects detection; the dashboard shows them to a reader asking what a
+    # feature's count does and does not include.
+    notes: str = ""
+    added_in: str = ""
 
 
 @dataclass(frozen=True)
@@ -108,6 +113,8 @@ def load(path: Path) -> list[Feature]:
             scope=raw["scope"],
             detectors=_parse_detectors(raw["detect"]),
             expected_rare=bool(raw.get("expected_rare", False)),
+            notes=str(raw.get("notes") or "").strip(),
+            added_in=str(raw.get("added-in") or ""),
         )
         for raw in data["features"]
     ]
