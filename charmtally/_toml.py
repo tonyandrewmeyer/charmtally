@@ -16,8 +16,8 @@ that makes it work) exists once rather than once per importer.
 from __future__ import annotations
 
 try:
-    import tomllib  # ty: ignore[unresolved-import]
+    import tomllib  # ty: ignore[import-not-found]
 except ModuleNotFoundError:  # pragma: no cover — exercised only on 3.10
-    import tomli as tomllib  # ty: ignore[unresolved-import]
+    import tomli as tomllib  # ty: ignore[import-not-found]
 
 __all__ = ["tomllib"]
