@@ -871,6 +871,66 @@ def test_rootless_needs_both_halves_scanned() -> None:
     assert adoption.compute_rootless(rocks_only) is None
 
 
+# --- bucket membership -----------------------------------------------------
+
+
+def test_members_name_the_charms_in_each_bucket() -> None:
+    """The page lists who is behind each band, not only how many."""
+    snap = _snapshot({
+        "jub": _testing_charm(jubilant=True, pytest_operator=False, has_tests=True),
+        "pyop": _testing_charm(jubilant=False, pytest_operator=True, has_tests=True),
+        "none": _testing_charm(jubilant=False, pytest_operator=False, has_tests=False),
+    })
+
+    point = adoption.compute_integration_testing(snap)
+
+    assert point is not None
+    assert point[adoption.MEMBERS] == {
+        "jubilant": ["jub"],
+        "pytest-operator": ["pyop"],
+        "zaza": [],
+        "other-integration-tests": [],
+        "no-integration-tests": ["none"],
+    }
+    # Every count is the size of its member list: one walk produces both.
+    assert {k: len(v) for k, v in point[adoption.MEMBERS].items()} == point["counts"]
+
+
+def test_members_mark_rocks_apart_from_charms() -> None:
+    snap = _rootless_snapshot(
+        {"k8s": _k8s_charm("non-root")},
+        {"canonical/foo:rockcraft.yaml": _rock("_daemon_")},
+    )
+
+    point = adoption.compute_rootless(snap)
+
+    assert point is not None
+    assert point[adoption.MEMBERS]["run-user: _daemon_"] == [
+        adoption.ROCK_PREFIX + "canonical/foo:rockcraft.yaml"
+    ]
+    assert point[adoption.MEMBERS]["charm-user: non-root"] == ["k8s"]
+
+
+def test_members_are_kept_on_the_latest_point_only() -> None:
+    """A list per bucket per date would be the corpus again for every snapshot."""
+    older = _snapshot({"a": _charm(features={"ops.typed-relation": True})}, date="2026-06-04")
+    newer = _snapshot({"a": _charm(features={"ops.typed-relation": True})}, date="2026-06-11")
+
+    series = adoption.compute_series([older, newer])[adoption.TYPED_RELATION]
+
+    assert adoption.MEMBERS not in series[0]
+    assert series[-1][adoption.MEMBERS] == {"typed": ["a"], "untyped": []}
+
+
+def test_bucket_features_name_real_buckets_and_inputs() -> None:
+    """A bucket_features entry must name a bucket the metric draws, and a
+    feature the metric reads, or its member links select nothing."""
+    for metric in adoption.METRICS:
+        for bucket, feature in metric.bucket_features:
+            assert bucket in metric.breakdown_keys, (metric.key, bucket)
+            assert feature in metric.inputs, (metric.key, feature)
+
+
 # --- rendering + CLI --------------------------------------------------------
 
 
@@ -901,6 +961,34 @@ def test_render_adoption_does_not_escape_authored_markup() -> None:
     assert "<code>run-user</code>" in html  # a rootless caveat
     assert "actively-maintained charms" in html  # the jubilant detail
     assert "not just eligible charms" in html  # the jubilant denominator_note
+
+
+def test_render_adoption_lists_members_and_links_the_implementation() -> None:
+    snap = _snapshot({"jub": _testing_charm(jubilant=True, pytest_operator=False, has_tests=True)})
+    series = adoption.compute_series([snap])
+
+    html = render_adoption(list(adoption.METRICS), series)
+
+    # The list, with the prefix the page's script builds each link from: the
+    # charm view narrowed to one charm, with the bucket's feature selected.
+    assert (
+        'data-member-href="dashboard.html?charm.feat=has%3Ajubilant.integration-tests'
+        '&amp;charm.q=charm%3A%3D">jub</p>'
+    ) in html
+    assert "/charmtally/adoption.py#L" in html
+    assert "compute_integration_testing" in html
+    assert 'id="method"' in html
+
+
+def test_render_adoption_keeps_members_out_of_the_chart_payload() -> None:
+    """The lists are markup under each chart; the JSON would ship them twice."""
+    snap = _snapshot({"jub": _testing_charm(jubilant=True, pytest_operator=False, has_tests=True)})
+    series = adoption.compute_series([snap])
+
+    html = render_adoption(list(adoption.METRICS), series)
+
+    payload = html.split('id="adoption-metrics-data">', 1)[1].split("</script>", 1)[0]
+    assert '"members"' not in payload
 
 
 def test_render_adoption_labels_the_headline_line() -> None:

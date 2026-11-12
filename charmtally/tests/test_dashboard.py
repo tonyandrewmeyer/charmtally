@@ -3,8 +3,18 @@ precision-floor annotation added with the scan-detector follow-ups."""
 
 from __future__ import annotations
 
+import json
+
+from .. import catalogue
 from ..catalogue import Detector, Feature
-from ..dashboard import _ops_cohort, _ops_cohort_order, render
+from ..dashboard import (
+    _evidence_index,
+    _feature_definition_lines,
+    _note_paragraphs,
+    _ops_cohort,
+    _ops_cohort_order,
+    render,
+)
 
 
 def _empty_meta() -> dict:
@@ -513,3 +523,89 @@ def test_unresolvable_partner_reads_as_unknown_not_clear() -> None:
     assert 'data-ceiling="none"' in html
     # Only the inherited state earns a chip; unknown is the majority state.
     assert "inherits&nbsp;juju" not in html
+
+
+# ── feature descriptions and the evidence column (#161) ─────────────────────
+
+
+def test_feature_row_shows_its_summary_and_how_it_is_detected() -> None:
+    feature = Feature(
+        name="f1",
+        library="ops",
+        summary="Charm does the thing.",
+        scope="tests",
+        detectors=(Detector(kind="import", config={"module": "thing", "names": ["A", "B"]}),),
+        notes="Caveat one\ncontinues here.\n  - a list item\n    wrapped",
+        added_in="ops 2.5",
+    )
+    charm = _charm("c1", present_features={"f1"}, all_features=["f1"])
+
+    html = render({"c1": charm}, [feature])
+
+    assert '<div class="fsummary">Charm does the thing.</div>' in html
+    assert "<code>import</code> <code>module: thing; names: A, B</code>" in html
+    assert "scope <code>tests</code>" in html
+    assert "<p>Caveat one continues here.</p><p>- a list item wrapped</p>" in html
+    assert "ops 2.5" in html
+
+
+def test_note_paragraphs_reflow_yaml_wrapping() -> None:
+    notes = "First para\nsame para.\n\nSecond para:\n  - item one\n    more\n  - item two"
+
+    assert _note_paragraphs(notes) == [
+        "First para same para.",
+        "Second para:",
+        "- item one more",
+        "- item two",
+    ]
+
+
+def test_every_shipped_feature_has_a_definition_line() -> None:
+    """The text scan finds each catalogue entry, so each row links its recipe."""
+    lines = _feature_definition_lines(catalogue.default_path())
+    text = catalogue.default_path().read_text().splitlines()
+
+    for feature in catalogue.load(catalogue.default_path()):
+        assert text[lines[feature.name] - 1].strip() == f"- name: {feature.name}"
+
+
+def test_definition_links_only_for_the_shipped_catalogue(tmp_path) -> None:
+    """A scan against another catalogue would link to the wrong lines."""
+    shipped = catalogue.load(catalogue.default_path())[:1]
+    name = shipped[0].name
+    charm = _charm("c1", present_features=set(), all_features=[name])
+
+    linked = render({"c1": charm}, shipped)
+    other = render({"c1": charm}, shipped, features_path=tmp_path / "features.yaml")
+
+    assert "Definition in features.yaml" in linked
+    assert "/charmtally/features.yaml#L" in linked
+    assert "Definition in features.yaml" not in other
+
+
+def test_evidence_index_interns_paths_and_features() -> None:
+    charm = _charm_with_evidence("f1", repo_sha="deadbeef", subpath="charms/bar")
+    charm["features"]["f1"]["evidence"] = [
+        {"file": "src/charm.py", "line": n, "detector_kind": "import", "snippet": "x"}
+        for n in (1, 2, 3, 4)
+    ]
+
+    index = _evidence_index([charm], ["f0", "f1"], "main")
+
+    assert index["features"] == ["f0", "f1"]
+    assert index["paths"] == ["charms/bar/src/charm.py"]
+    base, per_feature = index["charms"]["c1"]
+    assert base == "https://github.com/canonical/foo-operator/blob/deadbeef/"
+    # Feature 1, path 0; capped at three lines.
+    assert per_feature == {"1": [0, 1, 0, 2, 0, 3]}
+
+
+def test_evidence_index_is_embedded_and_escaped() -> None:
+    """Evidence paths come from third-party repos and land inside <script>."""
+    charm = _charm_with_evidence("f1", file="src/</script><b>.py")
+
+    html = render({"c1": charm}, [_feature("f1")])
+
+    blob = html.split('id="charm-evidence-data">', 1)[1].split("</script>", 1)[0]
+    assert "<b>" not in blob
+    assert json.loads(blob)["paths"] == ["src/</script><b>.py"]

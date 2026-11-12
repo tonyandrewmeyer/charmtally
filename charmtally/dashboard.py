@@ -22,19 +22,68 @@ checkout, i.e. `charmtally local`).
 from __future__ import annotations
 
 import datetime as dt
+import functools
+import inspect
+import json
+import os
 import posixpath
+import urllib.parse
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import jinja2
 
 from . import adoption as _adoption
+from . import catalogue as _catalogue
 from . import ceilings as _ceilings
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
+    import markupsafe
+
 _TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
+_PACKAGE_DIR = Path(__file__).resolve().parent
+
+#: Where this tool's own source is, for the pages' "how is this measured"
+#: links into the implementation.
+SOURCE_REPO = "https://github.com/tonyandrewmeyer/charmtally"
+
+
+def _source_ref() -> str:
+    """Commit to link the implementation at: the one being run, if known.
+
+    `GITHUB_SHA` is the checkout the weekly `scan` workflow renders from, so
+    a line anchor taken from the running code points at the same line on
+    GitHub. Run anywhere else the commit is not known without asking git,
+    and `main` is close enough for a page nobody publishes.
+    """
+    return os.environ.get("GITHUB_SHA") or "main"
+
+
+def _source_url(rel: str, line: int = 0, ref: str | None = None) -> str:
+    """Link to the repo-relative path `rel` in this repo at `ref`, on `line`."""
+    url = f"{SOURCE_REPO}/blob/{ref or _source_ref()}/{rel}"
+    return f"{url}#L{line}" if line > 0 else url
+
+
+#: features.yaml's place in this repo, for linking a feature to its recipe.
+_FEATURES_REL = "charmtally/features.yaml"
+
+
+def _package_rel(path: str | Path) -> str:
+    """`.../charmtally/adoption.py` → `charmtally/adoption.py`, wherever installed."""
+    return Path(path).resolve().relative_to(_PACKAGE_DIR.parent).as_posix()
+
+
+def _function_url(func: Any, ref: str | None = None) -> str | None:
+    """Link to where `func` is defined, or None if it has no findable source."""
+    try:
+        source = inspect.getsourcefile(func)
+        _, line = inspect.getsourcelines(func)
+    except (OSError, TypeError):
+        return None
+    return _source_url(_package_rel(source), line, ref) if source else None
 
 
 def _environment() -> jinja2.Environment:
@@ -102,6 +151,144 @@ def _exemplar(charm: dict, ref: str, evidence: list[dict]) -> dict:
             ),
         }
     return {"charm": charm["name"], "url": charm["repo_url"]}
+
+
+#: What a feature's `scope` means, in the words the feature view uses.
+#: Python files only: the file-independent detectors read what they read
+#: whatever the scope says, and the feature view says so beside this text.
+_SCOPE_TEXT = {
+    "src": (
+        "Python files under the charm's src/ and lib/, "
+        "excluding tests and vendored charm libraries"
+    ),
+    "tests": (
+        "Python files under the charm's tests/ "
+        "(or the monorepo's shared tests/integration/ when it has none)"
+    ),
+    "any": "every Python file in the charm, excluding vendored charm libraries",
+}
+
+
+def _format_config_value(value: Any) -> str:
+    if isinstance(value, (list, tuple)):
+        return ", ".join(_format_config_value(v) for v in value)
+    if isinstance(value, dict):
+        return "; ".join(f"{k}={_format_config_value(v)}" for k, v in value.items())
+    return str(value)
+
+
+def _detector_lines(feature: Any) -> list[dict[str, str]]:
+    """One `{kind, config}` per detector, for the feature view's "how" panel.
+
+    Rendered from the catalogue entry rather than written as prose per
+    feature, so it cannot drift from what the scan does: any one of these
+    matching is what marks the feature present.
+    """
+    return [
+        {
+            "kind": d.kind,
+            "config": "; ".join(f"{k}: {_format_config_value(v)}" for k, v in d.config.items()),
+        }
+        for d in feature.detectors
+    ]
+
+
+def _note_paragraphs(notes: str) -> list[str]:
+    """Reflow a feature's YAML-wrapped `notes` into paragraphs and list items.
+
+    The catalogue hard-wraps notes at the file's width, and the feature view
+    is far narrower, so showing the line breaks verbatim leaves every line
+    ragged. A blank line starts a paragraph, a `- ` line starts a list item
+    (kept, dash and all, as its own block), and anything else continues the
+    block before it.
+    """
+    blocks: list[str] = []
+    current: list[str] = []
+    for raw in notes.splitlines():
+        line = raw.strip()
+        if not line or line.startswith(("- ", "* ")):
+            if current:
+                blocks.append(" ".join(current))
+            current = [line] if line else []
+            continue
+        current.append(line)
+    if current:
+        blocks.append(" ".join(current))
+    return blocks
+
+
+def _feature_definition_lines(path: Path) -> dict[str, int]:
+    """Line of each `- name:` in features.yaml, to link a feature to its recipe.
+
+    A text scan, not a YAML parse: the parser does not keep line numbers, and
+    every entry in the catalogue starts with `- name: <name>` on a line of
+    its own. Architecture patterns are in the same file under the same key,
+    but no pattern shares a name with a feature, so the first hit is right.
+    """
+    lines: dict[str, int] = {}
+    try:
+        text = path.read_text()
+    except OSError:
+        return lines
+    for n, line in enumerate(text.splitlines(), start=1):
+        stripped = line.strip()
+        if stripped.startswith("- name:"):
+            lines.setdefault(stripped.removeprefix("- name:").strip(), n)
+    return lines
+
+
+#: Most evidence lines kept per (charm, feature) for the charm view. The
+#: feature view's exemplars show one; three is enough to show a pattern
+#: without making the page carry every match the scan recorded.
+_EVIDENCE_PER_FEATURE = 3
+
+
+def _evidence_index(charms: list[dict], feat_names: list[str], ref: str) -> dict[str, Any]:
+    """Evidence for every present (charm, feature), compacted for the page.
+
+    The charm view shows these for the features its `has:` chips select, so
+    "which charms have X" can also answer "where". Inline rather than a
+    fetched sidecar file: compacted it is about 400 KB, and the page keeps
+    working from `file://`, where fetch is blocked.
+
+    Shape: `{"features": [name, ...], "paths": [path, ...], "charms": {charm:
+    [blob URL prefix, {feature index: [path index, line, path index, line,
+    ...]}]}}`. A charm's URL prefix (repo and scanned commit) is stored once
+    rather than per line, and features and paths are indices: the same few
+    files — `src/charm.py`, `charmcraft.yaml` — are most of the evidence, and
+    spelling each out every time was more than half the bytes.
+    `paintEvidence` in `dashboard.html.j2` reads it, so the two change
+    together.
+    """
+    index = {name: i for i, name in enumerate(feat_names)}
+    paths: dict[str, int] = {}
+    out: dict[str, Any] = {}
+    for c in charms:
+        per_feature: dict[str, list] = {}
+        for fname in feat_names:
+            rec = c["features"].get(fname, {})
+            if not rec.get("present"):
+                continue
+            flat: list[int] = []
+            for e in (rec.get("evidence") or [])[:_EVIDENCE_PER_FEATURE]:
+                path = _repo_path(c, e["file"])
+                flat += [paths.setdefault(path, len(paths)), e["line"]]
+            per_feature[str(index[fname])] = flat
+        if per_feature:
+            base = c["repo_url"].rstrip("/").removesuffix(".git")
+            out[c["name"]] = [f"{base}/blob/{_evidence_ref(c, ref)}/", per_feature]
+    return {"features": feat_names, "paths": list(paths), "charms": out}
+
+
+def _compact_json(value: Any) -> markupsafe.Markup:
+    """`|tojson` without the whitespace, for the large inline data blobs.
+
+    Same escaping as Jinja's filter (`<`, `>`, `&` and `'` as unicode escapes),
+    so it is safe inside a `<script>` element; only the separators differ.
+    """
+    return jinja2.utils.htmlsafe_json_dumps(
+        value, dumps=functools.partial(json.dumps, separators=(",", ":"))
+    )
 
 
 # Below this many present-counts across the full corpus a feature is flagged
@@ -227,8 +414,21 @@ def _ceiling_state(ceiling: _ceilings.Ceiling | None) -> str:
     return "unknown" if ceiling.unresolved else "none"
 
 
-def render(results: dict, features: list, ref: str = "main", *, pairs: list | None = None) -> str:
-    """Render the survey results as a standalone HTML dashboard."""
+def render(
+    results: dict,
+    features: list,
+    ref: str = "main",
+    *,
+    pairs: list | None = None,
+    features_path: Path | None = None,
+) -> str:
+    """Render the survey results as a standalone HTML dashboard.
+
+    `features_path` is the catalogue `features` was loaded from. Each feature
+    links to its recipe in this repo's copy of the catalogue, which is only
+    right when that is the catalogue in use, so a scan run against some other
+    file gets no links rather than links to the wrong lines.
+    """
     charms = [v for k, v in results.items() if not k.startswith("__")]
     feat_meta = {f.name: f for f in features}
     feat_names = [f.name for f in features]
@@ -246,6 +446,12 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
         if arch_of_charm[c["name"]] not in _SCORING_NA_ARCH
     }
     ops_cohort_names = _ops_cohort_order(ops_cohort_of_charm.values())
+    shipped = _catalogue.default_path()
+    definition_lines = (
+        _feature_definition_lines(shipped)
+        if features_path is None or features_path.resolve() == shipped.resolve()
+        else {}
+    )
 
     # Feature view rows.
     feature_rows: list[dict[str, Any]] = []
@@ -349,9 +555,18 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
         # detector is too strict. Suppress for features explicitly marked
         # `expected_rare: true` in features.yaml.
         low_count = present < _PRECISION_FLOOR and not feat_meta[fname].expected_rare
+        feature = feat_meta[fname]
+        def_line = definition_lines.get(fname)
         feature_rows.append({
             "name": fname,
-            "library": feat_meta[fname].library,
+            "library": feature.library,
+            "summary": feature.summary,
+            "scope": feature.scope,
+            "scope_text": _SCOPE_TEXT.get(feature.scope, feature.scope),
+            "detectors": _detector_lines(feature),
+            "notes": _note_paragraphs(feature.notes),
+            "added_in": feature.added_in,
+            "definition_url": _source_url(_FEATURES_REL, def_line) if def_line else None,
             "present": present,
             "clear_gap": clear_gap,
             "clear_gap_ai": clear_gap_ai,
@@ -614,6 +829,7 @@ def render(results: dict, features: list, ref: str = "main", *, pairs: list | No
         summary=summary,
         facets=facets,
         pairs=pairs or [],
+        evidence=_compact_json(_evidence_index(charms, feat_names, ref)),
         generated_at=dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
     )
 
@@ -685,6 +901,48 @@ def render_trend(
     )
 
 
+def _member_href(feature: str | None) -> str:
+    """URL prefix a bucket member's name is appended to, to link its Tally row.
+
+    The charm view narrowed to that charm alone (`charm:=` is the exact-match
+    form; a bare `charm:` is a substring, and `mysql` would bring
+    `mysql-router` with it). When the bucket is one feature's reading, that
+    feature is selected too, which is what makes the charm view show the
+    matched lines. The page's script appends the URL-encoded name and the
+    `#charm-view` anchor; rocks are not on the Tally and it links those to
+    their `rockcraft.yaml` instead.
+    """
+    params = {"charm.feat": f"has:{feature}"} if feature else {}
+    params["charm.q"] = "charm:="
+    return f"dashboard.html?{urllib.parse.urlencode(params)}"
+
+
+def _member_lists(metric: _adoption.Metric, latest: dict | None) -> list[dict[str, Any]]:
+    """List the latest point's bucket membership, in the order the chart stacks it.
+
+    Breakdown buckets come first, in `breakdown_keys` order, then whatever
+    else the metric names members for (a cross-cut such as "reaches 4 but
+    inherits a cap"), in the order the metric listed them.
+
+    Names, not links: a link per member is the corpus again per card, and
+    doubled the page. The template writes each bucket as one comma-separated
+    list carrying `href`, and the page's script turns the names into links.
+    """
+    members = (latest or {}).get(_adoption.MEMBERS) or {}
+    features = dict(metric.bucket_features)
+    order = [k for k in metric.breakdown_keys if k in members]
+    order += [k for k in members if k not in order]
+    return [
+        {
+            "bucket": key,
+            "feature": features.get(key),
+            "names": members[key],
+            "href": _member_href(features.get(key)),
+        }
+        for key in order
+    ]
+
+
 def render_adoption(
     metrics: Sequence[_adoption.Metric],
     series: dict[str, list[dict]],
@@ -708,6 +966,7 @@ def render_adoption(
     tmpl = env.get_template("adoption.html.j2")
 
     cards: list[dict[str, Any]] = []
+    ref = _source_ref()
     for metric in metrics:
         points = series.get(metric.key, [])
         latest, delta = _adoption.latest_and_delta(points)
@@ -717,9 +976,13 @@ def render_adoption(
             "latest": latest,
             "delta": delta,
             "pending": metric.pending,
+            "source_url": _function_url(metric.compute, ref) if metric.compute else None,
+            "members": _member_lists(metric, latest),
         })
 
     # Built from the Metric objects rather than by reaching back into `cards`,
+    # and without `members`: the lists are drawn as markup under each chart,
+    # and carrying them in the chart payload too would ship them twice.
     # whose values are a union the type checker can't attribute-access.
     chart_data = [
         {
@@ -728,7 +991,10 @@ def render_adoption(
             "breakdown_keys": list(metric.breakdown_keys),
             "headline": metric.headline,
             "headline_keys": list(metric.headline_keys),
-            "series": series.get(metric.key, []),
+            "series": [
+                {k: v for k, v in point.items() if k != _adoption.MEMBERS}
+                for point in series.get(metric.key, [])
+            ],
         }
         for metric in metrics
     ]
@@ -736,5 +1002,7 @@ def render_adoption(
     return tmpl.render(
         cards=cards,
         chart_data=chart_data,
+        adoption_source_url=_source_url(_package_rel(_adoption.__file__), ref=ref),
+        overrides_url=_source_url("corpus-overrides.yaml", ref=ref),
         generated_at=dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
     )
